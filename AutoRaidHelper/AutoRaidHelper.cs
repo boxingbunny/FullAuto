@@ -2,18 +2,11 @@ using System.Numerics;
 using System.Runtime.Loader;
 using AEAssist;
 using AEAssist.AEPlugin;
-using AEAssist.API.MemoryApi;
-using AEAssist.CombatRoutine.Module;
 using AEAssist.Extension;
 using AEAssist.Helper;
 using AEAssist.MemoryApi;
 using AEAssist.Verify;
-using Dalamud.Game.ClientState.Conditions;
-using Dalamud.Game.ClientState.Objects.Types;
 using ECommons.DalamudServices;
-using ECommons.ExcelServices;
-using ECommons.GameFunctions;
-using ECommons.GameHelpers;
 using ImGuiNET;
 
 namespace AutoRaidHelper
@@ -125,7 +118,8 @@ namespace AutoRaidHelper
         private Vector3? _point2World = null;
         private Vector3? _point3World = null;
         private float _twoPointDistanceXZ = 0f; // 点1-点2距离
-
+        private bool _addDebugPoints = false;
+        
         // 选择夹角顶点：0 => 场地中心, 1 => 第三点(Alt)
         private int _apexMode = 0;
 
@@ -179,16 +173,11 @@ namespace AutoRaidHelper
 
         public void Update()
         {
- 
             CheckPointRecording();
-
             CheckAutoCountdown();
-
             CheckAutoLeaveDuty();
-
-            CheckAutoQueue();
-            
             ResetDutyCompletedIfNotInDuty();
+            CheckAutoQueue();
         }
 
         public void OnPluginUI()
@@ -221,7 +210,8 @@ namespace AutoRaidHelper
         {
             // 提示信息
             ImGui.TextColored(new Vector4(1f, 0.85f, 0.4f, 1f),
-                "提示: Ctrl 记录点1, Shift 记录点2, Alt 记录点3 (顶点)；夹角顶点可选“场地中心”或“点3”");
+                "提示: Ctrl 记录点1, Shift 记录点2, Alt 记录点3 (顶点)" +
+                "\n夹角顶点可选“场地中心”或“点3”");
             ImGui.Separator();
 
             // 鼠标坐标显示
@@ -238,11 +228,19 @@ namespace AutoRaidHelper
 
             ImGui.Separator();
 
+            // 显示是否添加 Debug 点的复选框
+            ImGui.Checkbox("添加Debug点", ref _addDebugPoints);
+            
+            // 添加一个按钮用于清理 Debug 点
+            ImGui.SameLine();
+            if (ImGui.Button("清理Debug点")) 
+                Share.TrustDebugPoint.Clear();
+            
             // 显示记录的点 (保留2位小数)
             ImGui.Text($"点1: {FormatPointXZ(_point1World)}");
             ImGui.Text($"点2: {FormatPointXZ(_point2World)}");
             ImGui.Text($"点3(顶点): {FormatPointXZ(_point3World)}");
-
+            
             // 如果点1和点2存在，显示距离及夹角（夹角顶点可选）
             if (_point1World.HasValue && _point2World.HasValue)
             {
@@ -435,6 +433,9 @@ namespace AutoRaidHelper
                     _point2World = pointXZ;
                 else if (alt)
                     _point3World = pointXZ;
+                
+                if (_addDebugPoints && (ctrl || shft || alt))
+                    Share.TrustDebugPoint.Add(pointXZ);
             }
 
             if (_point1World.HasValue && _point2World.HasValue)
@@ -466,7 +467,7 @@ namespace AutoRaidHelper
             bool isBoundByDuty = Core.Resolve<MemApiDuty>().IsBoundByDuty();
             bool partyIs8 = Core.Resolve<MemApiDuty>().DutyMembersNumber() == 8;
 
-            if (notInCombat && inMission && !_countdownTriggered)
+            if (notInCombat && inMission && partyIs8 && !_countdownTriggered)
             {
                 ChatHelper.SendMessage("/countdown 15");
                 _countdownTriggered = true;
