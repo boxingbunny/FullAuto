@@ -501,7 +501,7 @@ public class AutoRaidHelper : IAEPlugin
     }
 
     // 当副本完成时，触发事件，将 _dutyCompleted 置为 true
-    private void OnDutyCompleted(object sender, ushort e)
+    private void OnDutyCompleted(object? sender, ushort e)
     {
         LogHelper.Print($"副本任务完成（DutyCompleted 事件，ID: {e}）");
         _dutyCompleted = true;
@@ -512,7 +512,7 @@ public class AutoRaidHelper : IAEPlugin
         }
     }
 
-    private void OnDutyWiped(object sender, ushort e)
+    private void OnDutyWiped(object? sender, ushort e)
     {
         LogHelper.Print($"副本团灭重置（DutyWiped 事件，ID: {e}）");
         _countdownTriggered = false;
