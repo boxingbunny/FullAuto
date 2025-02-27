@@ -1,0 +1,15 @@
+E:\MyACR\AutoRaidHelper\AutoRaidHelper\bin\Debug\net8.0\AutoRaidHelper.deps.json
+E:\MyACR\AutoRaidHelper\AutoRaidHelper\bin\Debug\net8.0\AutoRaidHelper.dll
+E:\MyACR\AutoRaidHelper\AutoRaidHelper\bin\Debug\net8.0\AutoRaidHelper.pdb
+E:\MyACR\AutoRaidHelper\AutoRaidHelper\obj\Debug\net8.0\AutoRaidHelper.csproj.AssemblyReference.cache
+E:\MyACR\AutoRaidHelper\AutoRaidHelper\obj\Debug\net8.0\AutoRaidHelper.GeneratedMSBuildEditorConfig.editorconfig
+E:\MyACR\AutoRaidHelper\AutoRaidHelper\obj\Debug\net8.0\AutoRaidHelper.AssemblyInfoInputs.cache
+E:\MyACR\AutoRaidHelper\AutoRaidHelper\obj\Debug\net8.0\AutoRaidHelper.AssemblyInfo.cs
+E:\MyACR\AutoRaidHelper\AutoRaidHelper\obj\Debug\net8.0\AutoRaidHelper.csproj.CoreCompileInputs.cache
+E:\MyACR\AutoRaidHelper\AutoRaidHelper\obj\Debug\net8.0\AutoRaidHelper.dll
+E:\MyACR\AutoRaidHelper\AutoRaidHelper\obj\Debug\net8.0\refint\AutoRaidHelper.dll
+E:\MyACR\AutoRaidHelper\AutoRaidHelper\obj\Debug\net8.0\AutoRaidHelper.pdb
+E:\MyACR\AutoRaidHelper\AutoRaidHelper\obj\Debug\net8.0\ref\AutoRaidHelper.dll
+E:\AE3.0\AEAssistCNVersion\AEAssist\net8.0\AutoRaidHelper.deps.json
+E:\AE3.0\AEAssistCNVersion\AEAssist\net8.0\AutoRaidHelper.dll
+E:\AE3.0\AEAssistCNVersion\AEAssist\net8.0\AutoRaidHelper.pdb

@@ -1,0 +1,16 @@
+E:\AE3.0\AEAssistCNVersion\AEAssist\AutoRaidHelper.deps.json
+E:\AE3.0\AEAssistCNVersion\AEAssist\AutoRaidHelper.dll
+E:\AE3.0\AEAssistCNVersion\AEAssist\AutoRaidHelper.pdb
+E:\MyACR\AutoRaidHelper\AutoRaidHelper\obj\Release\AutoRaidHelper.csproj.AssemblyReference.cache
+E:\MyACR\AutoRaidHelper\AutoRaidHelper\obj\Release\AutoRaidHelper.GeneratedMSBuildEditorConfig.editorconfig
+E:\MyACR\AutoRaidHelper\AutoRaidHelper\obj\Release\AutoRaidHelper.AssemblyInfoInputs.cache
+E:\MyACR\AutoRaidHelper\AutoRaidHelper\obj\Release\AutoRaidHelper.AssemblyInfo.cs
+E:\MyACR\AutoRaidHelper\AutoRaidHelper\obj\Release\AutoRaidHelper.csproj.CoreCompileInputs.cache
+E:\MyACR\AutoRaidHelper\AutoRaidHelper\obj\Release\AutoRaidHelper.dll
+E:\MyACR\AutoRaidHelper\AutoRaidHelper\obj\Release\refint\AutoRaidHelper.dll
+E:\MyACR\AutoRaidHelper\AutoRaidHelper\obj\Release\AutoRaidHelper.pdb
+E:\MyACR\AutoRaidHelper\AutoRaidHelper\obj\Release\ref\AutoRaidHelper.dll
+E:\AE3.0\Plugins\AutoRaidHelper\AutoRaidHelper.deps.json
+E:\AE3.0\Plugins\AutoRaidHelper\AutoRaidHelper.dll
+E:\AE3.0\Plugins\AutoRaidHelper\AutoRaidHelper.pdb
+E:\MyACR\AutoRaidHelper\AutoRaidHelper\obj\Release\AutoRaidHelper.sourcelink.json
