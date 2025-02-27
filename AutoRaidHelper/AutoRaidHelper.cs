@@ -11,83 +11,6 @@ using ImGuiNET;
 
 namespace AutoRaidHelper
 {
-    public static class GeometryUtilsXZ
-    {
-        /// <summary>
-        /// 在 XZ 平面计算两点的 2D 距离，忽略 Y
-        /// </summary>
-        public static float DistanceXZ(Vector3 a, Vector3 b)
-        {
-            float dx = b.X - a.X;
-            float dz = b.Z - a.Z;
-            return MathF.Sqrt(dx * dx + dz * dz);
-        }
-
-        /// <summary>
-        /// 在 XZ 平面计算：以 basePos 为圆心，向量(base->v1)与(base->v2) 的夹角(0~180)
-        /// 忽略 Y
-        /// </summary>
-        public static float AngleXZ(Vector3 v1, Vector3 v2, Vector3 basePos)
-        {
-            Vector3 a = new Vector3(v1.X - basePos.X, 0, v1.Z - basePos.Z);
-            Vector3 b = new Vector3(v2.X - basePos.X, 0, v2.Z - basePos.Z);
-
-            float dot = Vector3.Dot(a, b);
-            float magA = a.Length();
-            float magB = b.Length();
-
-            if (magA < 1e-6f || magB < 1e-6f)
-                return 0f;
-
-            float cosTheta = dot / (magA * magB);
-            cosTheta = Math.Clamp(cosTheta, -1f, 1f);
-
-            float rad = MathF.Acos(cosTheta);
-            return rad * (180f / MathF.PI);
-        }
-
-        /// <summary>
-        /// 弦长、角度(°)、半径 互算
-        /// chord=null => angle+radius => chord
-        /// angle=null => chord+radius => angle
-        /// radius=null => chord+angle => radius
-        /// </summary>
-        public static (float? value, string desc) ChordAngleRadius(float? chord, float? angleDeg, float? radius)
-        {
-            // 1) angle+radius => chord
-            if (chord == null && angleDeg != null && radius != null)
-            {
-                float angleRad = angleDeg.Value * MathF.PI / 180f;
-                float c = 2f * radius.Value * MathF.Sin(angleRad / 2f);
-                return (c, "弦长");
-            }
-            // 2) chord+radius => angle
-            if (angleDeg == null && chord != null && radius != null)
-            {
-                float x = chord.Value / (2f * radius.Value);
-                x = Math.Clamp(x, -1f, 1f);
-                float aRad = 2f * MathF.Asin(x);
-                float aDeg = aRad * (180f / MathF.PI);
-                return (aDeg, "角度(°)");
-            }
-            // 3) chord+angle => radius
-            if (radius == null && chord != null && angleDeg != null)
-            {
-                float angleRad = angleDeg.Value * MathF.PI / 180f;
-                float denominator = 2f * MathF.Sin(angleRad / 2f);
-                if (Math.Abs(denominator) < 1e-6f)
-                    return (null, "角度过小,无法计算半径");
-                float r = chord.Value / denominator;
-                return (r, "半径");
-            }
-
-            return (null, "请只留一个值为空，其余两个有值");
-        }
-    }
-
-    /// <summary>
-    /// 插件示例：将所有界面内容放入“几何计算”标签页，新开“自动化”标签页（此页示例仅显示提示）
-    /// </summary>
     public class AutoRaidHelper : IAEPlugin
     {
         // 场地中心 / 朝向点
@@ -162,13 +85,11 @@ namespace AutoRaidHelper
         public void OnLoad(AssemblyLoadContext loadContext)
         {
             Svc.DutyState.DutyCompleted += OnDutyCompleted;
-            LogHelper.Print("已订阅副本完成事件");
         }
 
         public void Dispose()
         {
             Svc.DutyState.DutyCompleted -= OnDutyCompleted;
-            LogHelper.Print("已取消订阅副本完成事件");
         }
 
         public void Update()
@@ -182,7 +103,6 @@ namespace AutoRaidHelper
 
         public void OnPluginUI()
         {
-            // 使用 TabBar 分页：一个“几何计算”，一个“自动化”
             if (ImGui.BeginTabBar("MainTabBar"))
             {
                 if (ImGui.BeginTabItem("几何计算"))
@@ -197,18 +117,21 @@ namespace AutoRaidHelper
                     ImGui.EndTabItem();
                 }
 
+                if (ImGui.BeginTabItem("FA全局设置"))
+                {
+                    DrawFAGeneralSettingTab();
+                    ImGui.EndTabItem();
+                }
+                
                 ImGui.EndTabBar();
             }
         }
 
         #endregion
 
-        /// <summary>
-        /// 绘制“几何计算”标签页内容
-        /// </summary>
+
         private void DrawGeometryTab()
         {
-            // 提示信息
             ImGui.TextColored(new Vector4(1f, 0.85f, 0.4f, 1f),
                 "提示: Ctrl 记录点1, Shift 记录点2, Alt 记录点3 (顶点)" +
                 "\n夹角顶点可选“场地中心”或“点3”");
@@ -370,26 +293,13 @@ namespace AutoRaidHelper
 
             ImGui.Checkbox("进本自动倒计时(15s)", ref _enableAutoCountdown);
             ImGui.Checkbox("指定地图ID的副本结束后自动退本(需启用DR <即刻退本> 模块)", ref _enableAutoLeaveDuty);
-
-            // 显示自动倒计时状态
-            string autoCountdownStatus = _enableAutoCountdown ? (_countdownTriggered ? "已触发" : "待触发") : "未启用";
-            ImGui.Text($"自动倒计时状态: {autoCountdownStatus}");
-
-            // 显示副本状态信息
-            bool inMission = Core.Resolve<MemApiDuty>().InMission;
-            bool isBoundByDuty = Core.Resolve<MemApiDuty>().IsBoundByDuty();
-            bool isOver = _dutyCompleted;
-            ImGui.Text($"副本是否正式开始: {inMission}");
-            ImGui.SameLine();
-            ImGui.Text($"是否在副本里: {isBoundByDuty}");
-            ImGui.Text($"副本是否结束: {isOver}");
-
+            
             ImGui.Separator();
 
             //【自动排本设置】
             ImGui.Checkbox("自动排本(需启用DR <任务搜索器指令> 模块)", ref _enableAutoQueue);
             // 检查是否解限
-            ImGui.Checkbox("是否解限", ref _enableUnreset);
+            ImGui.Checkbox("解限", ref _enableUnreset);
             
             ImGui.Text("选择副本:");
 
@@ -410,8 +320,41 @@ namespace AutoRaidHelper
                 ImGui.SetNextItemWidth(150f);
                 ImGui.InputText("自定义副本名称", ref _customDutyName, 50);
             }
+            
+            ImGui.Separator();
+            
+            if (ImGui.CollapsingHeader("自动化Debug"))
+            {
+                string autoCountdownStatus = _enableAutoCountdown ? (_countdownTriggered ? "已触发" : "待触发") : "未启用";
+                bool inMission = Core.Resolve<MemApiDuty>().InMission;
+                bool isBoundByDuty = Core.Resolve<MemApiDuty>().IsBoundByDuty();
+                bool isOver = _dutyCompleted;
+                int pmCount = Svc.Party.Count;
+
+                ImGui.Text($"自动倒计时状态: {autoCountdownStatus}");
+                ImGui.Text($"副本是否正式开始: {inMission}");
+                ImGui.Text($"是否在副本里: {isBoundByDuty}");
+                ImGui.Text($"副本是否结束: {isOver}");
+                ImGui.Text($"小队人数: {pmCount}");
+
+                ImGui.Separator();
+                ImGui.Text("小队成员状态:");
+                foreach (var member in Svc.Party)
+                {
+                    bool isValid = member.GameObject != null && member.GameObject.IsValid();
+                    ImGui.Text($"[{member.Name}] 是否为有效单位: {isValid}");
+                }
+            }
         }
 
+        private void DrawFAGeneralSettingTab()
+        {
+            bool printDebug = FullAutoSettings.PrintDebugInfo;
+            if (ImGui.Checkbox("绘制坐标点并打印Debug信息", ref printDebug))
+            {
+                FullAutoSettings.PrintDebugInfo = printDebug;
+            }
+        }
 
         /// <summary>
         /// 按下Ctrl=点1, Shift=点2, Alt=点3，记录后计算点1-点2距离（仅在XZ平面）
@@ -454,37 +397,40 @@ namespace AutoRaidHelper
             return $"<{p.Value.X:F2}, 0, {p.Value.Z:F2}>";
         }
 
-        private void CheckAutoCountdown()
+        private async void CheckAutoCountdown()
         {
+            // 检查当前地图是否符合要求
             if (Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() != _autoFuncZoneId)
                 return;
 
+            // 检查是否启用自动倒计时
             if (!_enableAutoCountdown)
+                return;
+
+            // 检查是否都可选中
+            if (Svc.Party.Any(member => member.GameObject == null || !member.GameObject.IsTargetable))
                 return;
 
             bool notInCombat = !Core.Me.InCombat();
             bool inMission = Core.Resolve<MemApiDuty>().InMission;
             bool isBoundByDuty = Core.Resolve<MemApiDuty>().IsBoundByDuty();
             bool partyIs8 = Core.Resolve<MemApiDuty>().DutyMembersNumber() == 8;
-
+            
             if (notInCombat && inMission && partyIs8 && !_countdownTriggered)
             {
-                ChatHelper.SendMessage("/countdown 15");
                 _countdownTriggered = true;
-                Task.Run(async () =>
-                {
-                    await Task.Delay(30000);
-                    _countdownTriggered = false;
-                });
+                await Coroutine.Instance.WaitAsync(3000);
+                ChatHelper.SendMessage("/countdown 15");
+                await Coroutine.Instance.WaitAsync(25000);
+                _countdownTriggered = false;
             }
-
-            // 每次检测到战斗重置时重置倒计时标识
+            
             if (!inMission && isBoundByDuty)
             {
                 _countdownTriggered = false;
             }
-
         }
+
 
         private async void CheckAutoLeaveDuty()
         {
@@ -515,15 +461,9 @@ namespace AutoRaidHelper
             if (Core.Resolve<MemApiDuty>().IsBoundByDuty())
                 return;
             
-            var mismatchedMembers = Svc.Party.Where(p => p.Territory.Value.RowId == _autoFuncZoneId).ToList();
-            if (mismatchedMembers.Any())
-            {
-                foreach (var p in mismatchedMembers)
-                {
-                    LogHelper.Print($"[{p.Name}] 还在指定副本内，取消排本");
-                }
+            // 如果队伍中有任意一个成员的 GameObject 为 null 或 IsValid() 为 false，则直接 return
+            if (Svc.Party.Any(member => member.GameObject == null || !member.GameObject.IsValid()))
                 return;
-            }
             
             // 组装副本名称
             // 若下拉框选择“自定义”且自定义名称非空，则用自定义名称
@@ -558,12 +498,15 @@ namespace AutoRaidHelper
         private void ResetDutyCompletedIfNotInDuty()
         {
             // 如果玩家不在副本中，则重置 _dutyCompleted
-            if (!Core.Resolve<MemApiDuty>().IsBoundByDuty())
-            {
-                if (_dutyCompleted)
-                    LogHelper.Print("检测到玩家不在副本内，自动重置_dutyCompleted");
-                _dutyCompleted = false;
-            }
+            if (Core.Resolve<MemApiDuty>().IsBoundByDuty()) 
+                return;
+            
+            if (!_dutyCompleted) 
+                return;
+            
+            LogHelper.Print("检测到玩家不在副本内，自动重置_dutyCompleted");
+            _dutyCompleted = false;
         }
     }
+
 }
