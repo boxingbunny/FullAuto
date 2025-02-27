@@ -36,43 +36,25 @@ public static class Utilities
 
     private static IBattleChara? FindUncoveredTower(List<IBattleChara> towers)
     {
-        foreach (var target in towers)
-        {
-            var isCovered = false;
-            foreach (var source in towers)
-            {
-                if (source == target) continue;
-
-                var vec = target.Position - source.Position;
-                if (vec == Vector3.Zero) continue;
-
-                var dir = Vector2.Normalize(new Vector2(vec.X, vec.Z));
-
-                var forwardDir = new Vector2(
-                    (float)Math.Sin(source.Rotation),
-                    (float)Math.Cos(source.Rotation)
-                );
-                var leftDir = new Vector2(
-                    (float)Math.Sin(source.Rotation + MathF.PI / 2),
-                    (float)Math.Cos(source.Rotation + MathF.PI / 2)
-                );
-                var rightDir = new Vector2(
-                    (float)Math.Sin(source.Rotation - MathF.PI / 2),
-                    (float)Math.Cos(source.Rotation - MathF.PI / 2)
-                );
-
-                if (IsDirectionCovered(dir, forwardDir) ||
-                    IsDirectionCovered(dir, leftDir) ||
-                    IsDirectionCovered(dir, rightDir))
-                {
-                    isCovered = true;
-                    break;
-                }
-            }
-
-            if (!isCovered) return target;
-        }
-        return null;
+        return (from target in towers
+            let isCovered =
+                (from source in towers
+                    where source != target
+                    let vec = target.Position - source.Position
+                    where vec != Vector3.Zero
+                    let dir = Vector2.Normalize(new Vector2(vec.X, vec.Z))
+                    let forwardDir = new Vector2((float)Math.Sin(source.Rotation), (float)Math.Cos(source.Rotation))
+                    let leftDir =
+                        new Vector2((float)Math.Sin(source.Rotation + MathF.PI / 2),
+                            (float)Math.Cos(source.Rotation + MathF.PI / 2))
+                    let rightDir =
+                        new Vector2((float)Math.Sin(source.Rotation - MathF.PI / 2),
+                            (float)Math.Cos(source.Rotation - MathF.PI / 2))
+                    where IsDirectionCovered(dir, forwardDir) || IsDirectionCovered(dir, leftDir) ||
+                          IsDirectionCovered(dir, rightDir)
+                    select dir).Any()
+            where !isCovered
+            select target).FirstOrDefault();
     }
 
     private static bool IsDirectionCovered(Vector2 dir, Vector2 sourceDir, float toleranceDegrees = 22.5f)

@@ -7,7 +7,6 @@ using AEAssist.Helper;
 using AEAssist.MemoryApi;
 using AEAssist.Verify;
 using Dalamud.Game.ClientState.Conditions;
-using Dalamud.Plugin.Services;
 using ECommons.DalamudServices;
 using ImGuiNET;
 
@@ -142,7 +141,7 @@ public class AutoRaidHelper : IAEPlugin
         ImGui.Separator();
 
         // 鼠标坐标显示
-        Vector2 mousePos = ImGui.GetMousePos();
+        var mousePos = ImGui.GetMousePos();
         if (Svc.GameGui.ScreenToWorld(mousePos, out var wPos3D))
         {
             ImGui.Text($"鼠标屏幕坐标: X={mousePos.X:F2}, Y={mousePos.Y:F2}");
@@ -187,7 +186,7 @@ public class AutoRaidHelper : IAEPlugin
             float angleAtApex;
             if (_apexMode == 0)
             {
-                Vector3 apexCenter = _centerPositions[_selectedCenterIndex];
+                var apexCenter = _centerPositions[_selectedCenterIndex];
                 angleAtApex = GeometryUtilsXZ.AngleXZ(_point1World.Value, _point2World.Value, apexCenter);
                 ImGui.Text($"夹角(场地中心): {angleAtApex:F2}°");
             }
@@ -214,9 +213,9 @@ public class AutoRaidHelper : IAEPlugin
         ImGui.SetNextItemWidth(150f);
         if (ImGui.BeginCombo("##CenterCombo", _centerLabels[_selectedCenterIndex]))
         {
-            for (int i = 0; i < _centerLabels.Length; i++)
+            for (var i = 0; i < _centerLabels.Length; i++)
             {
-                bool isSelected = (i == _selectedCenterIndex);
+                var isSelected = i == _selectedCenterIndex;
                 if (ImGui.Selectable(_centerLabels[i], isSelected))
                     _selectedCenterIndex = i;
                 if (isSelected) ImGui.SetItemDefaultFocus();
@@ -230,9 +229,9 @@ public class AutoRaidHelper : IAEPlugin
         ImGui.SetNextItemWidth(150f);
         if (ImGui.BeginCombo("##DirectionCombo", _directionLabels[_selectedDirectionIndex]))
         {
-            for (int i = 0; i < _directionLabels.Length; i++)
+            for (var i = 0; i < _directionLabels.Length; i++)
             {
-                bool isSelected = (i == _selectedDirectionIndex);
+                var isSelected = i == _selectedDirectionIndex;
                 if (ImGui.Selectable(_directionLabels[i], isSelected))
                     _selectedDirectionIndex = i;
                 if (isSelected) ImGui.SetItemDefaultFocus();
@@ -244,14 +243,14 @@ public class AutoRaidHelper : IAEPlugin
         // 计算鼠标->中心距离 & 夹角
         if (Svc.GameGui.ScreenToWorld(mousePos, out var wPos3D2))
         {
-            Vector3 mouseXZ = new Vector3(wPos3D2.X, 0, wPos3D2.Z);
-            Vector3 centerXZ = new Vector3(_centerPositions[_selectedCenterIndex].X, 0,
+            var mouseXZ = wPos3D2 with { Y = 0 };
+            var centerXZ = new Vector3(_centerPositions[_selectedCenterIndex].X, 0,
                 _centerPositions[_selectedCenterIndex].Z);
-            float distMouseCenter = GeometryUtilsXZ.DistanceXZ(mouseXZ, centerXZ);
+            var distMouseCenter = GeometryUtilsXZ.DistanceXZ(mouseXZ, centerXZ);
             ImGui.Text($"鼠标->中心 距离: {distMouseCenter:F2}");
 
-            Vector3 directionXZ = _directionPositions[_selectedDirectionIndex];
-            float angleDeg = GeometryUtilsXZ.AngleXZ(mouseXZ, directionXZ, centerXZ);
+            var directionXZ = _directionPositions[_selectedDirectionIndex];
+            var angleDeg = GeometryUtilsXZ.AngleXZ(mouseXZ, directionXZ, centerXZ);
             ImGui.Text($"夹角: {angleDeg:F2}°");
         }
 
@@ -268,9 +267,9 @@ public class AutoRaidHelper : IAEPlugin
 
         if (ImGui.Button("Compute##chordAngleRadius"))
         {
-            float? chordVal = (MathF.Abs(_chordInput) < 1e-6f) ? null : _chordInput;
-            float? angleVal = (MathF.Abs(_angleInput) < 1e-6f) ? null : _angleInput;
-            float? radiusVal = (MathF.Abs(_radiusInput) < 1e-6f) ? null : _radiusInput;
+            float? chordVal = MathF.Abs(_chordInput) < 1e-6f ? null : _chordInput;
+            float? angleVal = MathF.Abs(_angleInput) < 1e-6f ? null : _angleInput;
+            float? radiusVal = MathF.Abs(_radiusInput) < 1e-6f ? null : _radiusInput;
 
             var (res, desc) = GeometryUtilsXZ.ChordAngleRadius(chordVal, angleVal, radiusVal);
             _chordResultLabel = res.HasValue ? $"{desc}: {res.Value:F2}" : $"错误: {desc}";
@@ -326,13 +325,13 @@ public class AutoRaidHelper : IAEPlugin
 
         if (ImGui.CollapsingHeader("自动化Debug"))
         {
-            string autoCountdownStatus = _enableAutoCountdown ? (_countdownTriggered ? "已触发" : "待触发") : "未启用";
-            bool inCombat = Core.Me.InCombat();
-            bool inCutScene = Svc.Condition[ConditionFlag.OccupiedInCutSceneEvent];
-            bool inMission = Core.Resolve<MemApiDuty>().InMission;
-            bool isBoundByDuty = Core.Resolve<MemApiDuty>().IsBoundByDuty();
-            bool isOver = _dutyCompleted;
-            IPartyList partyList = Svc.Party;
+            var autoCountdownStatus = _enableAutoCountdown ? _countdownTriggered ? "已触发" : "待触发" : "未启用";
+            var inCombat = Core.Me.InCombat();
+            var inCutScene = Svc.Condition[ConditionFlag.OccupiedInCutSceneEvent];
+            var inMission = Core.Resolve<MemApiDuty>().InMission;
+            var isBoundByDuty = Core.Resolve<MemApiDuty>().IsBoundByDuty();
+            var isOver = _dutyCompleted;
+            var partyList = Svc.Party;
 
             ImGui.Text($"自动倒计时状态: {autoCountdownStatus}");
             ImGui.Text($"处于战斗中: {inCombat}");
@@ -346,7 +345,7 @@ public class AutoRaidHelper : IAEPlugin
             ImGui.Text("小队成员状态:");
             foreach (var member in partyList)
             {
-                bool isValid = member.GameObject != null && member.GameObject.IsValid();
+                var isValid = member.GameObject != null && member.GameObject.IsValid();
                 ImGui.Text($"[{member.Name}] 是否为有效单位: {isValid}");
             }
         }
@@ -354,7 +353,7 @@ public class AutoRaidHelper : IAEPlugin
 
     private void DrawFAGeneralSettingTab()
     {
-        bool printDebug = FullAutoSettings.PrintDebugInfo;
+        var printDebug = FullAutoSettings.PrintDebugInfo;
         if (ImGui.Checkbox("绘制坐标点并打印Debug信息", ref printDebug))
         {
             FullAutoSettings.PrintDebugInfo = printDebug;
@@ -366,14 +365,14 @@ public class AutoRaidHelper : IAEPlugin
     /// </summary>
     private void CheckPointRecording()
     {
-        bool ctrl = ImGui.IsKeyPressed(ImGuiKey.LeftCtrl) || ImGui.IsKeyPressed(ImGuiKey.RightCtrl);
-        bool shift = ImGui.IsKeyPressed(ImGuiKey.LeftShift) || ImGui.IsKeyPressed(ImGuiKey.RightShift);
-        bool alt = ImGui.IsKeyPressed(ImGuiKey.LeftAlt) || ImGui.IsKeyPressed(ImGuiKey.RightAlt);
+        var ctrl = ImGui.IsKeyPressed(ImGuiKey.LeftCtrl) || ImGui.IsKeyPressed(ImGuiKey.RightCtrl);
+        var shift = ImGui.IsKeyPressed(ImGuiKey.LeftShift) || ImGui.IsKeyPressed(ImGuiKey.RightShift);
+        var alt = ImGui.IsKeyPressed(ImGuiKey.LeftAlt) || ImGui.IsKeyPressed(ImGuiKey.RightAlt);
 
-        Vector2 mousePos = ImGui.GetMousePos();
+        var mousePos = ImGui.GetMousePos();
         if (Svc.GameGui.ScreenToWorld(mousePos, out var wPos3D))
         {
-            Vector3 pointXZ = new Vector3(wPos3D.X, 0, wPos3D.Z);
+            var pointXZ = wPos3D with { Y = 0 };
 
             if (ctrl)
                 _point1World = pointXZ;
@@ -418,9 +417,9 @@ public class AutoRaidHelper : IAEPlugin
             if (Svc.Party.Any(member => member.GameObject == null || !member.GameObject.IsTargetable))
                 return;
 
-            bool notInCombat = !Core.Me.InCombat();
-            bool inMission = Core.Resolve<MemApiDuty>().InMission;
-            bool partyIs8 = Core.Resolve<MemApiDuty>().DutyMembersNumber() == 8;
+            var notInCombat = !Core.Me.InCombat();
+            var inMission = Core.Resolve<MemApiDuty>().InMission;
+            var partyIs8 = Core.Resolve<MemApiDuty>().DutyMembersNumber() == 8;
 
 
             if (notInCombat && inMission && partyIs8 && !_countdownTriggered)
@@ -447,8 +446,8 @@ public class AutoRaidHelper : IAEPlugin
             if (!_enableAutoLeaveDuty)
                 return;
 
-            bool isBoundByDuty = Core.Resolve<MemApiDuty>().IsBoundByDuty();
-            bool isOver = _dutyCompleted;
+            var isBoundByDuty = Core.Resolve<MemApiDuty>().IsBoundByDuty();
+            var isOver = _dutyCompleted;
 
             // 如果副本已结束并且还在副本内，则发送退本命令
             if (isOver && isBoundByDuty)
@@ -468,7 +467,7 @@ public class AutoRaidHelper : IAEPlugin
         if (!_enableAutoQueue)
             return;
 
-        if ((DateTime.Now - _lastAutoQueueTime) < TimeSpan.FromSeconds(3))
+        if (DateTime.Now - _lastAutoQueueTime < TimeSpan.FromSeconds(3))
             return;
 
         if (Svc.Condition[ConditionFlag.InDutyQueue])
@@ -485,7 +484,7 @@ public class AutoRaidHelper : IAEPlugin
         // 组装副本名称
         // 若下拉框选择“自定义”且自定义名称非空，则用自定义名称
         // 否则用下拉框的预设名称
-        string dutyName = (_selectedDutyName == "自定义" && !string.IsNullOrEmpty(_customDutyName))
+        var dutyName = _selectedDutyName == "自定义" && !string.IsNullOrEmpty(_customDutyName)
             ? _customDutyName
             : _selectedDutyName;
 
