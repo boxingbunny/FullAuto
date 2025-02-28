@@ -67,7 +67,7 @@ public class AutoRaidHelper : IAEPlugin
     private string _selectedDutyName = "欧米茄绝境验证战";
     private string _customDutyName = "";
     private DateTime _lastAutoQueueTime = DateTime.MinValue;
-    private bool _enableUnReset; // 表示是否解限
+    private bool _enableUnrest; // 表示是否解限
 
     // 定义自动排本相关字段
     private int _omegaCompletedCount; // 记录低保数
@@ -122,7 +122,7 @@ public class AutoRaidHelper : IAEPlugin
 
             if (ImGui.BeginTabItem("FA全局设置"))
             {
-                DrawFAGeneralSettingTab();
+                DrawFaGeneralSettingTab();
                 ImGui.EndTabItem();
             }
 
@@ -299,7 +299,7 @@ public class AutoRaidHelper : IAEPlugin
         //【自动排本设置】
         ImGui.Checkbox("自动排本(需启用DR <任务搜索器指令> 模块)", ref _enableAutoQueue);
         // 检查是否解限
-        ImGui.Checkbox("解限", ref _enableUnReset);
+        ImGui.Checkbox("解限", ref _enableUnrest);
 
         ImGui.Text("选择副本:");
 
@@ -351,7 +351,7 @@ public class AutoRaidHelper : IAEPlugin
         }
     }
 
-    private void DrawFAGeneralSettingTab()
+    private void DrawFaGeneralSettingTab()
     {
         var printDebug = FullAutoSettings.PrintDebugInfo;
         if (ImGui.Checkbox("绘制坐标点并打印Debug信息", ref printDebug))
@@ -489,7 +489,7 @@ public class AutoRaidHelper : IAEPlugin
             : _selectedDutyName;
 
         // 如果启用了解限模式，在命令后附加 " unrest"
-        if (_enableUnReset)
+        if (_enableUnrest)
         {
             dutyName += " unrest";
         }
