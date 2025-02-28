@@ -196,28 +196,41 @@ public static class Utilities
         return (float)diffAngleCW;
     }
 
-    public static Vector3 _stageCenter = new(100f, 0f, 100f);
+    private static Vector3 _stageCenter = new(100f, 0f, 100f);
 
-    // 设置场地中心
+    /// <summary>
+    /// 设置场地中心
+    /// </summary>
+    /// <param name="center">新的场地中心坐标</param>
     public static void SetStageCenter(Vector3 center) => _stageCenter = center;
 
-    // 通过旋转角度和距离计算坐标
+    /// <summary>
+    /// 通过旋转角度和距离计算坐标
+    /// </summary>
+    /// <param name="startPoint">起始点坐标</param>
+    /// <param name="degrees">旋转角度（度）</param>
+    /// <param name="clockwise">是否顺时针旋转</param>
+    /// <param name="distance">旋转后沿该方向移动的距离</param>
+    /// <returns>计算得到的新坐标</returns>
     public static Vector3 GetPositionByRotation(Vector3 startPoint, float degrees, bool clockwise, float distance)
     {
         // 计算初始点到场地中心的方向向量
-        var direction = startPoint - _stageCenter;
+        Vector3 direction = startPoint - _stageCenter;
         // 计算旋转方向
-        var radians = MathF.PI * degrees / 180f * (clockwise ? 1 : -1); // 顺时针为正，逆时针为负
+        float radians = MathF.PI * degrees / 180f * (clockwise ? 1 : -1); // 顺时针为正，逆时针为负
+
         // 计算旋转后的方向向量
-        var cos = MathF.Cos(radians);
-        var sin = MathF.Sin(radians);
-        var rotatedDirection = new Vector3(
+        float cos = MathF.Cos(radians);
+        float sin = MathF.Sin(radians);
+        Vector3 rotatedDirection = new Vector3(
             direction.X * cos - direction.Z * sin,
             0,
             direction.X * sin + direction.Z * cos
         );
+
         // 计算最终位置（在旋转后的方向上移动指定距离）
-        var finalPosition = _stageCenter + Vector3.Normalize(rotatedDirection) * distance;
+        Vector3 finalPosition = _stageCenter + Vector3.Normalize(rotatedDirection) * distance;
+
         return finalPosition;
     }
 
@@ -243,22 +256,87 @@ public static class Utilities
         return offsetPosition;
     }
 
-    // 将弧度转换为标准化角度（0-360度）
+    /// <summary>
+    /// 绝欧P3塔排序，判断两塔的顺逆并调整位置，确保塔0到塔1的坐标顺序始终为顺时针。
+    /// </summary>
+    /// <param name="towerPositions">两塔坐标的数组</param>
+    public static void SortTowersClockwise(Vector3[] towerPositions)
+    {
+        Vector3 v0 = towerPositions[0] - _stageCenter;
+        Vector3 v1 = towerPositions[1] - _stageCenter;
+    
+        float crossProduct = v0.X * v1.Z - v0.Z * v1.X;
+    
+        // 如果叉积大于 0，说明两座塔按顺时针排列；否则为逆时针
+        if (crossProduct > 0)
+            return;
+        
+        // 如果是逆时针，则交换两塔的位置
+        (towerPositions[0], towerPositions[1]) = (towerPositions[1], towerPositions[0]);
+    }
+    /// <summary>
+    /// 计算场地中心与目标点之间的角度并归一化。
+    /// </summary>
+    /// <param name="pos">目标点坐标</param>
+    /// <returns>目标点相对于场地中心的角度</returns>
+    public static float CalculateAngleFromCenter(Vector3 pos)
+    {
+        Vector3 diff = pos - _stageCenter;
+        float rad = MathF.Atan2(diff.X, -diff.Z);
+        float angle = (rad * (180f / MathF.PI) + 360f) % 360f;
+        return angle;
+    }
+
+    /// <summary>
+    /// 判断两个地火位置相对于场地中心的刷新方向
+    /// </summary>
+    /// <param name="firePos1">第一个地火的位置</param>
+    /// <param name="firePos2">第二个地火的位置</param>
+    /// <returns>如果刷新方向为顺时针则返回 true，否则返回 false</returns>
+    public static bool IsExaflareClockwise(Vector3 firePos1, Vector3 firePos2)
+    {
+        float angle1 = CalculateAngleFromCenter(firePos1);
+        float angle2 = CalculateAngleFromCenter(firePos2);
+
+        // 计算从第一个地火到第二个地火的顺时针角度差
+        float diffCW = (angle2 - angle1 + 360f) % 360f;
+        // 计算逆时针角度差
+        float diffCCW = (angle1 - angle2 + 360f) % 360f;
+
+        return diffCW < diffCCW;
+    }
+
+    
+    /// <summary>
+    /// 将弧度转换为标准化角度（0-360度）
+    /// </summary>
+    /// <param name="radians">输入的弧度值</param>
+    /// <returns>转换后的角度，范围为0到360度</returns>
     public static float RadiansToNormalizedDegrees(float radians)
     {
         var degrees = radians * (180f / MathF.PI);
         return (degrees % 360 + 360) % 360; // 确保结果在0-360之间
     }
 
+    /// <summary>
+    /// 弧度转换为标准化角度（0-360度）的扩展方法
+    /// </summary>
+    /// <param name="radians">输入的弧度值</param>
+    /// <returns>转换后的角度，范围为0到360度</returns>
     public static float RadToNormalizedDeg(this float radians) => RadiansToNormalizedDegrees(radians);
 
+    /// <summary>
+    /// 根据角色名称传送到指定位置，并记录调试信息
+    /// </summary>
+    /// <param name="name">角色名称或职能</param>
+    /// <param name="pos">目标位置坐标</param>
+    /// <param name="dev">调试信息或调用描述</param>
     public static void TPbyRole(string name, Vector3 pos, string dev)
     {
         try
         {
             var role = new HashSet<string> { "D1", "D2", "D3", "D4", "H1", "H2", "MT", "ST" };
-            RemoteControlHelper.SetPos(!role.Contains(name) ? RemoteControlHelper.GetRoleByPlayerName(name) : name,
-                pos);
+            RemoteControlHelper.SetPos(!role.Contains(name) ? RemoteControlHelper.GetRoleByPlayerName(name) : name, pos);
             if (!FullAutoSettings.PrintDebugInfo) return;
             LogHelper.Print($"{dev}: {name} 移动至 {pos}");
             Share.TrustDebugPoint.Add(pos);
@@ -269,6 +347,34 @@ public static class Utilities
         }
     }
 
+    /// <summary>
+    /// 锁定指定角色到给定位置，并记录调试信息
+    /// </summary>
+    /// <param name="name">角色名称或职能</param>
+    /// <param name="pos">目标位置坐标</param>
+    /// <param name="duration">锁定持续时间（毫秒）</param>
+    /// <param name="dev">调试信息或调用描述</param>
+    public static void LockbyRole(string name, Vector3 pos, int duration, string dev)
+    {
+        try
+        {
+            name = RemoteControlHelper.GetRoleByPlayerName(name);
+            RemoteControlHelper.LockPos(name, pos, duration);
+            LogHelper.Print($"{dev}: {name} 锁定在 {pos} {duration}ms");
+            Share.TrustDebugPoint.Add(pos);
+        }
+        catch (Exception ex)
+        {
+            LogHelper.PrintError($"锁定到位置失败 ({dev}): {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 调整角色面向，使其同时背向指定目标点，并通过传送实现旋转效果
+    /// </summary>
+    /// <param name="name">角色名称或职能</param>
+    /// <param name="rot">目标旋转角度（弧度）</param>
+    /// <param name="targetPos">目标位置坐标</param>
     public static async void SetRotbyRole(string name, float rot, Vector3 targetPos)
     {
         try
@@ -291,6 +397,11 @@ public static class Utilities
         }
     }
 
+    /// <summary>
+    /// 将角度归一化到 [-π, +π] 范围内
+    /// </summary>
+    /// <param name="rotation">原始角度（弧度）</param>
+    /// <returns>归一化后的角度（弧度）</returns>
     public static float NormalizeRotation(float rotation)
     {
         while (rotation > MathF.PI)
