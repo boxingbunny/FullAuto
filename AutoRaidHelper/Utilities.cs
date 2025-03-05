@@ -196,6 +196,25 @@ public static class Utilities
         return (float)diffAngleCW;
     }
 
+    /// <summary>
+    /// 输入坐标，获取逻辑方位（斜分割以正上为0，正分割以右上为0，顺时针增加）
+    /// </summary>
+    /// <param name="point">坐标点</param>
+    /// <param name="center">中心点</param>
+    /// <param name="dirs">方位总数</param>
+    /// <param name="diagDivision">斜分割，默认true</param>
+    /// <returns>该坐标点对应的逻辑方位</returns>
+    public static int Position2Dirs(this Vector3 point, Vector3 center, int dirs, bool diagDivision = true)
+    {
+        double dirsDouble = dirs;
+        var r = diagDivision
+            ? Math.Round(dirsDouble / 2 -
+                         dirsDouble / 2 * Math.Atan2(point.X - center.X, point.Z - center.Z) / Math.PI) % dirsDouble
+            : Math.Floor(dirsDouble / 2 -
+                         dirsDouble / 2 * Math.Atan2(point.X - center.X, point.Z - center.Z) / Math.PI) % dirsDouble;
+        return (int)r;
+    }
+
     private static Vector3 _stageCenter = new(100f, 0f, 100f);
 
     /// <summary>
@@ -264,16 +283,17 @@ public static class Utilities
     {
         Vector3 v0 = towerPositions[0] - _stageCenter;
         Vector3 v1 = towerPositions[1] - _stageCenter;
-    
+
         float crossProduct = v0.X * v1.Z - v0.Z * v1.X;
-    
+
         // 如果叉积大于 0，说明两座塔按顺时针排列；否则为逆时针
         if (crossProduct > 0)
             return;
-        
+
         // 如果是逆时针，则交换两塔的位置
         (towerPositions[0], towerPositions[1]) = (towerPositions[1], towerPositions[0]);
     }
+
     /// <summary>
     /// 计算场地中心与目标点之间的角度并归一化。
     /// </summary>
@@ -306,7 +326,7 @@ public static class Utilities
         return diffCW < diffCCW;
     }
 
-    
+
     /// <summary>
     /// 将弧度转换为标准化角度（0-360度）
     /// </summary>
@@ -336,7 +356,8 @@ public static class Utilities
         try
         {
             var role = new HashSet<string> { "D1", "D2", "D3", "D4", "H1", "H2", "MT", "ST" };
-            RemoteControlHelper.SetPos(!role.Contains(name) ? RemoteControlHelper.GetRoleByPlayerName(name) : name, pos);
+            RemoteControlHelper.SetPos(!role.Contains(name) ? RemoteControlHelper.GetRoleByPlayerName(name) : name,
+                pos);
             if (!FullAutoSettings.PrintDebugInfo) return;
             LogHelper.Print($"{dev}: {name} 移动至 {pos}");
             Share.TrustDebugPoint.Add(pos);
