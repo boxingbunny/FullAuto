@@ -9,13 +9,8 @@ using Dalamud.Game.ClientState.Conditions;
 using ECommons.DalamudServices;
 using ImGuiNET;
 using System.Numerics;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Loader;
-using System.Text;
-using System.Threading.Tasks;
 using AEAssist.CombatRoutine.Trigger;
-using ECommons.Automation;
 
 namespace AutoRaidHelper
 {
@@ -364,6 +359,10 @@ namespace AutoRaidHelper
 
             ImGui.Checkbox("进本自动倒计时(15s)", ref _enableAutoCountdown);
             ImGui.Checkbox("指定地图ID的副本结束后自动退本(需启用DR <即刻退本> 模块)", ref _enableAutoLeaveDuty);
+            if (ImGui.Button("遥控全队即刻退本"))
+            {
+                RemoteControlHelper.Cmd("", "/pdr leaveduty");
+            }
 
             ImGui.Separator();
 
@@ -381,6 +380,8 @@ namespace AutoRaidHelper
                     _selectedDutyName = "欧米茄绝境验证战";
                 if (ImGui.Selectable("幻想龙诗绝境战", _selectedDutyName == "幻想龙诗绝境战"))
                     _selectedDutyName = "幻想龙诗绝境战";
+                if (ImGui.Selectable("光暗未来绝境战", _selectedDutyName == "光暗未来绝境战"))
+                    _selectedDutyName = "光暗未来绝境战";
                 if (ImGui.Selectable("自定义", _selectedDutyName == "自定义"))
                     _selectedDutyName = "自定义";
                 ImGui.EndCombo();

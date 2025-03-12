@@ -379,7 +379,8 @@ public static class Utilities
     {
         try
         {
-            name = RemoteControlHelper.GetRoleByPlayerName(name);
+            var role = new HashSet<string> { "D1", "D2", "D3", "D4", "H1", "H2", "MT", "ST" };
+            RemoteControlHelper.LockPos(!role.Contains(name) ? RemoteControlHelper.GetRoleByPlayerName(name) : name, pos, duration);
             RemoteControlHelper.LockPos(name, pos, duration);
             LogHelper.Print($"{dev}: {name} 锁定在 {pos} {duration}ms");
             Share.TrustDebugPoint.Add(pos);
