@@ -24,7 +24,7 @@ namespace AutoRaidHelper
         private readonly Vector3[] _centerPositions =
         [
             new(0, 0, 0),
-        new(100, 0, 100)
+            new(100, 0, 100)
         ];
 
         private readonly string[] _directionLabels = ["东(101,0,100)", "西(99,0,100)", "南(100,0,101)", "北(100,0,99)"];
@@ -32,9 +32,9 @@ namespace AutoRaidHelper
         private readonly Vector3[] _directionPositions =
         [
             new(101, 0, 100),
-        new(99, 0, 100),
-        new(100, 0, 101),
-        new(100, 0, 99)
+            new(99, 0, 100),
+            new(100, 0, 101),
+            new(100, 0, 99)
         ];
 
         // 默认选择“新(100,0,100)” & “北(100,0,99)”
@@ -77,21 +77,21 @@ namespace AutoRaidHelper
         private int _omegaCompletedCount; // 记录低保数
 
         //详细打印相关开关
-        public bool EnemyCastSpellCondParams = false;
+        public bool EnemyCastSpellCondParams;
         public bool EnemyCastSpellCondParams_EnemyOnly = false;
-        public bool OnMapEffectCreateEvent = false;
-        public bool TetherCondParams = false;
+        public bool OnMapEffectCreateEvent;
+        public bool TetherCondParams;
 
-        public bool TargetIconEffectCondParams = false;
-        public bool UnitCreateCondParams = false;
-        public bool UnitDeleteCondParams = false;
-        public bool AddStatusCondParams = false;
-        public bool RemoveStatusCondParams = false;
+        public bool TargetIconEffectCondParams;
+        public bool UnitCreateCondParams;
+        public bool UnitDeleteCondParams;
+        public bool AddStatusCondParams;
+        public bool RemoveStatusCondParams;
 
-        public bool ReceviceAbilityEffectCondParams = false;
-        public bool GameLogCondParams = false;
-        public bool WeatherChangedCondParams = false;
-        public bool ActorControlCondParams = false;
+        public bool ReceiveAbilityEffectCondParams;
+        public bool GameLogCondParams;
+        public bool WeatherChangedCondParams;
+        public bool ActorControlCondParams;
 
         #region IAEPlugin Implementation
 
@@ -164,40 +164,40 @@ namespace AutoRaidHelper
         public void OnCondParamsCreateEvent(ITriggerCondParams condParams)
         {
             if (condParams is EnemyCastSpellCondParams spell && EnemyCastSpellCondParams)
-                LogHelper.Print($"{spell.ToString()}");
+                LogHelper.Print($"{spell}");
 
             if (condParams is OnMapEffectCreateEvent MapEffect && OnMapEffectCreateEvent)
-                LogHelper.Print($"{MapEffect.ToString()}");
+                LogHelper.Print($"{MapEffect}");
 
             if (condParams is TetherCondParams Tether && TetherCondParams)
-                LogHelper.Print($"{Tether.ToString()}");
+                LogHelper.Print($"{Tether}");
 
             if (condParams is TargetIconEffectCondParams IconEffect && TargetIconEffectCondParams)
-                LogHelper.Print($"{IconEffect.ToString()}");
+                LogHelper.Print($"{IconEffect}");
 
             if (condParams is UnitCreateCondParams UnitCreate && UnitCreateCondParams)
-                LogHelper.Print($"{UnitCreate.ToString()}");
+                LogHelper.Print($"{UnitCreate}");
 
             if (condParams is UnitDeleteCondParams UnitDelete && UnitDeleteCondParams)
-                LogHelper.Print($"{UnitDelete.ToString()}");
+                LogHelper.Print($"{UnitDelete}");
 
             if (condParams is AddStatusCondParams AddStatus && AddStatusCondParams)
-                LogHelper.Print($"{AddStatus.ToString()}");
+                LogHelper.Print($"{AddStatus}");
 
             if (condParams is RemoveStatusCondParams RemoveStatus && RemoveStatusCondParams)
-                LogHelper.Print($"{RemoveStatus.ToString()}");
+                LogHelper.Print($"{RemoveStatus}");
 
-            if (condParams is ReceviceAbilityEffectCondParams AbilityEffect && ReceviceAbilityEffectCondParams)
-                LogHelper.Print($"{AbilityEffect.ToString()}");
+            if (condParams is ReceviceAbilityEffectCondParams AbilityEffect && ReceiveAbilityEffectCondParams)
+                LogHelper.Print($"{AbilityEffect}");
 
             if (condParams is GameLogCondParams GameLog && GameLogCondParams)
-                LogHelper.Print($"{GameLog.ToString()}");
+                LogHelper.Print($"{GameLog}");
 
             if (condParams is WeatherChangedCondParams WeatherChanged && WeatherChangedCondParams)
-                LogHelper.Print($"{WeatherChanged.ToString()}");
+                LogHelper.Print($"{WeatherChanged}");
 
             if (condParams is ActorControlCondParams ActorControl && ActorControlCondParams)
-                LogHelper.Print($"{ActorControl.ToString()}");
+                LogHelper.Print($"{ActorControl}");
         }
 
 
@@ -476,7 +476,7 @@ namespace AutoRaidHelper
             ImGui.SameLine();
             ImGui.Checkbox("删除Buff", ref RemoveStatusCondParams);
 
-            ImGui.Checkbox("效果事件", ref ReceviceAbilityEffectCondParams);
+            ImGui.Checkbox("效果事件", ref ReceiveAbilityEffectCondParams);
             ImGui.SameLine();
             ImGui.Checkbox("游戏日志", ref GameLogCondParams);
             ImGui.SameLine();
