@@ -432,4 +432,20 @@ public static class Utilities
             rotation += 2f * MathF.PI;
         return rotation;
     }
+
+    private static Vector3 ExtendLine(Vector3 Center, Vector3 Direction, float distance)
+    {
+        var dx = Direction.X - Center.X;
+        var dz = Direction.Z - Center.Z;
+
+        var length = MathF.Sqrt(dx * dx + dz * dz);
+
+        var ux = dx / length;
+        var uz = dz / length;
+
+        var px = Direction.X + distance * ux;
+        var pz = Direction.Z + distance * uz;
+
+        return new Vector3(px, Direction.Y, pz);
+    }
 }
