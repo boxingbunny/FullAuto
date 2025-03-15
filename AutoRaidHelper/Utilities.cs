@@ -433,7 +433,7 @@ public static class Utilities
         return rotation;
     }
 
-    private static Vector3 ExtendLine(Vector3 Center, Vector3 Direction, float distance)
+    public static Vector3 ExtendLine(Vector3 Center, Vector3 Direction, float distance)
     {
         var dx = Direction.X - Center.X;
         var dz = Direction.Z - Center.Z;
