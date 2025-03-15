@@ -11,6 +11,8 @@ using ImGuiNET;
 using System.Numerics;
 using System.Runtime.Loader;
 using AEAssist.CombatRoutine.Trigger;
+using Dalamud.Game.ClientState.Objects.Types;
+using ECommons.GameFunctions;
 
 namespace AutoRaidHelper
 {
@@ -359,9 +361,33 @@ namespace AutoRaidHelper
 
             ImGui.Checkbox("进本自动倒计时(15s)", ref _enableAutoCountdown);
             ImGui.Checkbox("指定地图ID的副本结束后自动退本(需启用DR <即刻退本> 模块)", ref _enableAutoLeaveDuty);
-            if (ImGui.Button("遥控全队即刻退本"))
+            
+            //【按钮类】
+            ImGui.Separator();
+            ImGui.Text("遥控全队按钮:");
+            
+            if (ImGui.Button("即刻退本"))
             {
-                RemoteControlHelper.Cmd("", "/pdr leaveduty");
+                if (Core.Resolve<MemApiDuty>().InMission)
+                {
+                    RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
+                    RemoteControlHelper.Cmd("", "/pdr leaveduty");
+                }
+            }
+            ImGui.SameLine();
+            if (ImGui.Button("TP撞电网"))
+            {
+                if (Core.Resolve<MemApiDuty>().InMission) 
+                    RemoteControlHelper.SetPos("", new Vector3(100, 0, 125));
+            }
+            ImGui.Text("Debug用按钮:");
+            if (ImGui.Button("打印可选中敌对单位信息"))
+            {
+                var enemies = Svc.Objects.OfType<IBattleNpc>().Where(x => x.IsTargetable);
+                foreach (var enemy in enemies)
+                {
+                    LogHelper.Print($"敌对单位: {enemy.Name} (EntityIdID: {enemy.EntityId}, DataId: {enemy.DataId}), 位置: {enemy.Position}");
+                }
             }
 
             ImGui.Separator();
