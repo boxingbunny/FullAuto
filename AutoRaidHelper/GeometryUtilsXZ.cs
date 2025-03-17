@@ -76,4 +76,56 @@ public static class GeometryUtilsXZ
 
         return (null, "请只留一个值为空，其余两个有值");
     }
+    
+    /// <summary>
+    /// 计算给定点相对于一个参考方向的偏移量。
+    /// 该参考方向由“场地中心”到“顶点”（apexPos）确定，
+    /// 即将场地中心 (stageCenter) 到 apexPos 的向量作为前进方向，并以其顺时针旋转 90° 得到右侧方向。
+    /// 返回的 offsetZ 表示点在前进方向上的分量（正值表示点离场地中心沿参考方向的距离），
+    /// offsetX 表示点在右侧方向上的分量（正值表示点在右侧的偏移）。
+    /// </summary>
+    /// <param name="point">需要计算偏移的目标点</param>
+    /// <param name="apexPos">作为参考的顶点位置，通常为用户通过 Alt 键记录的点</param>
+    /// <param name="stageCenter">场地中心坐标，作为计算偏移的基准点</param>
+    /// <returns>一个元组，其中 offsetX 为右侧偏移，offsetZ 为前进偏移</returns>
+    public static (float offsetX, float offsetZ) CalculateOffsetFromReference(Vector3 point, Vector3 apexPos, Vector3 stageCenter)
+    {
+        // 1) 计算前进方向：从场地中心指向顶点
+        //    这里 dir 表示场地中心到 apexPos 的向量（忽略 Y 轴）
+        Vector3 dir = apexPos - stageCenter;
+        dir.Y = 0;
+
+        // 如果场地中心与顶点几乎重合（向量长度非常小），则无法确定参考方向，
+        // 此时直接使用 point 与 apexPos 的差作为偏移（退化处理）
+        if (dir.LengthSquared() < 1e-6f)
+        {
+            float fallbackX = point.X - apexPos.X;
+            float fallbackZ = point.Z - apexPos.Z;
+            return (fallbackX, fallbackZ);
+        }
+
+        // 归一化前进方向向量，使其长度为 1，
+        // 这样后续计算偏移时，投影得到的分量直接代表在该方向上的距离
+        dir = Vector3.Normalize(dir);
+
+        // 2) 计算右侧方向：将前进方向顺时针旋转 90° 得到
+        //    右侧方向用于计算点在参考方向正交方向上的偏移
+        Vector3 perpendicular = new Vector3(-dir.Z, 0, dir.X);
+
+        // 3) 计算目标点相对于场地中心的差向量（忽略 Y 轴）
+        //    diff 表示从场地中心到目标点的向量
+        Vector3 diff = point - stageCenter;
+        diff.Y = 0;
+
+        // 4) 将差向量分别投影到前进方向和右侧方向上
+        //    使用点积计算分量：
+        //    offsetZ：在前进方向上的分量
+        //    offsetX：在右侧方向上的分量
+        float offsetZ = Vector3.Dot(diff, dir);
+        float offsetX = Vector3.Dot(diff, perpendicular);
+
+        return (offsetX, offsetZ);
+    }
+
+
 }

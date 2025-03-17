@@ -204,50 +204,52 @@ namespace AutoRaidHelper
         private void DrawGeometryTab()
         {
             ImGui.TextColored(new Vector4(1f, 0.85f, 0.4f, 1f),
-                "提示: Ctrl 记录点1, Shift 记录点2, Alt 记录点3 (顶点)" +
-                "\n夹角顶点可选“场地中心”或“点3”");
+                "提示: Ctrl 记录点1, Shift 记录点2, Alt 记录点3 (顶点)\n夹角顶点可选“场地中心”或“点3”");
             ImGui.Separator();
+            ImGui.Spacing();
 
-            // 鼠标坐标显示
+            // ===== 鼠标实时坐标信息 =====
             var mousePos = ImGui.GetMousePos();
             if (Svc.GameGui.ScreenToWorld(mousePos, out var wPos3D))
             {
-                ImGui.Text($"鼠标屏幕坐标: X={mousePos.X:F2}, Y={mousePos.Y:F2}");
-                ImGui.Text($"鼠标世界(3D): X={wPos3D.X:F2}, Y={wPos3D.Y:F2}, Z={wPos3D.Z:F2}");
+                ImGui.Text($"鼠标屏幕: <{mousePos.X:F2}, {mousePos.Y:F2}> \n鼠标世界: <{wPos3D.X:F2}, {wPos3D.Z:F2}>");
+
+                // 计算鼠标 → 场地中心的距离和角度
+                float distMouseCenter = GeometryUtilsXZ.DistanceXZ(wPos3D, _centerPositions[_selectedCenterIndex]);
+                float angleMouseCenter = GeometryUtilsXZ.AngleXZ(_directionPositions[_selectedDirectionIndex], wPos3D, _centerPositions[_selectedCenterIndex]);
+
+                ImGui.TextColored(new Vector4(0.2f, 1f, 0.2f, 1f), $"鼠标 -> 场地中心: 距离 {distMouseCenter:F2}, 角度 {angleMouseCenter:F2}°");
             }
             else
             {
                 ImGui.Text("鼠标不在游戏窗口内");
             }
 
+            ImGui.Spacing();
             ImGui.Separator();
+            ImGui.Spacing();
 
-            // 显示是否添加 Debug 点的复选框
+            // ===== Debug点记录 & 清理 =====
             ImGui.Checkbox("添加Debug点", ref _addDebugPoints);
-
-            // 添加一个按钮用于清理 Debug 点
             ImGui.SameLine();
-            if (ImGui.Button("清理Debug点"))
-                Share.TrustDebugPoint.Clear();
+            if (ImGui.Button("清理Debug点")) Share.TrustDebugPoint.Clear();
 
-            // 显示记录的点 (保留2位小数)
-            ImGui.Text($"点1: {FormatPointXZ(_point1World)}");
-            ImGui.Text($"点2: {FormatPointXZ(_point2World)}");
-            ImGui.Text($"点3(顶点): {FormatPointXZ(_point3World)}");
+            ImGui.Spacing();
 
-            // 如果点1和点2存在，显示距离及夹角（夹角顶点可选）
+            // ===== 记录的点 & 距离信息 =====
+            ImGui.Text($"点1: {FormatPointXZ(_point1World)}   \n点2: {FormatPointXZ(_point2World)}   \n点3: {FormatPointXZ(_point3World)}");
+
             if (_point1World.HasValue && _point2World.HasValue)
             {
-                ImGui.Text($"点1-点2 距离: {_twoPointDistanceXZ:F2}");
+                ImGui.TextColored(new Vector4(0.2f, 1f, 0.2f, 1f), $"点1 -> 点2: 距离 {_twoPointDistanceXZ:F2}");
+
                 ImGui.Text("夹角顶点:");
                 ImGui.SameLine();
                 ImGui.SetNextItemWidth(120f);
                 if (ImGui.BeginCombo("##ApexMode", _apexMode == 0 ? "场地中心" : "点3(Alt)"))
                 {
-                    if (ImGui.Selectable("场地中心", _apexMode == 0))
-                        _apexMode = 0;
-                    if (ImGui.Selectable("点3(Alt)", _apexMode == 1))
-                        _apexMode = 1;
+                    if (ImGui.Selectable("场地中心", _apexMode == 0)) _apexMode = 0;
+                    if (ImGui.Selectable("点3(Alt)", _apexMode == 1)) _apexMode = 1;
                     ImGui.EndCombo();
                 }
 
@@ -256,26 +258,32 @@ namespace AutoRaidHelper
                 {
                     var apexCenter = _centerPositions[_selectedCenterIndex];
                     angleAtApex = GeometryUtilsXZ.AngleXZ(_point1World.Value, _point2World.Value, apexCenter);
-                    ImGui.Text($"夹角(场地中心): {angleAtApex:F2}°");
+                    ImGui.TextColored(new Vector4(0.2f, 1f, 0.2f, 1f), $"夹角(场地中心): {angleAtApex:F2}°");
+                }
+                else if (_point3World.HasValue)
+                {
+                    angleAtApex = GeometryUtilsXZ.AngleXZ(_point1World.Value, _point2World.Value, _point3World.Value);
+                    ImGui.TextColored(new Vector4(0.2f, 1f, 0.2f, 1f), $"夹角(点3): {angleAtApex:F2}°");
+
+                    var (offsetX1, offsetZ1) = GeometryUtilsXZ.CalculateOffsetFromReference(
+                        _point1World.Value, _point3World.Value, _centerPositions[_selectedCenterIndex]);
+                    var (offsetX2, offsetZ2) = GeometryUtilsXZ.CalculateOffsetFromReference(
+                        _point2World.Value, _point3World.Value, _centerPositions[_selectedCenterIndex]);
+
+                    ImGui.Text("在场地中心到点3线上的偏移:");
+                    ImGui.TextColored(new Vector4(0.2f, 1f, 0.2f, 1f), $"点1: X={offsetX1:F2}, Z={offsetZ1:F2}   点2: X={offsetX2:F2}, Z={offsetZ2:F2}");
                 }
                 else
                 {
-                    if (_point3World.HasValue)
-                    {
-                        angleAtApex =
-                            GeometryUtilsXZ.AngleXZ(_point1World.Value, _point2World.Value, _point3World.Value);
-                        ImGui.Text($"夹角(点3): {angleAtApex:F2}°");
-                    }
-                    else
-                    {
-                        ImGui.TextColored(new Vector4(1f, 0.2f, 0.2f, 1f), "点3未记录，无法计算夹角");
-                    }
+                    ImGui.TextColored(new Vector4(1f, 0.2f, 0.2f, 1f), "点3未记录，无法计算夹角");
                 }
             }
 
+            ImGui.Spacing();
             ImGui.Separator();
+            ImGui.Spacing();
 
-            // 场地中心 & 朝向点选择
+            // ===== 场地中心 & 朝向点选择 =====
             ImGui.Text("场地中心:");
             ImGui.SameLine();
             ImGui.SetNextItemWidth(150f);
@@ -283,12 +291,8 @@ namespace AutoRaidHelper
             {
                 for (var i = 0; i < _centerLabels.Length; i++)
                 {
-                    var isSelected = i == _selectedCenterIndex;
-                    if (ImGui.Selectable(_centerLabels[i], isSelected))
-                        _selectedCenterIndex = i;
-                    if (isSelected) ImGui.SetItemDefaultFocus();
+                    if (ImGui.Selectable(_centerLabels[i], i == _selectedCenterIndex)) _selectedCenterIndex = i;
                 }
-
                 ImGui.EndCombo();
             }
 
@@ -299,33 +303,17 @@ namespace AutoRaidHelper
             {
                 for (var i = 0; i < _directionLabels.Length; i++)
                 {
-                    var isSelected = i == _selectedDirectionIndex;
-                    if (ImGui.Selectable(_directionLabels[i], isSelected))
-                        _selectedDirectionIndex = i;
-                    if (isSelected) ImGui.SetItemDefaultFocus();
+                    if (ImGui.Selectable(_directionLabels[i], i == _selectedDirectionIndex)) _selectedDirectionIndex = i;
                 }
-
                 ImGui.EndCombo();
             }
 
-            // 计算鼠标->中心距离 & 夹角
-            if (Svc.GameGui.ScreenToWorld(mousePos, out var wPos3D2))
-            {
-                var mouseXZ = wPos3D2 with { Y = 0 };
-                var centerXZ = new Vector3(_centerPositions[_selectedCenterIndex].X, 0,
-                    _centerPositions[_selectedCenterIndex].Z);
-                var distMouseCenter = GeometryUtilsXZ.DistanceXZ(mouseXZ, centerXZ);
-                ImGui.Text($"鼠标->中心 距离: {distMouseCenter:F2}");
-
-                var directionXZ = _directionPositions[_selectedDirectionIndex];
-                var angleDeg = GeometryUtilsXZ.AngleXZ(mouseXZ, directionXZ, centerXZ);
-                ImGui.Text($"夹角: {angleDeg:F2}°");
-            }
-
+            ImGui.Spacing();
             ImGui.Separator();
+            ImGui.Spacing();
 
-            // 弦长 / 角度 / 半径互算
-            ImGui.Text("弦长 / 角度(°) / 半径 (输入两个):");
+            // ===== 弦长 / 角度(°) / 半径互算 =====
+            ImGui.Text("弦长 / 角度(°) / 半径 (输入其中两个):");
             ImGui.SetNextItemWidth(100f);
             ImGui.InputFloat("弦长##chord", ref _chordInput);
             ImGui.SetNextItemWidth(100f);
@@ -333,7 +321,7 @@ namespace AutoRaidHelper
             ImGui.SetNextItemWidth(100f);
             ImGui.InputFloat("半径##radius", ref _radiusInput);
 
-            if (ImGui.Button("Compute##chordAngleRadius"))
+            if (ImGui.Button("计算##chordAngleRadius"))
             {
                 float? chordVal = MathF.Abs(_chordInput) < 1e-6f ? null : _chordInput;
                 float? angleVal = MathF.Abs(_angleInput) < 1e-6f ? null : _angleInput;
@@ -342,10 +330,10 @@ namespace AutoRaidHelper
                 var (res, desc) = GeometryUtilsXZ.ChordAngleRadius(chordVal, angleVal, radiusVal);
                 _chordResultLabel = res.HasValue ? $"{desc}: {res.Value:F2}" : $"错误: {desc}";
             }
-
             ImGui.SameLine();
-            ImGui.Text(_chordResultLabel);
+            ImGui.TextColored(new Vector4(0.2f, 1f, 0.2f, 1f), _chordResultLabel);
         }
+
 
 
         private void DrawAutomationTab()
