@@ -15,26 +15,26 @@
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <OutputPath>..\..\..\AE\Plugins\AutoRaidHelper\</OutputPath>
+        <OutputPath>E:\AE3.0\Plugins\AutoRaidHelper</OutputPath>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-        <OutputPath>..\..\..\AE\Plugins\AutoRaidHelper</OutputPath>
+        <OutputPath>E:\AE3.0\Plugins\AutoRaidHelper</OutputPath>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <ItemGroup>
         <Reference Include="AEAssist">
-            <HintPath>$(AELibPath)AEAssist.dll</HintPath>
-            <Private>False</Private>
+          <HintPath>..\..\..\AE3.0\AEAssistCNVersion\AEAssist\AEAssist.dll</HintPath>
+          <Private>False</Private>
         </Reference>
         <Reference Include="Dalamud">
             <HintPath>$(DalamudLibPath)Dalamud.dll</HintPath>
             <Private>False</Private>
         </Reference>
         <Reference Include="ECommons">
-            <HintPath>$(AELibPath)ECommons.dll</HintPath>
-            <Private>False</Private>
+          <HintPath>..\..\..\AE3.0\AEAssistCNVersion\AEAssist\ECommons.dll</HintPath>
+          <Private>False</Private>
         </Reference>
         <Reference Include="FFXIVClientStructs">
             <HintPath>$(DalamudLibPath)FFXIVClientStructs.dll</HintPath>
