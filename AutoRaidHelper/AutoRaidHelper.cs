@@ -212,7 +212,7 @@ namespace AutoRaidHelper
             var mousePos = ImGui.GetMousePos();
             if (Svc.GameGui.ScreenToWorld(mousePos, out var wPos3D))
             {
-                ImGui.Text($"鼠标屏幕: <{mousePos.X:F2}, {mousePos.Y:F2}> \n鼠标世界: <{wPos3D.X:F2}, {wPos3D.Z:F2}>");
+                ImGui.Text($"鼠标屏幕: <{mousePos.X:F2}, {mousePos.Y:F2}>\n鼠标世界: <{wPos3D.X:F2}, {wPos3D.Z:F2}>");
 
                 // 计算鼠标 → 场地中心的距离和角度
                 float distMouseCenter = GeometryUtilsXZ.DistanceXZ(wPos3D, _centerPositions[_selectedCenterIndex]);
