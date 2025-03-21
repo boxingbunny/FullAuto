@@ -432,7 +432,43 @@ public static class Utilities
             rotation += 2f * MathF.PI;
         return rotation;
     }
+    
+    /// <summary>
+    /// 计算两条无限直线的交点。
+    /// 每条直线由一个经过的点和一个方向角（以度为单位）定义。
+    /// 如果两直线平行，则返回 null。
+    /// </summary>
+    /// <param name="a">直线1经过的点（二维坐标）</param>
+    /// <param name="angle1">直线1的方向角（度），角度基准通常为水平轴或其他约定角度</param>
+    /// <param name="b">直线2经过的点（二维坐标）</param>
+    /// <param name="angle2">直线2的方向角（度）</param>
+    /// <returns>
+    /// 返回两直线的交点（Vector2）。如果两直线平行（即斜率相等），则返回 null。
+    /// </returns>
+    private static Vector2? GetIntersectionPoint(Vector2 a, float angle1, Vector2 b, float angle2)
+    {
+        double x1 = a.X, y1 = a.Y;
+        double x2 = b.X, y2 = b.Y;
 
+        // 将角度从度转换为弧度后，计算直线的斜率 m = tan(θ)
+        double m1 = Math.Tan(angle1 * Math.PI / 180.0);
+        double m2 = Math.Tan(angle2 * Math.PI / 180.0);
+
+        // 根据直线方程 y = m*x + c，计算截距 b1 和 b2，其中 c = y - m*x
+        double b1 = y1 - m1 * x1;
+        double b2 = y2 - m2 * x2;
+
+        // 如果两条直线的斜率相同（或几乎相同），说明直线平行，没有交点
+        if (m1 - m2 == 0)
+            return null;
+
+        // 计算交点的 X 坐标：通过解方程 m1*x + b1 = m2*x + b2 得到
+        double xIntersect = (b2 - b1) / (m1 - m2);
+        // 代入任一条直线方程得到交点的 Y 坐标
+        double yIntersect = m1 * xIntersect + b1;
+        return new Vector2((float)xIntersect, (float)yIntersect);
+    }
+    
     public static Vector3 ExtendLine(Vector3 Center, Vector3 Direction, float distance)
     {
         var dx = Direction.X - Center.X;
