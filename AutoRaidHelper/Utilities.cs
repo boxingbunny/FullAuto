@@ -448,4 +448,29 @@ public static class Utilities
 
         return new Vector3(px, Direction.Y, pz);
     }
+
+    public enum Direction
+    {
+        North,
+        East,
+        South,
+        West
+    }
+
+    public static Vector3 GetDirectionVector(Direction direction)
+    {
+        return direction switch
+        {
+            Direction.East => new Vector3(1, 0, 0),
+            Direction.South => new Vector3(0, 0, 1),
+            Direction.West => new Vector3(-1, 0, 0),
+            Direction.North => new Vector3(0, 0, -1),
+            _ => Vector3.Zero
+        };
+    }
+
+    public static Vector3 GetPosition(Direction baseDirection, float distance)
+    {
+        return _stageCenter + GetDirectionVector(baseDirection) * distance;
+    }
 }
