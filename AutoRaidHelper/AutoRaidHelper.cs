@@ -12,7 +12,9 @@ using System.Numerics;
 using System.Runtime.Loader;
 using AEAssist.CombatRoutine.Trigger;
 using Dalamud.Game.ClientState.Objects.Types;
-using ECommons.GameFunctions;
+using FFXIVClientStructs.FFXIV.Client.UI.Info;
+using static FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCommonList.CharacterData.OnlineStatus;
+
 
 namespace AutoRaidHelper
 {
@@ -60,38 +62,39 @@ namespace AutoRaidHelper
         // 定义自动倒计时相关字段
         private bool _enableAutoCountdown;
         private bool _countdownTriggered;
-        private uint _autoFuncZoneId = 1122;
+        private uint _autoFuncZoneId = 1238;
 
         // 定义自动退本相关字段
         private bool _enableAutoLeaveDuty;
         private bool _dutyCompleted;
+        private bool _leaveDutyTriggered;
 
         // 定义自动排本相关字段
         private bool _enableAutoQueue;
-        private string _selectedDutyName = "欧米茄绝境验证战";
+        private string _selectedDutyName = "光暗未来绝境战";
         private string _customDutyName = "";
         private DateTime _lastAutoQueueTime = DateTime.MinValue;
         private bool _enableUnrest; // 表示是否解限
+        private string? _finalSendDutyName;
 
         // 定义自动排本相关字段
         private int _omegaCompletedCount; // 记录低保数
 
         //详细打印相关开关
-        public bool EnemyCastSpellCondParams;
-        public bool EnemyCastSpellCondParams_EnemyOnly = false;
-        public bool OnMapEffectCreateEvent;
-        public bool TetherCondParams;
+        private bool _enemyCastSpellCondParams;
+        private bool _onMapEffectCreateEvent;
+        private bool _tetherCondParams;
 
-        public bool TargetIconEffectCondParams;
-        public bool UnitCreateCondParams;
-        public bool UnitDeleteCondParams;
-        public bool AddStatusCondParams;
-        public bool RemoveStatusCondParams;
+        private bool _targetIconEffectCondParams;
+        private bool _unitCreateCondParams;
+        private bool _unitDeleteCondParams;
+        private bool _addStatusCondParams;
+        private bool _removeStatusCondParams;
 
-        public bool ReceiveAbilityEffectCondParams;
-        public bool GameLogCondParams;
-        public bool WeatherChangedCondParams;
-        public bool ActorControlCondParams;
+        private bool _receiveAbilityEffectCondParams;
+        private bool _gameLogCondParams;
+        private bool _weatherChangedCondParams;
+        private bool _actorControlCondParams;
 
         #region IAEPlugin Implementation
 
@@ -123,7 +126,7 @@ namespace AutoRaidHelper
             CheckPointRecording();
             CheckAutoCountdown();
             CheckAutoLeaveDuty();
-            ResetDutyCompletedIfNotInDuty();
+            ResetFlagIfNotInDuty();
             CheckAutoQueue();
         }
 
@@ -161,43 +164,43 @@ namespace AutoRaidHelper
 
         #endregion
 
-        public void OnCondParamsCreateEvent(ITriggerCondParams condParams)
+        private void OnCondParamsCreateEvent(ITriggerCondParams condParams)
         {
-            if (condParams is EnemyCastSpellCondParams spell && EnemyCastSpellCondParams)
+            if (condParams is EnemyCastSpellCondParams spell && _enemyCastSpellCondParams)
                 LogHelper.Print($"{spell}");
 
-            if (condParams is OnMapEffectCreateEvent MapEffect && OnMapEffectCreateEvent)
-                LogHelper.Print($"{MapEffect}");
+            if (condParams is OnMapEffectCreateEvent mapEffect && _onMapEffectCreateEvent)
+                LogHelper.Print($"{mapEffect}");
 
-            if (condParams is TetherCondParams Tether && TetherCondParams)
-                LogHelper.Print($"{Tether}");
+            if (condParams is TetherCondParams tether && _tetherCondParams)
+                LogHelper.Print($"{tether}");
 
-            if (condParams is TargetIconEffectCondParams IconEffect && TargetIconEffectCondParams)
-                LogHelper.Print($"{IconEffect}");
+            if (condParams is TargetIconEffectCondParams iconEffect && _targetIconEffectCondParams)
+                LogHelper.Print($"{iconEffect}");
 
-            if (condParams is UnitCreateCondParams UnitCreate && UnitCreateCondParams)
-                LogHelper.Print($"{UnitCreate}");
+            if (condParams is UnitCreateCondParams unitCreate && _unitCreateCondParams)
+                LogHelper.Print($"{unitCreate}");
 
-            if (condParams is UnitDeleteCondParams UnitDelete && UnitDeleteCondParams)
-                LogHelper.Print($"{UnitDelete}");
+            if (condParams is UnitDeleteCondParams unitDelete && _unitDeleteCondParams)
+                LogHelper.Print($"{unitDelete}");
 
-            if (condParams is AddStatusCondParams AddStatus && AddStatusCondParams)
-                LogHelper.Print($"{AddStatus}");
+            if (condParams is AddStatusCondParams addStatus && _addStatusCondParams)
+                LogHelper.Print($"{addStatus}");
 
-            if (condParams is RemoveStatusCondParams RemoveStatus && RemoveStatusCondParams)
-                LogHelper.Print($"{RemoveStatus}");
+            if (condParams is RemoveStatusCondParams removeStatus && _removeStatusCondParams)
+                LogHelper.Print($"{removeStatus}");
 
-            if (condParams is ReceviceAbilityEffectCondParams AbilityEffect && ReceiveAbilityEffectCondParams)
-                LogHelper.Print($"{AbilityEffect}");
+            if (condParams is ReceviceAbilityEffectCondParams abilityEffect && _receiveAbilityEffectCondParams)
+                LogHelper.Print($"{abilityEffect}");
 
-            if (condParams is GameLogCondParams GameLog && GameLogCondParams)
-                LogHelper.Print($"{GameLog}");
+            if (condParams is GameLogCondParams gameLog && _gameLogCondParams)
+                LogHelper.Print($"{gameLog}");
 
-            if (condParams is WeatherChangedCondParams WeatherChanged && WeatherChangedCondParams)
-                LogHelper.Print($"{WeatherChanged}");
+            if (condParams is WeatherChangedCondParams weatherChanged && _weatherChangedCondParams)
+                LogHelper.Print($"{weatherChanged}");
 
-            if (condParams is ActorControlCondParams ActorControl && ActorControlCondParams)
-                LogHelper.Print($"{ActorControl}");
+            if (condParams is ActorControlCondParams actorControl && _actorControlCondParams)
+                LogHelper.Print($"{actorControl}");
         }
 
 
@@ -352,9 +355,9 @@ namespace AutoRaidHelper
             
             //【按钮类】
             ImGui.Separator();
-            ImGui.Text("遥控全队按钮:");
+            ImGui.Text("遥控按钮:");
             
-            if (ImGui.Button("即刻退本"))
+            if (ImGui.Button("全队即刻退本"))
             {
                 if (Core.Resolve<MemApiDuty>().InMission)
                 {
@@ -363,15 +366,28 @@ namespace AutoRaidHelper
                 }
             }
             ImGui.SameLine();
-            if (ImGui.Button("TP撞电网"))
+            if (ImGui.Button("全队TP撞电网"))
             {
                 if (Core.Resolve<MemApiDuty>().InMission) 
                     RemoteControlHelper.SetPos("", new Vector3(100, 0, 125));
             }
+            ImGui.SameLine();
+            if (ImGui.Button("为小队队长发送排本命令"))
+            {
+                var leaderName = GetPartyLeaderName();
+                if (!string.IsNullOrEmpty(leaderName))
+                {
+                    var leaderRole = RemoteControlHelper.GetRoleByPlayerName(leaderName);
+
+                    RemoteControlHelper.Cmd(leaderRole, $"/pdrduty n {_finalSendDutyName}");
+                    LogHelper.Print($"为队长 {leaderName} 发送排本命令: /pdrduty n {_finalSendDutyName}");
+                }
+            }
+            
             ImGui.Text("Debug用按钮:");
             if (ImGui.Button("打印可选中敌对单位信息"))
             {
-                var enemies = Svc.Objects.OfType<IBattleNpc>().Where(x => x.IsTargetable);
+                var enemies = Svc.Objects.OfType<IBattleNpc>().Where(x => x.IsTargetable && x.IsEnemy());
                 foreach (var enemy in enemies)
                 {
                     LogHelper.Print($"敌对单位: {enemy.Name} (EntityIdID: {enemy.EntityId}, DataId: {enemy.DataId}), 位置: {enemy.Position}");
@@ -417,23 +433,31 @@ namespace AutoRaidHelper
                 var inMission = Core.Resolve<MemApiDuty>().InMission;
                 var isBoundByDuty = Core.Resolve<MemApiDuty>().IsBoundByDuty();
                 var isOver = _dutyCompleted;
-                var partyList = Svc.Party;
-
+                var isCrossRealmParty = InfoProxyCrossRealm.IsCrossRealmParty();
+                
                 ImGui.Text($"自动倒计时状态: {autoCountdownStatus}");
                 ImGui.Text($"处于战斗中: {inCombat}");
                 ImGui.Text($"处于黑屏中: {inCutScene}");
                 ImGui.Text($"副本正式开始: {inMission}");
-                ImGui.Text($"在副本里: {isBoundByDuty}");
+                ImGui.Text($"在副本中: {isBoundByDuty}");
                 ImGui.Text($"副本结束: {isOver}");
-                ImGui.Text($"小队人数: {partyList.Count}");
-
+                ImGui.Text($"跨服小队状态: {isCrossRealmParty}");
+                
                 ImGui.Separator();
-                ImGui.Text("小队成员状态:");
-                foreach (var member in partyList)
+                
+                if (!isCrossRealmParty) return;
+                
+                // 打印跨服小队玩家名字和状态
+                ImGui.Text("跨服小队成员及状态:");
+                var partyStatus = GetCrossRealmPartyStatus();
+                for (int i = 0; i < partyStatus.Count; i++)
                 {
-                    var isValid = member.GameObject != null && member.GameObject.IsValid();
-                    ImGui.Text($"[{member.Name}] 是否为有效单位: {isValid}");
+                    var status = partyStatus[i];
+                    var onlineText = status.IsOnline ? "在线" : "离线";
+                    var dutyText = status.IsInDuty ? "副本中" : "副本外";
+                    ImGui.Text($"[{i}] {status.Name} 状态: {onlineText}, {dutyText}");
                 }
+
             }
         }
 
@@ -448,29 +472,29 @@ namespace AutoRaidHelper
 
         private void DebugPrint()
         {
-            ImGui.Checkbox("咏唱事件", ref EnemyCastSpellCondParams);
+            ImGui.Checkbox("咏唱事件", ref _enemyCastSpellCondParams);
             ImGui.SameLine();
-            ImGui.Checkbox("地图事件", ref OnMapEffectCreateEvent);
+            ImGui.Checkbox("地图事件", ref _onMapEffectCreateEvent);
             ImGui.SameLine();
-            ImGui.Checkbox("连线事件", ref TetherCondParams);
+            ImGui.Checkbox("连线事件", ref _tetherCondParams);
             ImGui.SameLine();
-            ImGui.Checkbox("点名头标", ref TargetIconEffectCondParams);
+            ImGui.Checkbox("点名头标", ref _targetIconEffectCondParams);
 
-            ImGui.Checkbox("创建单位", ref UnitCreateCondParams);
+            ImGui.Checkbox("创建单位", ref _unitCreateCondParams);
             ImGui.SameLine();
-            ImGui.Checkbox("删除单位", ref UnitDeleteCondParams);
+            ImGui.Checkbox("删除单位", ref _unitDeleteCondParams);
             ImGui.SameLine();
-            ImGui.Checkbox("添加Buff", ref AddStatusCondParams);
+            ImGui.Checkbox("添加Buff", ref _addStatusCondParams);
             ImGui.SameLine();
-            ImGui.Checkbox("删除Buff", ref RemoveStatusCondParams);
+            ImGui.Checkbox("删除Buff", ref _removeStatusCondParams);
 
-            ImGui.Checkbox("效果事件", ref ReceiveAbilityEffectCondParams);
+            ImGui.Checkbox("效果事件", ref _receiveAbilityEffectCondParams);
             ImGui.SameLine();
-            ImGui.Checkbox("游戏日志", ref GameLogCondParams);
+            ImGui.Checkbox("游戏日志", ref _gameLogCondParams);
             ImGui.SameLine();
-            ImGui.Checkbox("天气变化", ref WeatherChangedCondParams);
+            ImGui.Checkbox("天气变化", ref _weatherChangedCondParams);
             ImGui.SameLine();
-            ImGui.Checkbox("ActorControl", ref ActorControlCondParams);
+            ImGui.Checkbox("ActorControl", ref _actorControlCondParams);
         }
 
         /// <summary>
@@ -528,7 +552,7 @@ namespace AutoRaidHelper
                     return;
 
                 // 检查是否都可选中
-                if (Svc.Party.Any(member => member.GameObject == null || !member.GameObject.IsTargetable))
+                if (Svc.Party.Any(member => member.GameObject is not { IsTargetable: true }))
                     return;
 
                 var notInCombat = !Core.Me.InCombat();
@@ -548,8 +572,7 @@ namespace AutoRaidHelper
                 LogHelper.Print(e.Message);
             }
         }
-
-
+        
         private async void CheckAutoLeaveDuty()
         {
             try
@@ -564,11 +587,14 @@ namespace AutoRaidHelper
                 var isOver = _dutyCompleted;
 
                 // 如果副本已结束并且还在副本内，则发送退本命令
-                if (isOver && isBoundByDuty)
+                if (isOver && isBoundByDuty && !_leaveDutyTriggered)
                 {
+                    _leaveDutyTriggered = true;
                     await Coroutine.Instance.WaitAsync(1000);
-                    ChatHelper.SendMessage("/pdr leaveduty");
+                    RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
+                    RemoteControlHelper.Cmd("", "/pdr leaveduty");
                 }
+                
             }
             catch (Exception e)
             {
@@ -578,42 +604,51 @@ namespace AutoRaidHelper
 
         private void CheckAutoQueue()
         {
-            if (!_enableAutoQueue)
-                return;
-
-            if (DateTime.Now - _lastAutoQueueTime < TimeSpan.FromSeconds(3))
-                return;
-
-            if (Svc.Condition[ConditionFlag.InDutyQueue])
-                return;
-
-            if (Core.Resolve<MemApiDuty>().IsBoundByDuty())
-                return;
-
-            // 如果队伍中有任意一个成员的 GameObject 为 null 或 IsValid() 为 false，则直接 return
-            if (Svc.Party.Any(member => member.GameObject == null || !member.GameObject.IsValid()))
-                return;
-
-
             // 组装副本名称
-            // 若下拉框选择“自定义”且自定义名称非空，则用自定义名称
-            // 否则用下拉框的预设名称
             var dutyName = _selectedDutyName == "自定义" && !string.IsNullOrEmpty(_customDutyName)
                 ? _customDutyName
                 : _selectedDutyName;
 
-            // 如果启用了解限模式，在命令后附加 " unrest"
             if (_enableUnrest)
             {
                 dutyName += " unrest";
             }
+            _finalSendDutyName = dutyName;
+            
+            if (!_enableAutoQueue)
+                return;
+            
+            if (DateTime.Now - _lastAutoQueueTime < TimeSpan.FromSeconds(3))
+                return;
+            
+            if (Svc.Condition[ConditionFlag.InDutyQueue])
+                return;
+            
+            if (Core.Resolve<MemApiDuty>().IsBoundByDuty())
+                return;
+            
+            // 检查跨服小队人数
+            if (InfoProxyCrossRealm.GetPartyMemberCount() < 8)
+                return;
+            
+            // 获取跨服小队所有玩家状态
+            var partyStatus = GetCrossRealmPartyStatus();
+            var invalidNames = partyStatus
+                .Where(s => !s.IsOnline || s.IsInDuty)
+                .Select(s => s.Name)
+                .ToList();
 
-            // 最后发送排本命令
-            ChatHelper.SendMessage($"/pdrduty n {dutyName}");
+            if (invalidNames.Count != 0)
+            {
+                LogHelper.Print("玩家不在线或在副本中：" + string.Join(", ", invalidNames));
+                return;
+            }
+            
+            ChatHelper.SendMessage($"/pdrduty n {_finalSendDutyName}");
             _lastAutoQueueTime = DateTime.Now;
-            LogHelper.Print($"自动排本命令已发送：/pdrduty n {dutyName}");
+            LogHelper.Print($"自动排本命令已发送：/pdrduty n {_finalSendDutyName}");
         }
-
+        
         // 当副本完成时，触发事件，将 _dutyCompleted 置为 true
         private void OnDutyCompleted(object? sender, ushort e)
         {
@@ -632,9 +667,9 @@ namespace AutoRaidHelper
             _countdownTriggered = false;
         }
 
-        private void ResetDutyCompletedIfNotInDuty()
+        private void ResetFlagIfNotInDuty()
         {
-            // 如果玩家不在副本中，则重置 _dutyCompleted
+            // 如果玩家不在副本中，则重置标志
             if (Core.Resolve<MemApiDuty>().IsBoundByDuty())
                 return;
 
@@ -642,7 +677,67 @@ namespace AutoRaidHelper
                 return;
 
             LogHelper.Print("检测到玩家不在副本内，自动重置_dutyCompleted");
+
+            _countdownTriggered = false;
+            _leaveDutyTriggered = false;
             _dutyCompleted = false;
         }
+        
+        // 获取跨服小队玩家名字及其状态
+        private static unsafe List<(string Name, bool IsOnline, bool IsInDuty)> GetCrossRealmPartyStatus()
+        {
+            var result = new List<(string, bool, bool)>();
+
+            var crossRealmProxy = InfoProxyCrossRealm.Instance();
+            if (crossRealmProxy == null)
+                return result;
+
+            var infoModulePtr = InfoModule.Instance();
+            if (infoModulePtr == null)
+                return result;
+
+            var commonListPtr = (InfoProxyCommonList*)infoModulePtr->GetInfoProxyById(InfoProxyId.PartyMember);
+            if (commonListPtr == null)
+                return result;
+
+            var groups = crossRealmProxy->CrossRealmGroups;
+            foreach (var group in groups)
+            {
+                int count = group.GroupMemberCount;
+                if (commonListPtr->CharDataSpan.Length < count)
+                    continue;
+
+                for (int i = 0; i < count; i++)
+                {
+                    var member = group.GroupMembers[i];
+                    var data = commonListPtr->CharDataSpan[i];
+
+                    bool isOnline = data.State.HasFlag(Online);
+                    bool isInDuty = data.State.HasFlag(InDuty);
+                    
+                    result.Add((member.NameString, isOnline, isInDuty));
+                }
+            }
+
+            return result;
+        }
+        private static unsafe string? GetPartyLeaderName()
+        {
+            var infoModulePtr = InfoModule.Instance();
+            if (infoModulePtr == null)
+                return null;
+            
+            var commonListPtr = (InfoProxyCommonList*)infoModulePtr->GetInfoProxyById(InfoProxyId.PartyMember);
+            if (commonListPtr == null)
+                return null;
+            
+            foreach (var data in commonListPtr->CharDataSpan)
+            {
+                if (data.State.HasFlag(PartyLeader) || data.State.HasFlag(PartyLeaderCrossWorld))
+                    return data.NameString;
+            }
+            return null;
+        }
+
     }
 }
