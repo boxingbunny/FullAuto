@@ -1,9 +1,10 @@
 ﻿using System.Numerics;
 using AEAssist;
 using AEAssist.Helper;
+using AutoRaidHelper.Settings;
 using Dalamud.Game.ClientState.Objects.Types;
 
-namespace AutoRaidHelper;
+namespace AutoRaidHelper.Utils;
 
 public static class Utilities
 {
@@ -271,7 +272,7 @@ public static class Utilities
         // 计算正交方向（顺时针旋转 90°，即右侧方向）
         var perpendicular = new Vector3(-dirVector.Z, 0, dirVector.X);
         // 计算最终偏移坐标
-        var offsetPosition = _stageCenter + (dirVector * offsetZ) + (perpendicular * offsetX);
+        var offsetPosition = _stageCenter + dirVector * offsetZ + perpendicular * offsetX;
         return offsetPosition;
     }
 
@@ -358,7 +359,7 @@ public static class Utilities
             var role = new HashSet<string> { "D1", "D2", "D3", "D4", "H1", "H2", "MT", "ST" };
             RemoteControlHelper.SetPos(!role.Contains(name) ? RemoteControlHelper.GetRoleByPlayerName(name) : name,
                 pos);
-            if (!FullAutoSettings.PrintDebugInfo) return;
+            if (!FullAutoSettings.Instance.FaGeneralSetting.PrintDebugInfo) return;
             LogHelper.Print($"{dev}: {name} 移动至 {pos}");
             Share.TrustDebugPoint.Add(pos);
         }
