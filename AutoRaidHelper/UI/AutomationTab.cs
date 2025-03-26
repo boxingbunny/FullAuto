@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿
 using System.Numerics;
 using ImGuiNET;
 using AEAssist;
@@ -13,6 +12,9 @@ using Dalamud.Game.ClientState.Objects.Types;
 using AEAssist.Extension;
 using Dalamud.Game.ClientState.Conditions;
 using System.Runtime.Loader;
+using Dalamud.Game.ClientState.Objects.Enums;
+using FFXIVClientStructs.FFXIV.Client.Game.UI;
+using FFXIVClientStructs.FFXIV.Client.Game.Control;
 
 namespace AutoRaidHelper.UI
 {
@@ -28,8 +30,6 @@ namespace AutoRaidHelper.UI
         /// </summary>
         public AutomationSettings Settings => FullAutoSettings.Instance.AutomationSettings;
 
-        // 自动倒计时相关状态标志
-        private bool _countdownTriggered;
         // 记录上次发送自动排本命令的时间，避免频繁发送
         private DateTime _lastAutoQueueTime = DateTime.MinValue;
         // 标记副本是否已经完成，通常在 DutyCompleted 事件中设置
@@ -38,6 +38,23 @@ namespace AutoRaidHelper.UI
         private int _omegaCompletedCount = 0;
         // 记录女王低保数（通过副本完成事件累加）
         private int _spheneCompletedCount = 0;
+        private bool _isCountdownRunning = false;
+        private bool _isOpenChestRunning = false;
+        private bool _isLeaveRunning = false;
+        private bool _isQueueRunning = false;
+
+        private bool _isCountdownCompleted = false;
+        private bool _isLeaveCompleted = false;
+        private bool _isQueueCompleted = false;
+        private bool _isOpenChestCompleted = false;
+
+        private bool _isLootCompleted = false;
+        private IGameObject? _treasure = null;
+
+        private readonly object _countdownLock = new object();
+        private readonly object _openChestLock = new object();
+        private readonly object _leaveLock = new object();
+        private readonly object _queueLock = new object();
 
         /// <summary>
         /// 在加载时，订阅副本状态相关事件（如副本完成和团灭）
@@ -67,6 +84,7 @@ namespace AutoRaidHelper.UI
         public async void Update()
         {
             await UpdateAutoCountdown();
+            await UpdateAutoOpenChest();
             await UpdateAutoLeave();
             await UpdateAutoQueue();
             ResetDutyFlag();
@@ -160,6 +178,20 @@ namespace AutoRaidHelper.UI
             ImGui.SameLine();
             ImGui.Text("秒");
 
+            //设置是否等待R点完成后再退本
+            bool waitRCompleted = Settings.AutoLeaveAfterLootEnabled;
+            if (ImGui.Checkbox("等待R点完成后再退本", ref waitRCompleted))
+            {
+                Settings.UpdateAutoLeaveAfterLootEnabled(waitRCompleted);
+            }
+
+            //设置自动开宝箱是否启用
+            bool openChestEnabled = Settings.AutoOpenChestEnabled;
+            if (ImGui.Checkbox("副本结束后自动开宝箱", ref openChestEnabled))
+            {
+                Settings.UpdateAutoOpenChestEnabled(openChestEnabled);
+            }
+
             //【遥控按钮】
 
             ImGui.Separator();
@@ -218,6 +250,24 @@ namespace AutoRaidHelper.UI
                 Settings.UpdateAutoQueueEnabled(autoQueue);
             }
 
+            //输入排本延迟时间（秒）
+            ImGui.SameLine();
+            ImGui.Text("延迟");
+            ImGui.SameLine();
+            ImGui.SetNextItemWidth(80f);
+            ImGui.SameLine();
+            int queueDelay = Settings.AutoQueueDelay;
+            if (queueDelay > 0)
+            {
+                if (ImGui.InputInt("##QueueDelay", ref queueDelay))
+                {
+                    Settings.UpdateAutoQueueDelay(queueDelay);
+                }
+                ImGui.SameLine();
+                ImGui.Text("秒");
+            }
+
+
             // 设置解限（若启用则在排本命令中加入 "unrest"）
             bool unrest = Settings.UnrestEnabled;
             if (ImGui.Checkbox("解限", ref unrest))
@@ -269,7 +319,7 @@ namespace AutoRaidHelper.UI
             if (ImGui.CollapsingHeader("自动化Debug"))
             {
                 // 显示自动倒计时、战斗状态、副本状态和跨服小队状态等辅助调试信息
-                var autoCountdownStatus = Settings.AutoCountdownEnabled ? _countdownTriggered ? "已触发" : "待触发" : "未启用";
+                var autoCountdownStatus = Settings.AutoCountdownEnabled ? _isCountdownCompleted ? "已触发" : "待触发" : "未启用";
                 var inCombat = Core.Me.InCombat();
                 var inCutScene = Svc.Condition[ConditionFlag.OccupiedInCutSceneEvent];
                 var inMission = Core.Resolve<MemApiDuty>().InMission;
@@ -284,6 +334,7 @@ namespace AutoRaidHelper.UI
                 ImGui.Text($"在副本中: {isBoundByDuty}");
                 ImGui.Text($"副本结束: {isOver}");
                 ImGui.Text($"跨服小队状态: {isCrossRealmParty}");
+                ImGui.Text($"是否完成宝箱拾取: {_isLootCompleted}");
                 ImGui.Separator();
 
                 // 如果为跨服小队，显示每个队员的在线与副本状态
@@ -309,6 +360,14 @@ namespace AutoRaidHelper.UI
         /// </summary>
         private async System.Threading.Tasks.Task UpdateAutoCountdown()
         {
+            if (_isCountdownRunning) return;
+            if (_isCountdownCompleted) return;
+            lock (_countdownLock)
+            {
+                if (_isCountdownRunning) return;
+                _isCountdownRunning = true;
+            }
+
             try
             {
                 // 如果当前地图ID与设置不匹配，直接返回
@@ -328,12 +387,17 @@ namespace AutoRaidHelper.UI
                 if (notInCombat && inMission && partyIs8)
                 {
                     await Coroutine.Instance.WaitAsync(8000);
-                    ChatHelper.SendMessage($"/countdown {Settings.AutoCountdownDelay * 1000}");
+                    ChatHelper.SendMessage($"/countdown {Settings.AutoCountdownDelay}");
+                    _isCountdownCompleted = true;
                 }
             }
             catch (Exception e)
             {
                 LogHelper.Print(e.Message);
+            }
+            finally
+            {
+                _isCountdownRunning = false;
             }
         }
 
@@ -343,26 +407,149 @@ namespace AutoRaidHelper.UI
         /// </summary>
         private async System.Threading.Tasks.Task UpdateAutoLeave()
         {
+            if (_isLeaveRunning) return;
+            if (_isLeaveCompleted) return;
+
+            lock (_leaveLock)
+            {
+                if (_isLeaveRunning) return;
+                _isLeaveRunning = true;
+            }
+
             try
             {
                 if (Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() != Settings.AutoFuncZoneId)
                     return;
-                if (!Settings.AutoLeaveEnabled)
+                if (!Settings.AutoLeaveEnabled && !Settings.AutoLeaveAfterLootEnabled)
                     return;
 
                 var isBoundByDuty = Core.Resolve<MemApiDuty>().IsBoundByDuty();
                 if (isBoundByDuty && _dutyCompleted)
                 {
-                    await Coroutine.Instance.WaitAsync(Settings.AutoLeaveDelay * 1000);
-                    RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
-                    RemoteControlHelper.Cmd("", "/pdr leaveduty");
+                    if (Settings.AutoLeaveAfterLootEnabled)
+                    {
+                        if (_isLootCompleted)
+                        {
+                            RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
+                            RemoteControlHelper.Cmd("", "/pdr leaveduty");
+                            _isLeaveCompleted = true;
+                        }
+                    }
+                    else
+                    {
+                        await Coroutine.Instance.WaitAsync(Settings.AutoLeaveDelay * 1000);
+                        RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
+                        RemoteControlHelper.Cmd("", "/pdr leaveduty");
+                        _isLeaveCompleted = true;
+                    }
                 }
             }
             catch (Exception e)
             {
                 LogHelper.Print(e.Message);
             }
+            finally
+            {
+                _isLeaveRunning = false;
+            }
         }
+
+        /// <summary>
+        /// 当副本结束后，自动开启副本的战利品宝箱。
+        /// 前提条件：当前地图匹配、在副本内且副本已完成。
+        ///  </summary>
+        private unsafe async System.Threading.Tasks.Task UpdateAutoOpenChest()
+        {
+            if (_isOpenChestRunning) return;
+            if (_isOpenChestCompleted) return;
+            if (_isLootCompleted) return;
+
+            lock (_openChestLock)
+            {
+                if (_isOpenChestRunning) return;
+                _isOpenChestRunning = true;
+            }
+            try
+            {
+                if (Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() != Settings.AutoFuncZoneId)
+                    return;
+                if (!Settings.AutoOpenChestEnabled)
+                    return;
+
+                var isBoundByDuty = Core.Resolve<MemApiDuty>().IsBoundByDuty();
+                if (isBoundByDuty && _dutyCompleted)
+                {
+                    if (_treasure == null)
+                    {
+                        //LogHelper.Print("尝试寻找宝箱");
+                        var player = Core.Me;
+                        if (player == null) return;
+
+                        var treasure = Svc.Objects.FirstOrDefault(o =>
+                            {
+                                if (o == null) return false;
+
+                                var obj = (FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)(void*)o.Address;
+                                if (!obj->GetIsTargetable()) return false;
+                                if ((ObjectKind)obj->ObjectKind != ObjectKind.Treasure) return false;
+
+                                // Check if the chest is already opened
+                                foreach (var item in Loot.Instance()->Items)
+                                    if (item.ChestObjectId == o.GameObjectId) return false;
+
+                                return true;
+                            });
+
+                        if (treasure == null)
+                        {
+                            //LogHelper.Print("未找到可开启的宝箱");
+                            return;
+                        }
+                        _treasure = treasure;
+                    }
+                    try
+                    {
+                        //LogHelper.Print($"尝试打开宝箱: {_treasure.Name} (EntityId: {_treasure.EntityId})");
+                        var player = Core.Me;
+                        if (player == null) return;
+                        var distance = Vector3.Distance(player.Position, _treasure.Position) - player.HitboxRadius - _treasure.HitboxRadius;
+                        if (distance > 0.5f)
+                        {
+                            RemoteControlHelper.Cmd("", $"/aetp {_treasure.Position.X},{_treasure.Position.Y},{_treasure.Position.Z}");
+                        }
+                        if (_treasure.IsTargetable)
+                        {
+                            Svc.Targets.Target = _treasure;
+                            TargetSystem.Instance()->InteractWithObject((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)(void*)_treasure.Address);
+                        }
+                        else
+                        {
+                            _isOpenChestCompleted = true;
+                            _isLootCompleted = true;
+                            LogHelper.Print($"已完成战利品分配");
+                            _treasure = null;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        LogHelper.Print($"Failed to open the chest: {ex.Message}");
+                    }
+                    finally
+                    {
+                        _isOpenChestRunning = false;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                LogHelper.Print(e.Message);
+            }
+            finally
+            {
+                _isOpenChestRunning = false;
+            }
+        }
+
 
         /// <summary>
         /// 根据配置和当前队伍状态自动发送排本命令。
@@ -371,6 +558,14 @@ namespace AutoRaidHelper.UI
         /// </summary>
         private async System.Threading.Tasks.Task UpdateAutoQueue()
         {
+            if (_isQueueRunning) return;
+            if (_isQueueCompleted) return;
+
+            lock (_queueLock)
+            {
+                if (_isQueueRunning) return;
+                _isQueueRunning = true;
+            }
             try
             {
                 // 根据选择的副本名称构造实际发送命令
@@ -403,14 +598,20 @@ namespace AutoRaidHelper.UI
                     LogHelper.Print("玩家不在线或在副本中：" + string.Join(", ", invalidNames));
                     return;
                 }
+                await Coroutine.Instance.WaitAsync(Settings.AutoQueueDelay * 1000);
                 // 发送排本命令，通过聊天输入框
                 ChatHelper.SendMessage($"/pdrduty n {Settings.FinalSendDutyName}");
                 _lastAutoQueueTime = DateTime.Now;
                 LogHelper.Print($"自动排本命令已发送：/pdrduty n {Settings.FinalSendDutyName}");
+                _isQueueCompleted = true;
             }
             catch (Exception e)
             {
                 LogHelper.Print(e.Message);
+            }
+            finally
+            {
+                _isQueueRunning = false;
             }
         }
 
@@ -428,6 +629,11 @@ namespace AutoRaidHelper.UI
                     return;
                 LogHelper.Print("检测到玩家不在副本内，自动重置_dutyCompleted");
                 _dutyCompleted = false;
+                _isOpenChestCompleted = false;
+                _isCountdownCompleted = false;
+                _isLeaveCompleted = false;
+                _isQueueCompleted = false;
+                _isLootCompleted = false;
             }
             catch (Exception e)
             {

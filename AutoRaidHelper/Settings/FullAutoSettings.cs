@@ -226,8 +226,14 @@ namespace AutoRaidHelper.Settings
         public bool AutoLeaveEnabled { get; set; } = false;
         public int AutoLeaveDelay { get; set; } = 1;
 
-        // 自动排本开启状态
+        // 是否宝箱R点完成后再退本
+        public bool AutoLeaveAfterLootEnabled { get; set; } = false;
+
+        //自动开启副本宝箱
+        public bool AutoOpenChestEnabled { get; set; } = false;
+        // 自动排本开启状态及延迟（单位：秒）
         public bool AutoQueueEnabled { get; set; } = false;
+        public int AutoQueueDelay { get; set; } = 3;
 
         // 选定的副本名称（默认："光暗未来绝境战"）以及自定义副本名称
         public string SelectedDutyName { get; set; } = "光暗未来绝境战";
@@ -289,11 +295,38 @@ namespace AutoRaidHelper.Settings
         }
 
         /// <summary>
+        /// 更新宝箱R点完成后再退本状态，并保存配置
+        /// </summary>
+        public void UpdateAutoLeaveAfterLootEnabled(bool enabled)
+        {
+            AutoLeaveAfterLootEnabled = enabled;
+            FullAutoSettings.Instance.Save();
+        }
+
+        ///<summary
+        /// 更新自动开启副本宝箱状态，并保存配置
+        ///</summary>
+        public void UpdateAutoOpenChestEnabled(bool enabled)
+        {
+            AutoOpenChestEnabled = enabled;
+            FullAutoSettings.Instance.Save();
+        }
+
+        /// <summary>
         /// 更新排本启用状态，并保存配置
         /// </summary>
         public void UpdateAutoQueueEnabled(bool enabled)
         {
             AutoQueueEnabled = enabled;
+            FullAutoSettings.Instance.Save();
+        }
+
+        ///<summary>
+        ///更新排本延迟时间，并保存配置
+        /// </summary>
+        public void UpdateAutoQueueDelay(int delay)
+        {
+            AutoQueueDelay = delay;
             FullAutoSettings.Instance.Save();
         }
 
