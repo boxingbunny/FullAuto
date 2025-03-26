@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace AutoRaidHelper;
+namespace AutoRaidHelper.Utils;
 
 public static class GeometryUtilsXZ
 {
