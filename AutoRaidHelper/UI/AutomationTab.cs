@@ -458,7 +458,7 @@ namespace AutoRaidHelper.UI
         /// 当副本结束后，自动开启副本的战利品宝箱。
         /// 前提条件：当前地图匹配、在副本内且副本已完成。
         ///  </summary>
-        private unsafe async System.Threading.Tasks.Task UpdateAutoOpenChest()
+        private async System.Threading.Tasks.Task UpdateAutoOpenChest()
         {
             if (_isOpenChestRunning) return;
             if (_isOpenChestCompleted) return;
@@ -484,28 +484,29 @@ namespace AutoRaidHelper.UI
                         //LogHelper.Print("尝试寻找宝箱");
                         var player = Core.Me;
                         if (player == null) return;
-
-                        var treasure = Svc.Objects.FirstOrDefault(o =>
-                            {
-                                if (o == null) return false;
-
-                                var obj = (FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)(void*)o.Address;
-                                if (!obj->GetIsTargetable()) return false;
-                                if ((ObjectKind)obj->ObjectKind != ObjectKind.Treasure) return false;
-
-                                // Check if the chest is already opened
-                                foreach (var item in Loot.Instance()->Items)
-                                    if (item.ChestObjectId == o.GameObjectId) return false;
-
-                                return true;
-                            });
-
-                        if (treasure == null)
+                        unsafe
                         {
-                            //LogHelper.Print("未找到可开启的宝箱");
-                            return;
+                            var treasure = Svc.Objects.FirstOrDefault(o =>
+                                {
+                                    if (o == null) return false;
+                                    var obj = (FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)(void*)o.Address;
+                                    if (!obj->GetIsTargetable()) return false;
+                                    if ((ObjectKind)obj->ObjectKind != ObjectKind.Treasure) return false;
+
+                                    // Check if the chest is already opened
+                                    foreach (var item in Loot.Instance()->Items)
+                                        if (item.ChestObjectId == o.GameObjectId) return false;
+
+                                    return true;
+                                });
+                            if (treasure == null)
+                            {
+                                //LogHelper.Print("未找到可开启的宝箱");
+                                return;
+                            }
+                            _treasure = treasure;
                         }
-                        _treasure = treasure;
+
                     }
                     try
                     {
@@ -516,11 +517,18 @@ namespace AutoRaidHelper.UI
                         if (distance > 0.5f)
                         {
                             RemoteControlHelper.Cmd("", $"/aetp {_treasure.Position.X},{_treasure.Position.Y},{_treasure.Position.Z}");
+                            await Coroutine.Instance.WaitAsync(3000);
+
                         }
                         if (_treasure.IsTargetable)
                         {
+                            LogHelper.Print("尝试打开宝箱");
                             Svc.Targets.Target = _treasure;
-                            TargetSystem.Instance()->InteractWithObject((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)(void*)_treasure.Address);
+                            unsafe
+                            {
+                                TargetSystem.Instance()->InteractWithObject((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)(void*)_treasure.Address);
+                            }
+                            await Coroutine.Instance.WaitAsync(3000);
                         }
                         else
                         {
@@ -549,7 +557,6 @@ namespace AutoRaidHelper.UI
                 _isOpenChestRunning = false;
             }
         }
-
 
         /// <summary>
         /// 根据配置和当前队伍状态自动发送排本命令。
