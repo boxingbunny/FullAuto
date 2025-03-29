@@ -17,6 +17,7 @@ using static FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCommonList.Charact
 using AutoRaidHelper.Settings;
 using AutoRaidHelper.Utils;
 using AutoRaidHelper.UI;
+using Frost.FA.Triggers;
 
 namespace AutoRaidHelper.Plugin
 {
@@ -30,6 +31,7 @@ namespace AutoRaidHelper.Plugin
 
         public PluginSetting BuildPlugin()
         {
+            TriggerMgr.Instance.Add("全自动小助手", new 指定职能tp指定位置().GetType());
             return new PluginSetting
             {
                 Name = "全自动小助手",
