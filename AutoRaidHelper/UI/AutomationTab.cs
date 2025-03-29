@@ -33,28 +33,28 @@ namespace AutoRaidHelper.UI
         // 记录上次发送自动排本命令的时间，避免频繁发送
         private DateTime _lastAutoQueueTime = DateTime.MinValue;
         // 标记副本是否已经完成，通常在 DutyCompleted 事件中设置
-        private bool _dutyCompleted = false;
+        private bool _dutyCompleted;
         // 记录欧米茄低保数（通过副本完成事件累加）
-        private int _omegaCompletedCount = 0;
+        private int _omegaCompletedCount;
         // 记录女王低保数（通过副本完成事件累加）
-        private int _spheneCompletedCount = 0;
-        private bool _isCountdownRunning = false;
-        private bool _isOpenChestRunning = false;
-        private bool _isLeaveRunning = false;
-        private bool _isQueueRunning = false;
+        private int _spheneCompletedCount;
+        private bool _isCountdownRunning;
+        private bool _isOpenChestRunning;
+        private bool _isLeaveRunning;
+        private bool _isQueueRunning;
 
-        private bool _isCountdownCompleted = false;
-        private bool _isLeaveCompleted = false;
-        private bool _isQueueCompleted = false;
-        private bool _isOpenChestCompleted = false;
+        private bool _isCountdownCompleted;
+        private bool _isLeaveCompleted;
+        private bool _isQueueCompleted;
+        private bool _isOpenChestCompleted;
 
-        private bool _isLootCompleted = false;
-        private IGameObject? _treasure = null;
+        private bool _isLootCompleted;
+        private IGameObject? _treasure;
 
-        private readonly object _countdownLock = new object();
-        private readonly object _openChestLock = new object();
-        private readonly object _leaveLock = new object();
-        private readonly object _queueLock = new object();
+        private readonly object _countdownLock = new();
+        private readonly object _openChestLock = new();
+        private readonly object _leaveLock = new();
+        private readonly object _queueLock = new();
 
         /// <summary>
         /// 在加载时，订阅副本状态相关事件（如副本完成和团灭）
@@ -83,11 +83,18 @@ namespace AutoRaidHelper.UI
         /// </summary>
         public async void Update()
         {
-            await UpdateAutoCountdown();
-            await UpdateAutoOpenChest();
-            await UpdateAutoLeave();
-            await UpdateAutoQueue();
-            ResetDutyFlag();
+            try
+            {
+                await UpdateAutoCountdown();
+                await UpdateAutoOpenChest();
+                await UpdateAutoLeave();
+                await UpdateAutoQueue();
+                ResetDutyFlag();
+            }
+            catch (Exception e)
+            {
+                LogHelper.Print(e.Message + e.StackTrace);
+            }
         }
 
         /// <summary>
@@ -133,6 +140,9 @@ namespace AutoRaidHelper.UI
         /// </summary>
         public void Draw()
         {
+            // 卫月缩放大小
+            var scale = ImGui.GetFontSize() / 13.0f; // 基于默认字体大小
+
             //【地图记录与倒计时设置】
 
             // 按钮用于记录当前地图ID，并更新相应设置
@@ -152,7 +162,7 @@ namespace AutoRaidHelper.UI
             ImGui.SameLine();
 
             // 输入倒计时延迟时间（秒）
-            ImGui.SetNextItemWidth(80f);
+            ImGui.SetNextItemWidth(80f * scale);
             int countdownDelay = Settings.AutoCountdownDelay;
             if (ImGui.InputInt("##CountdownDelay", ref countdownDelay))
             {
@@ -170,7 +180,7 @@ namespace AutoRaidHelper.UI
             ImGui.SameLine();
 
             // 输入退本延迟时间（秒）
-            ImGui.SetNextItemWidth(80f);
+            ImGui.SetNextItemWidth(80f * scale);
             int leaveDelay = Settings.AutoLeaveDelay;
             if (ImGui.InputInt("##LeaveDutyDelay", ref leaveDelay))
             {
@@ -255,7 +265,7 @@ namespace AutoRaidHelper.UI
             ImGui.SameLine();
             ImGui.Text("延迟");
             ImGui.SameLine();
-            ImGui.SetNextItemWidth(80f);
+            ImGui.SetNextItemWidth(80f * scale);
             ImGui.SameLine();
             int queueDelay = Settings.AutoQueueDelay;
             if (queueDelay > 0)
@@ -278,7 +288,7 @@ namespace AutoRaidHelper.UI
             ImGui.Text("选择副本:");
 
             // 下拉框选择副本名称，包括预设名称和自定义选项
-            ImGui.SetNextItemWidth(150f);
+            ImGui.SetNextItemWidth(150f * scale);
             if (ImGui.BeginCombo("##DutyName", Settings.SelectedDutyName))
             {
                 if (ImGui.Selectable("欧米茄绝境验证战", Settings.SelectedDutyName == "欧米茄绝境验证战"))
@@ -297,7 +307,7 @@ namespace AutoRaidHelper.UI
             // 如果选择自定义，则允许用户输入副本名称
             if (Settings.SelectedDutyName == "自定义")
             {
-                ImGui.SetNextItemWidth(150f);
+                ImGui.SetNextItemWidth(150f * scale);
                 string custom = Settings.CustomDutyName;
                 if (ImGui.InputText("自定义副本名称", ref custom, 50))
                 {
