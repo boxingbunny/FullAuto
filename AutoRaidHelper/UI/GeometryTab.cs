@@ -5,8 +5,6 @@ using AutoRaidHelper.Settings;
 using AEAssist;
 using AEAssist.Helper;
 using ECommons.DalamudServices;
-using AEAssist.CombatRoutine.Module;
-using System.Runtime.Loader;
 
 namespace AutoRaidHelper.UI
 {
@@ -19,6 +17,11 @@ namespace AutoRaidHelper.UI
         /// 获取全局的 GeometrySettings 配置单例，存储场地中心、朝向点及计算参数等配置。
         /// </summary>
         public GeometrySettings Settings => FullAutoSettings.Instance.GeometrySettings;
+
+        /// <summary>
+        /// 卫月字体大小。
+        /// </summary>
+        public static float scale => ImGui.GetFontSize() / 13.0f;
 
         /// <summary>
         /// 记录运行时的点1（一般通过按Ctrl记录）。
@@ -42,27 +45,27 @@ namespace AutoRaidHelper.UI
         public string ChordResultLabel { get; private set; } = "";
 
         // 固定数据：场地中心标签与对应的实际坐标值
-        private readonly string[] _centerLabels = new string[] { "旧(0,0,0)", "新(100,0,100)" };
-        private readonly Vector3[] _centerPositions = new Vector3[]
-        {
-            new Vector3(0, 0, 0),
-            new Vector3(100, 0, 100)
-        };
+        private readonly string[] _centerLabels = ["旧(0,0,0)", "新(100,0,100)"];
+        private readonly Vector3[] _centerPositions =
+        [
+            new(0, 0, 0),
+            new(100, 0, 100)
+        ];
 
         // 固定数据：朝向点标签与对应的实际坐标值
-        private readonly string[] _directionLabels = new string[] { "东(101,0,100)", "西(99,0,100)", "南(100,0,101)", "北(100,0,99)" };
-        private readonly Vector3[] _directionPositions = new Vector3[]
-        {
-            new Vector3(101, 0, 100),
-            new Vector3(99, 0, 100),
-            new Vector3(100, 0, 101),
-            new Vector3(100, 0, 99)
-        };
+        private readonly string[] _directionLabels = ["东(101,0,100)", "西(99,0,100)", "南(100,0,101)", "北(100,0,99)"];
+        private readonly Vector3[] _directionPositions =
+        [
+            new(101, 0, 100),
+            new(99, 0, 100),
+            new(100, 0, 101),
+            new(100, 0, 99)
+        ];
 
         /// <summary>
         /// 在每一帧调用，主要用于更新鼠标点击记录（点1、点2、点3）。
         /// </summary>
-        public async void Update()
+        public void Update()
         {
             // 每帧检查是否按下Ctrl/Shift/Alt键，记录对应的点信息
             CheckPointRecording();
@@ -125,7 +128,7 @@ namespace AutoRaidHelper.UI
                     $"点1 -> 点2: 距离 {TwoPointDistanceXZ:F2}");
                 ImGui.Text("夹角顶点:");
                 ImGui.SameLine();
-                ImGui.SetNextItemWidth(120f);
+                ImGui.SetNextItemWidth(120f * scale);
 
                 // 根据配置判断当前使用的夹角顶点模式（场地中心或者点3）
                 string apexLabel = Settings.ApexMode == 0 ? "场地中心" : "点3(Alt)";
@@ -142,7 +145,7 @@ namespace AutoRaidHelper.UI
                     ImGui.EndCombo();
                 }
 
-                float angleAtApex = 0f;
+                float angleAtApex;
                 // 根据选择的模式计算夹角
                 if (Settings.ApexMode == 0)
                 {
@@ -182,7 +185,7 @@ namespace AutoRaidHelper.UI
             // 绘制下拉框，供用户选择场地中心和朝向点
             ImGui.Text("场地中心:");
             ImGui.SameLine();
-            ImGui.SetNextItemWidth(150f);
+            ImGui.SetNextItemWidth(150f * scale);
             if (ImGui.BeginCombo("##CenterCombo", _centerLabels[Settings.SelectedCenterIndex]))
             {
                 for (int i = 0; i < _centerLabels.Length; i++)
@@ -198,7 +201,7 @@ namespace AutoRaidHelper.UI
 
             ImGui.Text("朝向点:");
             ImGui.SameLine();
-            ImGui.SetNextItemWidth(150f);
+            ImGui.SetNextItemWidth(150f * scale);
             if (ImGui.BeginCombo("##DirectionCombo", _directionLabels[Settings.SelectedDirectionIndex]))
             {
                 for (int i = 0; i < _directionLabels.Length; i++)

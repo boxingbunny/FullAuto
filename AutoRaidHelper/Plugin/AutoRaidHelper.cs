@@ -1,35 +1,24 @@
-﻿using AEAssist;
-using AEAssist.AEPlugin;
-using AEAssist.Helper;
-using AEAssist.MemoryApi;
+﻿using AEAssist.AEPlugin;
 using AEAssist.Verify;
-using AEAssist.Extension;
-using AEAssist.CombatRoutine.Module;
-using Dalamud.Game.ClientState.Conditions;
-using ECommons.DalamudServices;
 using ImGuiNET;
-using System.Numerics;
 using System.Runtime.Loader;
 using AEAssist.CombatRoutine.Trigger;
-using Dalamud.Game.ClientState.Objects.Types;
-using FFXIVClientStructs.FFXIV.Client.UI.Info;
-using static FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCommonList.CharacterData.OnlineStatus;
-using AutoRaidHelper.Settings;
-using AutoRaidHelper.Utils;
+using AutoRaidHelper.Triggers.TriggerAction;
 using AutoRaidHelper.UI;
 
 namespace AutoRaidHelper.Plugin
 {
     public class AutoRaidHelper : IAEPlugin
     {
-        private readonly GeometryTab _geometryTab = new GeometryTab();
-        private readonly AutomationTab _automationTab = new AutomationTab();
-        private readonly FaGeneralSettingTab _faGeneralSettingTab = new FaGeneralSettingTab();
-        private readonly DebugPrintTab _debugPrintTab = new DebugPrintTab();
+        private readonly GeometryTab _geometryTab = new();
+        private readonly AutomationTab _automationTab = new();
+        private readonly FaGeneralSettingTab _faGeneralSettingTab = new();
+        private readonly DebugPrintTab _debugPrintTab = new();
         #region IAEPlugin Implementation
 
         public PluginSetting BuildPlugin()
         {
+            TriggerMgr.Instance.Add("全自动小助手", new 指定职能tp指定位置().GetType());
             return new PluginSetting
             {
                 Name = "全自动小助手",

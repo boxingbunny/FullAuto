@@ -30,31 +30,33 @@ namespace AutoRaidHelper.UI
         /// </summary>
         public AutomationSettings Settings => FullAutoSettings.Instance.AutomationSettings;
 
+        public static float scale => ImGui.GetFontSize() / 13.0f;
+
         // 记录上次发送自动排本命令的时间，避免频繁发送
         private DateTime _lastAutoQueueTime = DateTime.MinValue;
         // 标记副本是否已经完成，通常在 DutyCompleted 事件中设置
-        private bool _dutyCompleted = false;
+        private bool _dutyCompleted;
         // 记录欧米茄低保数（通过副本完成事件累加）
-        private int _omegaCompletedCount = 0;
+        private int _omegaCompletedCount;
         // 记录女王低保数（通过副本完成事件累加）
-        private int _spheneCompletedCount = 0;
-        private bool _isCountdownRunning = false;
-        private bool _isOpenChestRunning = false;
-        private bool _isLeaveRunning = false;
-        private bool _isQueueRunning = false;
+        private int _spheneCompletedCount;
+        private bool _isCountdownRunning;
+        private bool _isOpenChestRunning;
+        private bool _isLeaveRunning;
+        private bool _isQueueRunning;
 
-        private bool _isCountdownCompleted = false;
-        private bool _isLeaveCompleted = false;
-        private bool _isQueueCompleted = false;
-        private bool _isOpenChestCompleted = false;
+        private bool _isCountdownCompleted;
+        private bool _isLeaveCompleted;
+        private bool _isQueueCompleted;
+        private bool _isOpenChestCompleted;
 
-        private bool _isLootCompleted = false;
-        private IGameObject? _treasure = null;
+        private bool _isLootCompleted;
+        private IGameObject? _treasure;
 
-        private readonly object _countdownLock = new object();
-        private readonly object _openChestLock = new object();
-        private readonly object _leaveLock = new object();
-        private readonly object _queueLock = new object();
+        private readonly object _countdownLock = new();
+        private readonly object _openChestLock = new();
+        private readonly object _leaveLock = new();
+        private readonly object _queueLock = new();
 
         /// <summary>
         /// 在加载时，订阅副本状态相关事件（如副本完成和团灭）
@@ -83,11 +85,18 @@ namespace AutoRaidHelper.UI
         /// </summary>
         public async void Update()
         {
-            await UpdateAutoCountdown();
-            await UpdateAutoOpenChest();
-            await UpdateAutoLeave();
-            await UpdateAutoQueue();
-            ResetDutyFlag();
+            try
+            {
+                await UpdateAutoCountdown();
+                await UpdateAutoOpenChest();
+                await UpdateAutoLeave();
+                await UpdateAutoQueue();
+                ResetDutyFlag();
+            }
+            catch (Exception e)
+            {
+                LogHelper.Print(e.Message + e.StackTrace);
+            }
         }
 
         /// <summary>
@@ -124,6 +133,7 @@ namespace AutoRaidHelper.UI
         {
             LogHelper.Print($"副本团灭重置（DutyWiped 事件，ID: {e}）");
             // 如有需要，在此处重置其他状态
+            _isCountdownCompleted = false;
         }
 
         /// <summary>
@@ -151,7 +161,7 @@ namespace AutoRaidHelper.UI
             ImGui.SameLine();
 
             // 输入倒计时延迟时间（秒）
-            ImGui.SetNextItemWidth(80f);
+            ImGui.SetNextItemWidth(80f * scale);
             int countdownDelay = Settings.AutoCountdownDelay;
             if (ImGui.InputInt("##CountdownDelay", ref countdownDelay))
             {
@@ -169,7 +179,7 @@ namespace AutoRaidHelper.UI
             ImGui.SameLine();
 
             // 输入退本延迟时间（秒）
-            ImGui.SetNextItemWidth(80f);
+            ImGui.SetNextItemWidth(80f * scale);
             int leaveDelay = Settings.AutoLeaveDelay;
             if (ImGui.InputInt("##LeaveDutyDelay", ref leaveDelay))
             {
@@ -254,7 +264,7 @@ namespace AutoRaidHelper.UI
             ImGui.SameLine();
             ImGui.Text("延迟");
             ImGui.SameLine();
-            ImGui.SetNextItemWidth(80f);
+            ImGui.SetNextItemWidth(80f * scale);
             ImGui.SameLine();
             int queueDelay = Settings.AutoQueueDelay;
             if (queueDelay > 0)
@@ -277,7 +287,7 @@ namespace AutoRaidHelper.UI
             ImGui.Text("选择副本:");
 
             // 下拉框选择副本名称，包括预设名称和自定义选项
-            ImGui.SetNextItemWidth(150f);
+            ImGui.SetNextItemWidth(150f * scale);
             if (ImGui.BeginCombo("##DutyName", Settings.SelectedDutyName))
             {
                 if (ImGui.Selectable("欧米茄绝境验证战", Settings.SelectedDutyName == "欧米茄绝境验证战"))
@@ -296,7 +306,7 @@ namespace AutoRaidHelper.UI
             // 如果选择自定义，则允许用户输入副本名称
             if (Settings.SelectedDutyName == "自定义")
             {
-                ImGui.SetNextItemWidth(150f);
+                ImGui.SetNextItemWidth(150f * scale);
                 string custom = Settings.CustomDutyName;
                 if (ImGui.InputText("自定义副本名称", ref custom, 50))
                 {
@@ -358,7 +368,7 @@ namespace AutoRaidHelper.UI
         /// 在满足条件（地图匹配、启用倒计时、队伍所有成员有效、非战斗中、副本已开始且队伍人数为8）时：
         /// 等待8秒后，通过聊天框发送倒计时命令，命令格式为 "/countdown {delay}"。
         /// </summary>
-        private async System.Threading.Tasks.Task UpdateAutoCountdown()
+        private async Task UpdateAutoCountdown()
         {
             if (_isCountdownRunning) return;
             if (_isCountdownCompleted) return;
@@ -405,7 +415,7 @@ namespace AutoRaidHelper.UI
         /// 当副本结束后，自动在等待设定的延迟时间后通过遥控命令退本。
         /// 前提条件：当前地图匹配、启用退本、在副本内且副本已完成。
         /// </summary>
-        private async System.Threading.Tasks.Task UpdateAutoLeave()
+        private async Task UpdateAutoLeave()
         {
             if (_isLeaveRunning) return;
             if (_isLeaveCompleted) return;
@@ -458,7 +468,7 @@ namespace AutoRaidHelper.UI
         /// 当副本结束后，自动开启副本的战利品宝箱。
         /// 前提条件：当前地图匹配、在副本内且副本已完成。
         ///  </summary>
-        private unsafe async System.Threading.Tasks.Task UpdateAutoOpenChest()
+        private async Task UpdateAutoOpenChest()
         {
             if (_isOpenChestRunning) return;
             if (_isOpenChestCompleted) return;
@@ -484,28 +494,28 @@ namespace AutoRaidHelper.UI
                         //LogHelper.Print("尝试寻找宝箱");
                         var player = Core.Me;
                         if (player == null) return;
-
-                        var treasure = Svc.Objects.FirstOrDefault(o =>
-                            {
-                                if (o == null) return false;
-
-                                var obj = (FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)(void*)o.Address;
-                                if (!obj->GetIsTargetable()) return false;
-                                if ((ObjectKind)obj->ObjectKind != ObjectKind.Treasure) return false;
-
-                                // Check if the chest is already opened
-                                foreach (var item in Loot.Instance()->Items)
-                                    if (item.ChestObjectId == o.GameObjectId) return false;
-
-                                return true;
-                            });
-
-                        if (treasure == null)
+                        unsafe
                         {
-                            //LogHelper.Print("未找到可开启的宝箱");
-                            return;
+                            var treasure = Svc.Objects.FirstOrDefault(o =>
+                                {
+                                    var obj = (FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)(void*)o.Address;
+                                    if (!obj->GetIsTargetable()) return false;
+                                    if ((ObjectKind)obj->ObjectKind != ObjectKind.Treasure) return false;
+
+                                    // Check if the chest is already opened
+                                    foreach (var item in Loot.Instance()->Items)
+                                        if (item.ChestObjectId == o.GameObjectId) return false;
+
+                                    return true;
+                                });
+                            if (treasure == null)
+                            {
+                                //LogHelper.Print("未找到可开启的宝箱");
+                                return;
+                            }
+                            _treasure = treasure;
                         }
-                        _treasure = treasure;
+
                     }
                     try
                     {
@@ -516,11 +526,18 @@ namespace AutoRaidHelper.UI
                         if (distance > 0.5f)
                         {
                             RemoteControlHelper.Cmd("", $"/aetp {_treasure.Position.X},{_treasure.Position.Y},{_treasure.Position.Z}");
+                            await Coroutine.Instance.WaitAsync(3000);
+
                         }
                         if (_treasure.IsTargetable)
                         {
+                            LogHelper.Print("尝试打开宝箱");
                             Svc.Targets.Target = _treasure;
-                            TargetSystem.Instance()->InteractWithObject((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)(void*)_treasure.Address);
+                            unsafe
+                            {
+                                TargetSystem.Instance()->InteractWithObject((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)(void*)_treasure.Address);
+                            }
+                            await Coroutine.Instance.WaitAsync(3000);
                         }
                         else
                         {
@@ -550,13 +567,12 @@ namespace AutoRaidHelper.UI
             }
         }
 
-
         /// <summary>
         /// 根据配置和当前队伍状态自动发送排本命令。
         /// 条件包括：启用自动排本、足够的时间间隔、队伍状态满足要求（队伍成员均在线、不在副本中、队伍人数为8）。
         /// 若任一条件不满足则不发送排本命令。
         /// </summary>
-        private async System.Threading.Tasks.Task UpdateAutoQueue()
+        private async Task UpdateAutoQueue()
         {
             if (_isQueueRunning) return;
             if (_isQueueCompleted) return;
@@ -603,7 +619,6 @@ namespace AutoRaidHelper.UI
                 ChatHelper.SendMessage($"/pdrduty n {Settings.FinalSendDutyName}");
                 _lastAutoQueueTime = DateTime.Now;
                 LogHelper.Print($"自动排本命令已发送：/pdrduty n {Settings.FinalSendDutyName}");
-                _isQueueCompleted = true;
             }
             catch (Exception e)
             {
@@ -624,7 +639,10 @@ namespace AutoRaidHelper.UI
             try
             {
                 if (Core.Resolve<MemApiDuty>().IsBoundByDuty())
+                {
+                    _isQueueCompleted = true;
                     return;
+                }
                 if (!_dutyCompleted)
                     return;
                 LogHelper.Print("检测到玩家不在副本内，自动重置_dutyCompleted");
@@ -646,9 +664,9 @@ namespace AutoRaidHelper.UI
         /// 返回每个成员的姓名、是否在线以及是否处于副本中的状态。
         /// </summary>
         /// <returns>包含队员状态的列表</returns>
-        private static unsafe System.Collections.Generic.List<(string Name, bool IsOnline, bool IsInDuty)> GetCrossRealmPartyStatus()
+        private static unsafe List<(string Name, bool IsOnline, bool IsInDuty)> GetCrossRealmPartyStatus()
         {
-            var result = new System.Collections.Generic.List<(string, bool, bool)>();
+            var result = new List<(string, bool, bool)>();
             var crossRealmProxy = InfoProxyCrossRealm.Instance();
             if (crossRealmProxy == null)
                 return result;
