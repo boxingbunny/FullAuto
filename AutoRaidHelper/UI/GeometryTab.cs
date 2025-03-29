@@ -5,8 +5,6 @@ using AutoRaidHelper.Settings;
 using AEAssist;
 using AEAssist.Helper;
 using ECommons.DalamudServices;
-using AEAssist.CombatRoutine.Module;
-using System.Runtime.Loader;
 
 namespace AutoRaidHelper.UI
 {
@@ -42,27 +40,27 @@ namespace AutoRaidHelper.UI
         public string ChordResultLabel { get; private set; } = "";
 
         // 固定数据：场地中心标签与对应的实际坐标值
-        private readonly string[] _centerLabels = new string[] { "旧(0,0,0)", "新(100,0,100)" };
-        private readonly Vector3[] _centerPositions = new Vector3[]
-        {
-            new Vector3(0, 0, 0),
-            new Vector3(100, 0, 100)
-        };
+        private readonly string[] _centerLabels = ["旧(0,0,0)", "新(100,0,100)"];
+        private readonly Vector3[] _centerPositions =
+        [
+            new(0, 0, 0),
+            new(100, 0, 100)
+        ];
 
         // 固定数据：朝向点标签与对应的实际坐标值
-        private readonly string[] _directionLabels = new string[] { "东(101,0,100)", "西(99,0,100)", "南(100,0,101)", "北(100,0,99)" };
-        private readonly Vector3[] _directionPositions = new Vector3[]
-        {
-            new Vector3(101, 0, 100),
-            new Vector3(99, 0, 100),
-            new Vector3(100, 0, 101),
-            new Vector3(100, 0, 99)
-        };
+        private readonly string[] _directionLabels = ["东(101,0,100)", "西(99,0,100)", "南(100,0,101)", "北(100,0,99)"];
+        private readonly Vector3[] _directionPositions =
+        [
+            new(101, 0, 100),
+            new(99, 0, 100),
+            new(100, 0, 101),
+            new(100, 0, 99)
+        ];
 
         /// <summary>
         /// 在每一帧调用，主要用于更新鼠标点击记录（点1、点2、点3）。
         /// </summary>
-        public async void Update()
+        public void Update()
         {
             // 每帧检查是否按下Ctrl/Shift/Alt键，记录对应的点信息
             CheckPointRecording();
@@ -142,7 +140,7 @@ namespace AutoRaidHelper.UI
                     ImGui.EndCombo();
                 }
 
-                float angleAtApex = 0f;
+                float angleAtApex;
                 // 根据选择的模式计算夹角
                 if (Settings.ApexMode == 0)
                 {
