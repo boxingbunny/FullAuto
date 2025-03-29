@@ -30,6 +30,8 @@ namespace AutoRaidHelper.UI
         /// </summary>
         public AutomationSettings Settings => FullAutoSettings.Instance.AutomationSettings;
 
+        public static float scale => ImGui.GetFontSize() / 13.0f;
+
         // 记录上次发送自动排本命令的时间，避免频繁发送
         private DateTime _lastAutoQueueTime = DateTime.MinValue;
         // 标记副本是否已经完成，通常在 DutyCompleted 事件中设置
@@ -140,9 +142,6 @@ namespace AutoRaidHelper.UI
         /// </summary>
         public void Draw()
         {
-            // 卫月缩放大小
-            var scale = ImGui.GetFontSize() / 13.0f; // 基于默认字体大小
-
             //【地图记录与倒计时设置】
 
             // 按钮用于记录当前地图ID，并更新相应设置
@@ -369,7 +368,7 @@ namespace AutoRaidHelper.UI
         /// 在满足条件（地图匹配、启用倒计时、队伍所有成员有效、非战斗中、副本已开始且队伍人数为8）时：
         /// 等待8秒后，通过聊天框发送倒计时命令，命令格式为 "/countdown {delay}"。
         /// </summary>
-        private async System.Threading.Tasks.Task UpdateAutoCountdown()
+        private async Task UpdateAutoCountdown()
         {
             if (_isCountdownRunning) return;
             if (_isCountdownCompleted) return;
@@ -416,7 +415,7 @@ namespace AutoRaidHelper.UI
         /// 当副本结束后，自动在等待设定的延迟时间后通过遥控命令退本。
         /// 前提条件：当前地图匹配、启用退本、在副本内且副本已完成。
         /// </summary>
-        private async System.Threading.Tasks.Task UpdateAutoLeave()
+        private async Task UpdateAutoLeave()
         {
             if (_isLeaveRunning) return;
             if (_isLeaveCompleted) return;
@@ -469,7 +468,7 @@ namespace AutoRaidHelper.UI
         /// 当副本结束后，自动开启副本的战利品宝箱。
         /// 前提条件：当前地图匹配、在副本内且副本已完成。
         ///  </summary>
-        private async System.Threading.Tasks.Task UpdateAutoOpenChest()
+        private async Task UpdateAutoOpenChest()
         {
             if (_isOpenChestRunning) return;
             if (_isOpenChestCompleted) return;
@@ -499,7 +498,6 @@ namespace AutoRaidHelper.UI
                         {
                             var treasure = Svc.Objects.FirstOrDefault(o =>
                                 {
-                                    if (o == null) return false;
                                     var obj = (FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)(void*)o.Address;
                                     if (!obj->GetIsTargetable()) return false;
                                     if ((ObjectKind)obj->ObjectKind != ObjectKind.Treasure) return false;
@@ -574,7 +572,7 @@ namespace AutoRaidHelper.UI
         /// 条件包括：启用自动排本、足够的时间间隔、队伍状态满足要求（队伍成员均在线、不在副本中、队伍人数为8）。
         /// 若任一条件不满足则不发送排本命令。
         /// </summary>
-        private async System.Threading.Tasks.Task UpdateAutoQueue()
+        private async Task UpdateAutoQueue()
         {
             if (_isQueueRunning) return;
             if (_isQueueCompleted) return;
@@ -666,9 +664,9 @@ namespace AutoRaidHelper.UI
         /// 返回每个成员的姓名、是否在线以及是否处于副本中的状态。
         /// </summary>
         /// <returns>包含队员状态的列表</returns>
-        private static unsafe System.Collections.Generic.List<(string Name, bool IsOnline, bool IsInDuty)> GetCrossRealmPartyStatus()
+        private static unsafe List<(string Name, bool IsOnline, bool IsInDuty)> GetCrossRealmPartyStatus()
         {
-            var result = new System.Collections.Generic.List<(string, bool, bool)>();
+            var result = new List<(string, bool, bool)>();
             var crossRealmProxy = InfoProxyCrossRealm.Instance();
             if (crossRealmProxy == null)
                 return result;

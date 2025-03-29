@@ -19,6 +19,11 @@ namespace AutoRaidHelper.UI
         public GeometrySettings Settings => FullAutoSettings.Instance.GeometrySettings;
 
         /// <summary>
+        /// 卫月字体大小。
+        /// </summary>
+        public static float scale => ImGui.GetFontSize() / 13.0f;
+
+        /// <summary>
         /// 记录运行时的点1（一般通过按Ctrl记录）。
         /// </summary>
         public Vector3? Point1World { get; private set; }
@@ -123,7 +128,7 @@ namespace AutoRaidHelper.UI
                     $"点1 -> 点2: 距离 {TwoPointDistanceXZ:F2}");
                 ImGui.Text("夹角顶点:");
                 ImGui.SameLine();
-                ImGui.SetNextItemWidth(120f);
+                ImGui.SetNextItemWidth(120f * scale);
 
                 // 根据配置判断当前使用的夹角顶点模式（场地中心或者点3）
                 string apexLabel = Settings.ApexMode == 0 ? "场地中心" : "点3(Alt)";
@@ -180,7 +185,7 @@ namespace AutoRaidHelper.UI
             // 绘制下拉框，供用户选择场地中心和朝向点
             ImGui.Text("场地中心:");
             ImGui.SameLine();
-            ImGui.SetNextItemWidth(150f);
+            ImGui.SetNextItemWidth(150f * scale);
             if (ImGui.BeginCombo("##CenterCombo", _centerLabels[Settings.SelectedCenterIndex]))
             {
                 for (int i = 0; i < _centerLabels.Length; i++)
@@ -196,7 +201,7 @@ namespace AutoRaidHelper.UI
 
             ImGui.Text("朝向点:");
             ImGui.SameLine();
-            ImGui.SetNextItemWidth(150f);
+            ImGui.SetNextItemWidth(150f * scale);
             if (ImGui.BeginCombo("##DirectionCombo", _directionLabels[Settings.SelectedDirectionIndex]))
             {
                 for (int i = 0; i < _directionLabels.Length; i++)

@@ -1,7 +1,5 @@
 using AEAssist.Helper;
 using AEAssist;
-using System;
-using System.IO;
 using System.Text.Json;
 
 namespace AutoRaidHelper.Settings
@@ -45,16 +43,16 @@ namespace AutoRaidHelper.Settings
         }
 
         // GeometryTab相关设置：用于存储场地中心、朝向点、角度计算等几何信息的相关配置
-        public GeometrySettings GeometrySettings { get; set; } = new GeometrySettings();
+        public GeometrySettings GeometrySettings { get; set; } = new();
 
         // AutomationTab相关设置：用于存储自动倒计时、退本、排本等自动化功能的配置
-        public AutomationSettings AutomationSettings { get; set; } = new AutomationSettings();
+        public AutomationSettings AutomationSettings { get; set; } = new();
 
         // FaGeneralSetting：基础功能相关的配置信息（例如调试信息输出）
-        public FaGeneralSetting FaGeneralSetting { get; set; } = new FaGeneralSetting();
+        public FaGeneralSetting FaGeneralSetting { get; set; } = new();
 
         // DebugPrintSettings：调试打印相关设置，控制输出各类触发事件的调试信息
-        public DebugPrintSettings DebugPrintSettings { get; set; } = new DebugPrintSettings();
+        public DebugPrintSettings DebugPrintSettings { get; set; } = new();
 
         /// <summary>
         /// 保存当前配置到配置文件
@@ -119,15 +117,15 @@ namespace AutoRaidHelper.Settings
         public int SelectedDirectionIndex { get; set; } = 3;
 
         // 计算夹角时使用的顶点模式，0表示使用场地中心，1表示使用用户指定的点3
-        public int ApexMode { get; set; } = 0;
+        public int ApexMode { get; set; }
 
         // 用于弦长/角度/半径换算的输入参数（默认全为0）
-        public float ChordInput { get; set; } = 0f;
-        public float AngleInput { get; set; } = 0f;
-        public float RadiusInput { get; set; } = 0f;
+        public float ChordInput { get; set; }
+        public float AngleInput { get; set; }
+        public float RadiusInput { get; set; }
 
         // 控制是否添加 Debug 点的开关（默认为 false）
-        public bool AddDebugPoints { get; set; } = false;
+        public bool AddDebugPoints { get; set; }
 
         /// <summary>
         /// 更新场地中心选项，并保存配置
@@ -219,20 +217,20 @@ namespace AutoRaidHelper.Settings
         public uint AutoFuncZoneId { get; set; } = 1238;
 
         // 自动倒计时开启与否，以及相应的倒计时延迟（单位：秒）
-        public bool AutoCountdownEnabled { get; set; } = false;
+        public bool AutoCountdownEnabled { get; set; }
         public int AutoCountdownDelay { get; set; } = 15;
 
         // 自动退本状态及延迟（单位：秒）
-        public bool AutoLeaveEnabled { get; set; } = false;
+        public bool AutoLeaveEnabled { get; set; }
         public int AutoLeaveDelay { get; set; } = 1;
 
         // 是否宝箱R点完成后再退本
-        public bool AutoLeaveAfterLootEnabled { get; set; } = false;
+        public bool AutoLeaveAfterLootEnabled { get; set; }
 
         //自动开启副本宝箱
-        public bool AutoOpenChestEnabled { get; set; } = false;
+        public bool AutoOpenChestEnabled { get; set; }
         // 自动排本开启状态及延迟（单位：秒）
-        public bool AutoQueueEnabled { get; set; } = false;
+        public bool AutoQueueEnabled { get; set; }
         public int AutoQueueDelay { get; set; } = 3;
 
         // 选定的副本名称（默认："光暗未来绝境战"）以及自定义副本名称
@@ -240,14 +238,14 @@ namespace AutoRaidHelper.Settings
         public string CustomDutyName { get; set; } = "";
 
         // 解限功能开关（用于排本命令中追加 "unrest"）
-        public bool UnrestEnabled { get; set; } = false;
+        public bool UnrestEnabled { get; set; }
 
         // 最终生成的排本命令字符串（自动根据配置拼接组合）
         public string FinalSendDutyName { get; set; } = "";
 
         // 低保统计数据：Omega 与 Sphene 低保计数
-        public int OmegaCompletedCount { get; set; } = 0;
-        public int SpheneCompletedCount { get; set; } = 0;
+        public int OmegaCompletedCount { get; set; }
+        public int SpheneCompletedCount { get; set; }
 
         /// <summary>
         /// 更新当前地图 ID，并保存配置
@@ -303,7 +301,7 @@ namespace AutoRaidHelper.Settings
             FullAutoSettings.Instance.Save();
         }
 
-        ///<summary
+        ///<summary>
         /// 更新自动开启副本宝箱状态，并保存配置
         ///</summary>
         public void UpdateAutoOpenChestEnabled(bool enabled)
@@ -411,21 +409,21 @@ namespace AutoRaidHelper.Settings
     public class DebugPrintSettings
     {
         // 总开关：若关闭则不打印任何调试信息（默认关闭）
-        public bool DebugPrintEnabled { get; set; } = false;
+        public bool DebugPrintEnabled { get; set; }
 
         // 以下各开关分别控制不同事件的打印
-        public bool PrintEnemyCastSpell { get; set; } = false;
-        public bool PrintMapEffect { get; set; } = false;
-        public bool PrintTether { get; set; } = false;
-        public bool PrintTargetIcon { get; set; } = false;
-        public bool PrintUnitCreate { get; set; } = false;
-        public bool PrintUnitDelete { get; set; } = false;
-        public bool PrintAddStatus { get; set; } = false;
-        public bool PrintRemoveStatus { get; set; } = false;
-        public bool PrintAbilityEffect { get; set; } = false;
-        public bool PrintGameLog { get; set; } = false;
-        public bool PrintWeatherChanged { get; set; } = false;
-        public bool PrintActorControl { get; set; } = false;
+        public bool PrintEnemyCastSpell { get; set; }
+        public bool PrintMapEffect { get; set; }
+        public bool PrintTether { get; set; }
+        public bool PrintTargetIcon { get; set; }
+        public bool PrintUnitCreate { get; set; }
+        public bool PrintUnitDelete { get; set; }
+        public bool PrintAddStatus { get; set; }
+        public bool PrintRemoveStatus { get; set; }
+        public bool PrintAbilityEffect { get; set; }
+        public bool PrintGameLog { get; set; }
+        public bool PrintWeatherChanged { get; set; }
+        public bool PrintActorControl { get; set; }
 
         /// <summary>
         /// 更新 DebugPrintEnabled 总开关，并保存配置
