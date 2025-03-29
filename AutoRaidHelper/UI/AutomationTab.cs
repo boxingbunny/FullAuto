@@ -124,6 +124,7 @@ namespace AutoRaidHelper.UI
         {
             LogHelper.Print($"副本团灭重置（DutyWiped 事件，ID: {e}）");
             // 如有需要，在此处重置其他状态
+            _isCountdownCompleted = false;
         }
 
         /// <summary>
@@ -610,7 +611,6 @@ namespace AutoRaidHelper.UI
                 ChatHelper.SendMessage($"/pdrduty n {Settings.FinalSendDutyName}");
                 _lastAutoQueueTime = DateTime.Now;
                 LogHelper.Print($"自动排本命令已发送：/pdrduty n {Settings.FinalSendDutyName}");
-                _isQueueCompleted = true;
             }
             catch (Exception e)
             {
@@ -631,7 +631,10 @@ namespace AutoRaidHelper.UI
             try
             {
                 if (Core.Resolve<MemApiDuty>().IsBoundByDuty())
+                {
+                    _isQueueCompleted = true;
                     return;
+                }
                 if (!_dutyCompleted)
                     return;
                 LogHelper.Print("检测到玩家不在副本内，自动重置_dutyCompleted");
