@@ -18,6 +18,7 @@ using AutoRaidHelper.Settings;
 using AutoRaidHelper.Utils;
 using AutoRaidHelper.UI;
 using Frost.FA.Triggers;
+using Frost.Frost_WAR.Frost_WAR_Triggers;
 
 namespace AutoRaidHelper.Plugin
 {
@@ -32,6 +33,7 @@ namespace AutoRaidHelper.Plugin
         public PluginSetting BuildPlugin()
         {
             TriggerMgr.Instance.Add("全自动小助手", new 指定职能tp指定位置().GetType());
+            TriggerMgr.Instance.Add("全自动小助手", new 检测目标位置().GetType());
             return new PluginSetting
             {
                 Name = "全自动小助手",
