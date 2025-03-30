@@ -43,6 +43,17 @@ namespace AutoRaidHelper.UI
         /// 用于显示弦长、角度和半径计算后的结果描述与数值。
         /// </summary>
         public string ChordResultLabel { get; private set; } = "";
+        private int _distributionMode = 0; // 0: 全圆均匀分布, 1: 直线间距分布, 2: 总计角度分布
+        private float _distributionRadius = 19f;
+        private float _distributionFirstOffset = 0f;
+        private int _distributionCount = 8;
+        private bool _distributionClockwise = true;
+        private float _distributionSpacing = 3;      // 直线间距模式所用
+        private float _fixedAngle = 45f; // 固定角度默认值
+        private float _distributionTotalAngle = 90f;     // 总计角度模式所用
+        private List<Vector3> _distributionPositions = new List<Vector3>();
+        private bool _addDistributionToDebugPoints = true;
+        private bool _copyCoordinatesWithF = false;
 
         // 固定数据：场地中心标签与对应的实际坐标值
         private readonly string[] _centerLabels = ["旧(0,0,0)", "新(100,0,100)"];
@@ -254,6 +265,99 @@ namespace AutoRaidHelper.UI
             }
             ImGui.SameLine();
             ImGui.TextColored(new Vector4(0.2f, 1f, 0.2f, 1f), ChordResultLabel);
+
+            ImGui.Spacing();
+            ImGui.Separator();
+            ImGui.Spacing();
+            ImGui.TextColored(new Vector4(0.8f, 0.8f, 1f, 1f), "扇形分散");
+            string comboLabel = _distributionMode switch
+            {
+                0 => "全圆均匀分布",
+                1 => "直线间距分布",
+                2 => "固定角度分布",
+                3 => "总计角度分布",
+                _ => "未知模式"
+            };
+            if (ImGui.BeginCombo("##DistributionMode", comboLabel))
+            {
+                if (ImGui.Selectable("全圆均匀分布", _distributionMode == 0))
+                    _distributionMode = 0;
+                if (ImGui.Selectable("直线间距分布", _distributionMode == 1))
+                    _distributionMode = 1;
+                if (ImGui.Selectable("固定角度分布", _distributionMode == 2))
+                    _distributionMode = 2;
+                if (ImGui.Selectable("总计角度分布", _distributionMode == 3))
+                    _distributionMode = 3;
+                ImGui.EndCombo();
+            }
+
+            ImGui.InputFloat("半径", ref _distributionRadius, 1f, 5f, "%.2f");
+            ImGui.InputFloat("第一人偏移角度", ref _distributionFirstOffset, 1f, 5f, "%.2f");
+            ImGui.InputInt("人数", ref _distributionCount);
+            ImGui.Checkbox("顺时针", ref _distributionClockwise);
+            if (_distributionMode == 1)
+            {
+                ImGui.InputFloat("直线间距", ref _distributionSpacing, 1f, 5f, "%.2f");
+            }
+            if (_distributionMode == 2)
+            {
+                ImGui.InputFloat("固定角度", ref _fixedAngle, 1f, 5f, "%.2f");
+            }
+            if (_distributionMode == 3)
+            {
+                ImGui.InputFloat("总计角度", ref _distributionTotalAngle, 1f, 5f, "%.2f");
+            }
+
+            if (ImGui.Button("计算分布"))
+            {
+                var center = _centerPositions[Settings.SelectedCenterIndex];
+                if (_distributionMode == 0)
+                {
+                    _distributionPositions = GeometryUtilsXZ.ComputeFullCirclePositions(center, _distributionRadius, _distributionFirstOffset, _distributionCount, _distributionClockwise);
+                }
+                else if (_distributionMode == 1)
+                {
+                    _distributionPositions = GeometryUtilsXZ.ComputeArcPositionsByChordSpacing(center, _distributionRadius, _distributionFirstOffset, _distributionCount, _distributionClockwise, _distributionSpacing);
+                }
+                else if (_distributionMode == 2)
+                {
+                    _distributionPositions = GeometryUtilsXZ.ComputePositionsByFixedAngle(center, _distributionRadius, _distributionFirstOffset, _distributionCount, _distributionClockwise, _fixedAngle);
+                }
+                else if (_distributionMode == 3)
+                {
+                    _distributionPositions = GeometryUtilsXZ.ComputeArcPositionsByTotalAngle(center, _distributionRadius, _distributionFirstOffset, _distributionCount, _distributionClockwise, _distributionTotalAngle);
+                }
+                // 如果选择添加至 Debug 点，则遍历计算结果并调用 AddDebugPoint
+                if (_addDistributionToDebugPoints)
+                {
+                    foreach (var pos in _distributionPositions)
+                    {
+                        AddDebugPoint(pos);
+                    }
+                }
+            }
+            ImGui.SameLine();
+            ImGui.Checkbox("添加计算结果到Debug点", ref _addDistributionToDebugPoints);
+
+
+            ImGui.Spacing();
+            ImGui.TextColored(new Vector4(1f, 1f, 0.6f, 1f), "计算结果：");
+            ImGui.SameLine();
+            ImGui.Checkbox("复制时附加f和括号", ref _copyCoordinatesWithF);
+            for (int i = 0; i < _distributionPositions.Count; i++)
+            {
+                var pos = _distributionPositions[i];
+                string line = _copyCoordinatesWithF
+                      ? $"({pos.X:F2}f, {pos.Y:F2}f, {pos.Z:F2}f)"
+                      : $"{pos.X:F2}, {pos.Y:F2}, {pos.Z:F2}";
+                ImGui.Text(line);
+                ImGui.SameLine();
+                if (ImGui.Button("复制##" + i))
+                {
+                    ImGui.SetClipboardText(line);
+                }
+            }
+
         }
 
         /// <summary>
