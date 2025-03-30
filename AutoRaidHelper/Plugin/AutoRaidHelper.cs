@@ -3,8 +3,9 @@ using AEAssist.Verify;
 using ImGuiNET;
 using System.Runtime.Loader;
 using AEAssist.CombatRoutine.Trigger;
-using AutoRaidHelper.Triggers.TriggerAction;
 using AutoRaidHelper.UI;
+using AutoRaidHelper.Triggers.TriggerAction;
+using AutoRaidHelper.Triggers.TriggerCondition;
 
 namespace AutoRaidHelper.Plugin
 {
@@ -19,6 +20,7 @@ namespace AutoRaidHelper.Plugin
         public PluginSetting BuildPlugin()
         {
             TriggerMgr.Instance.Add("全自动小助手", new 指定职能tp指定位置().GetType());
+            TriggerMgr.Instance.Add("全自动小助手", new 检测目标位置().GetType());
             return new PluginSetting
             {
                 Name = "全自动小助手",
