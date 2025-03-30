@@ -3,8 +3,9 @@ using AEAssist.Verify;
 using ImGuiNET;
 using System.Runtime.Loader;
 using AEAssist.CombatRoutine.Trigger;
-using AutoRaidHelper.Triggers.TriggerAction;
 using AutoRaidHelper.UI;
+using AutoRaidHelper.Triggers.TriggerAction;
+using AutoRaidHelper.Triggers.TriggerCondition;
 
 namespace AutoRaidHelper.Plugin
 {

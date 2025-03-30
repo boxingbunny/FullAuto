@@ -5,7 +5,7 @@ using ECommons.DalamudServices;
 using ECommons.LanguageHelpers;
 using System.Numerics;
 
-namespace Frost.Frost_WAR.Frost_WAR_Triggers;
+namespace AutoRaidHelper.Triggers.TriggerCondition;
 
 public class 检测目标位置 : ITriggerCond
 {
