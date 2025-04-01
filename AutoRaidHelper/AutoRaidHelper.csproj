@@ -60,8 +60,4 @@
     </Reference>
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Triggers\TriggerCondition\" />
-  </ItemGroup>
-
 </Project>
