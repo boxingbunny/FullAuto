@@ -391,12 +391,23 @@ namespace AutoRaidHelper.Settings
         // 控制是否绘制坐标点并打印调试信息（默认启用）
         public bool PrintDebugInfo { get; set; } = true;
 
+        //控制是否打印所有ActorControl信息
+        public bool PrintActorControl { get; set; } = false;
         /// <summary>
         /// 更新 PrintDebugInfo 并保存配置
         /// </summary>
         public void UpdatePrintDebugInfo(bool print)
         {
             PrintDebugInfo = print;
+            FullAutoSettings.Instance.Save();
+        }
+
+        /// <summary>
+        /// 更新 PrintActorControl 并保存配置
+        /// </summary>
+        public void UpdatePrintActorControl(bool print)
+        {
+            PrintActorControl = print;
             FullAutoSettings.Instance.Save();
         }
     }
