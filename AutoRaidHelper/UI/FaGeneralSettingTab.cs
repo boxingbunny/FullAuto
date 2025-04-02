@@ -32,6 +32,11 @@ namespace AutoRaidHelper.UI
                 // 当用户更改复选框状态后，调用配置更新方法保存新的状态
                 Settings.UpdatePrintDebugInfo(printDebug);
             }
+            var printActorControl = Settings.PrintActorControl;
+            if (ImGui.Checkbox("打印所有ActorControl信息", ref printActorControl))
+            {
+                Settings.UpdatePrintActorControl(printActorControl);
+            }
         }
     }
 }
