@@ -118,7 +118,7 @@ namespace AutoRaidHelper.UI
             // 针对不同副本ID，更新对应的低保数
             if (e == 968)
             {
-                _omegaCompletedCount++;
+                _dragonCompletedCount++;
                 Settings.UpdateOmegaCompletedCount(Settings.DragonCompletedCount + 1);
                 LogHelper.Print($"龙诗低保 + 1, 本次已加低保数: {_dragonCompletedCount},共计加低保数{Settings.DragonCompletedCount}");
             }
@@ -136,7 +136,7 @@ namespace AutoRaidHelper.UI
             }
             if (e == 1238)
             {
-                _spheneCompletedCount ++;
+                _edenCompletedCount ++;
                 Settings.UpdateSpheneCompletedCount(Settings.EdenCompletedCount + 1);
                 LogHelper.Print($"伊甸低保 + 1, 本次已加低保数: {_edenCompletedCount},共计加低保数{Settings.EdenCompletedCount}");
             }
