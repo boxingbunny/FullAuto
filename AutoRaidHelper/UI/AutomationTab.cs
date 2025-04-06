@@ -36,10 +36,16 @@ namespace AutoRaidHelper.UI
         private DateTime _lastAutoQueueTime = DateTime.MinValue;
         // 标记副本是否已经完成，通常在 DutyCompleted 事件中设置
         private bool _dutyCompleted;
+        // 记录龙诗低保数
+        private int _dragonCompletedCount;
         // 记录欧米茄低保数（通过副本完成事件累加）
         private int _omegaCompletedCount;
         // 记录女王低保数（通过副本完成事件累加）
         private int _spheneCompletedCount;
+        // 记录伊甸低保数
+        private int _edenCompletedCount;
+        // 记录零式阿罗阿罗岛低保数
+        private int _alalCompletedCount;
         private bool _isCountdownRunning;
         private bool _isOpenChestRunning;
         private bool _isLeaveRunning;
@@ -110,11 +116,29 @@ namespace AutoRaidHelper.UI
             LogHelper.Print($"副本任务完成（DutyCompleted 事件，ID: {e}）");
             _dutyCompleted = true;
             // 针对不同副本ID，更新对应的低保数
+            if (e == 968)
+            {
+                _omegaCompletedCount++;
+                Settings.UpdateOmegaCompletedCount(Settings.DragonCompletedCount + 1);
+                LogHelper.Print($"龙诗低保 + 1, 本次已加低保数: {_dragonCompletedCount},共计加低保数{Settings.DragonCompletedCount}");
+            }
             if (e == 1122)
             {
                 _omegaCompletedCount++;
                 Settings.UpdateOmegaCompletedCount(Settings.OmegaCompletedCount + 1);
                 LogHelper.Print($"绝欧低保 + 1, 本次已加低保数: {_omegaCompletedCount},共计加低保数{Settings.OmegaCompletedCount}");
+            }
+            if (e == 1180)
+            {
+                _alalCompletedCount++;
+                Settings.UpdateOmegaCompletedCount(Settings.AlalCompletedCount + 1);
+                LogHelper.Print($"阿罗阿罗低保 + 1, 本次已加低保数: {_alalCompletedCount},共计加低保数{Settings.AlalCompletedCount}");
+            }
+            if (e == 1238)
+            {
+                _spheneCompletedCount ++;
+                Settings.UpdateSpheneCompletedCount(Settings.EdenCompletedCount + 1);
+                LogHelper.Print($"伊甸低保 + 1, 本次已加低保数: {_edenCompletedCount},共计加低保数{Settings.EdenCompletedCount}");
             }
             if (e == 1243)
             {
@@ -233,6 +257,7 @@ namespace AutoRaidHelper.UI
                 if (!string.IsNullOrEmpty(leaderName))
                 {
                     var leaderRole = RemoteControlHelper.GetRoleByPlayerName(leaderName);
+                    RemoteControlHelper.Cmd(leaderRole,"/pdr load ContentFinderCommand");
                     RemoteControlHelper.Cmd(leaderRole, $"/pdrduty n {Settings.FinalSendDutyName}");
                     LogHelper.Print($"为队长 {leaderName} 发送排本命令: /pdrduty n {Settings.FinalSendDutyName}");
                 }
@@ -298,6 +323,10 @@ namespace AutoRaidHelper.UI
                     Settings.UpdateSelectedDutyName("光暗未来绝境战");
                 if (ImGui.Selectable("永恒女王忆想歼灭战", Settings.SelectedDutyName == "永恒女王忆想歼灭战"))
                     Settings.UpdateSelectedDutyName("永恒女王忆想歼灭战");
+                if (ImGui.Selectable("异闻阿罗阿罗岛", Settings.SelectedDutyName == "异闻阿罗阿罗岛"))
+                    Settings.UpdateSelectedDutyName("异闻阿罗阿罗岛");
+                if (ImGui.Selectable("零式异闻阿罗阿罗岛", Settings.SelectedDutyName == "零式异闻阿罗阿罗岛"))
+                    Settings.UpdateSelectedDutyName("零式异闻阿罗阿罗岛");
                 if (ImGui.Selectable("自定义", Settings.SelectedDutyName == "自定义"))
                     Settings.UpdateSelectedDutyName("自定义");
                 ImGui.EndCombo();
@@ -616,6 +645,7 @@ namespace AutoRaidHelper.UI
                 }
                 await Coroutine.Instance.WaitAsync(Settings.AutoQueueDelay * 1000);
                 // 发送排本命令，通过聊天输入框
+                ChatHelper.SendMessage("/pdr load ContentFinderCommand");
                 ChatHelper.SendMessage($"/pdrduty n {Settings.FinalSendDutyName}");
                 _lastAutoQueueTime = DateTime.Now;
                 LogHelper.Print($"自动排本命令已发送：/pdrduty n {Settings.FinalSendDutyName}");
