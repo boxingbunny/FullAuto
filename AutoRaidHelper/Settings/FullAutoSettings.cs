@@ -366,22 +366,40 @@ namespace AutoRaidHelper.Settings
             FinalSendDutyName = finalName;
             FullAutoSettings.Instance.Save();
         }
-
-        /// <summary>
-        /// 更新 OmegaCompletedCount 并保存配置
-        /// </summary>
-        public void UpdateOmegaCompletedCount(int count)
+        
+        // 定义一个枚举类型
+        public enum DutyType : ushort
         {
-            OmegaCompletedCount = count;
-            FullAutoSettings.Instance.Save();
+            Dragon = 968,
+            Omega = 1122,
+            Alal = 1180,
+            Eden = 1238,
+            Sphene = 1243
         }
 
-        /// <summary>
-        /// 更新 SpheneCompletedCount 并保存配置
-        /// </summary>
-        public void UpdateSpheneCompletedCount(int count)
+        public void UpdateDutyCount(DutyType duty, int count)
         {
-            SpheneCompletedCount = count;
+            switch (duty)
+            {
+                case DutyType.Dragon:
+                    DragonCompletedCount = count;
+                    break;
+                case DutyType.Omega:
+                    OmegaCompletedCount = count;
+                    break;
+                case DutyType.Sphene:
+                    SpheneCompletedCount = count;
+                    break;
+                case DutyType.Eden:
+                    EdenCompletedCount = count;
+                    break;
+                case DutyType.Alal:
+                    AlalCompletedCount = count;
+                    break;
+                default:
+                    LogHelper.PrintError("未知的副本类型");
+                    return;
+            }
             FullAutoSettings.Instance.Save();
         }
     }
