@@ -30,43 +30,35 @@ namespace AutoRaidHelper.UI
         {
             _dutyUpdateActions = new Dictionary<DutyType, Action>
             {
-                { DutyType.Dragon, () =>
-                    {
-                        _dragonCompletedCount++;
-                        Settings.UpdateDutyCount(DutyType.Dragon, Settings.DragonCompletedCount + 1);
-                        LogHelper.Print($"龙诗低保 + 1, 本次已加低保数: {_dragonCompletedCount}, 共计加低保数 {Settings.DragonCompletedCount}");
-                    }
-                },
-                { DutyType.Omega, () =>
-                    {
-                        _omegaCompletedCount++;
-                        Settings.UpdateDutyCount(DutyType.Omega, Settings.OmegaCompletedCount + 1);
-                        LogHelper.Print($"绝欧低保 + 1, 本次已加低保数: {_omegaCompletedCount}, 共计加低保数 {Settings.OmegaCompletedCount}");
-                    }
-                },
-                { DutyType.Alal, () =>
-                    {
-                        _alalCompletedCount++;
-                        Settings.UpdateDutyCount(DutyType.Alal, Settings.AlalCompletedCount + 1);
-                        LogHelper.Print($"阿罗阿罗低保 + 1, 本次已加低保数: {_alalCompletedCount}, 共计加低保数 {Settings.AlalCompletedCount}");
-                    }
-                },
-                { DutyType.Eden, () =>
-                    {
-                        _edenCompletedCount++;
-                        Settings.UpdateDutyCount(DutyType.Eden, Settings.EdenCompletedCount + 1);
-                        LogHelper.Print($"伊甸低保 + 1, 本次已加低保数: {_edenCompletedCount}, 共计加低保数 {Settings.EdenCompletedCount}");
-                    }
-                },
-                { DutyType.Sphene, () =>
-                    {
-                        _spheneCompletedCount += 2;
-                        Settings.UpdateDutyCount(DutyType.Sphene, Settings.SpheneCompletedCount + 2);
-                        LogHelper.Print($"女王低保 + 2, 本次已加低保数: {_spheneCompletedCount}, 共计加低保数 {Settings.SpheneCompletedCount}");
-                    }
-                },
+                { DutyType.Dragon, () => UpdateDuty(DutyType.Dragon, ref _dragonCompletedCount, 1, "龙诗") },
+                { DutyType.Omega, () => UpdateDuty(DutyType.Omega, ref _omegaCompletedCount, 1, "绝欧") },
+                { DutyType.Alal, () => UpdateDuty(DutyType.Alal, ref _alalCompletedCount, 1, "阿罗阿罗") },
+                { DutyType.Eden, () => UpdateDuty(DutyType.Eden, ref _edenCompletedCount, 1, "伊甸") },
+                { DutyType.Sphene, () => UpdateDuty(DutyType.Sphene, ref _spheneCompletedCount, 2, "女王") },
             };
         }
+        
+        private void UpdateDuty(DutyType duty, ref int localCount, int increment, string dutyName)
+        {
+            // 取出当前全局累计值
+            int globalBefore = GetGlobalCount(duty);
+            localCount += increment;
+            int globalNew = globalBefore + increment;
+            // 计算全局累计值更新配置
+            Settings.UpdateDutyCount(duty, globalNew);
+            LogHelper.Print($"{dutyName}低保 + {increment}, 本次已加低保数: {localCount}, 共计加低保数 {GetGlobalCount(duty)}");
+        }
+
+        private int GetGlobalCount(DutyType duty) =>
+            duty switch
+            {
+                DutyType.Dragon => Settings.DragonCompletedCount,
+                DutyType.Omega  => Settings.OmegaCompletedCount,
+                DutyType.Alal   => Settings.AlalCompletedCount,
+                DutyType.Eden   => Settings.EdenCompletedCount,
+                DutyType.Sphene => Settings.SpheneCompletedCount,
+                _               => 0
+            };
         
         /// <summary>
         /// 通过全局配置单例获取 AutomationSettings 配置，
