@@ -17,7 +17,7 @@ namespace AutoRaidHelper.UI
         /// 获取全局的 GeometrySettings 配置单例，存储场地中心、朝向点及计算参数等配置。
         /// </summary>
         public GeometrySettings Settings => FullAutoSettings.Instance.GeometrySettings;
-
+        
         /// <summary>
         /// 卫月字体大小。
         /// </summary>
@@ -72,7 +72,39 @@ namespace AutoRaidHelper.UI
             new(100, 0, 101),
             new(100, 0, 99)
         ];
+        
+        /// <summary>
+        /// [落点预测功能]
+        /// 用户输入的前进距离，用于预测玩家面前的落点位置（单位与游戏内一致）。
+        /// </summary>
+        private float _moveForwardDistance = 10.0f;
+        /// <summary>
+        /// [落点预测功能]
+        /// 标识是否已成功计算出玩家面前的落点位置。
+        /// </summary>
+        private bool _hasCalculatedForwardPos;
+        /// <summary>
+        /// [落点预测功能]
+        /// 保存玩家当前在3D世界中的位置，作为预测落点的起始点。
+        /// </summary>
+        private Vector3 _forwardOrigin;
+        /// <summary>
+        /// [落点预测功能]
+        /// 保存根据玩家当前位置与朝向计算得到的落点位置（3D坐标）。
+        /// </summary>
+        private Vector3 _forwardDest;
+        /// <summary>
+        /// [落点预测功能]
+        /// 指示是否采用自定义起始点来计算预测落点。当为 true 时，将使用用户事先记录的 Ctrl 点作为起始坐标。
+        /// </summary>
+        private bool _useCustomOrigin;
+        /// <summary>
+        /// [落点预测功能]
+        /// 用户输入的自定义面向角度（单位：弧度，范围 -π ~ π），用于预测落点。
+        /// </summary>
+        private float _customRotation;
 
+        
         /// <summary>
         /// 在每一帧调用，主要用于更新鼠标点击记录（点1、点2、点3）。
         /// </summary>
@@ -357,9 +389,141 @@ namespace AutoRaidHelper.UI
                     ImGui.SetClipboardText(line);
                 }
             }
-
+            
+            // 预测玩家前方落点
+            DrawForwardMoveSection();
         }
 
+        private void DrawForwardMoveSection()
+        {
+            // 分隔线与提示文本
+            ImGui.Separator();
+            ImGui.Spacing();
+            ImGui.TextColored(new Vector4(0.8f, 0.95f, 0.6f, 1f), "计算玩家面前落点 + 绘制连线：");
+
+            // 复选框：选择是否使用自定义起始点（存储的 Ctrl 点）
+            ImGui.Checkbox("使用自定义起始点 (Ctrl点)", ref _useCustomOrigin);
+
+            // 如果使用自定义起始点，则显示自定义面向角度输入（单位：弧度，范围 -π ~ π）
+            if (_useCustomOrigin)
+            {
+                ImGui.InputFloat("自定义面向 (-π~π)##customRotation", ref _customRotation, 0.1f, 0.5f, "%.2f");
+            }
+
+            // 输入向前移动距离
+            ImGui.InputFloat("向前距离##forward", ref _moveForwardDistance, 1f, 5f, "%.2f");
+
+            // 当点击“计算落点”按钮时，根据不同模式计算出落点
+            if (ImGui.Button("计算落点##forward"))
+            {
+                if (_useCustomOrigin)
+                {
+                    // 使用已记录的 Ctrl 点作为起始坐标
+                    // 请确保 Point1World 已经在其他地方记录（例如按 Ctrl 时记录）
+                    if (Point1World.HasValue)
+                    {
+                        _forwardOrigin = Point1World.Value;
+                    }
+                    else
+                    {
+                        // 若未记录，则退回到玩家当前位置
+                        var me = Core.Me;
+                        if (me != null)
+                        {
+                            _forwardOrigin = me.Position;
+                        }
+                    }
+
+                    // 使用用户输入的自定义面向角度计算
+                    float sinAngle = MathF.Sin(_customRotation);
+                    float cosAngle = MathF.Cos(_customRotation);
+                    _forwardDest = new Vector3(
+                        _forwardOrigin.X + _moveForwardDistance * sinAngle,
+                        _forwardOrigin.Y,
+                        _forwardOrigin.Z + _moveForwardDistance * cosAngle
+                    );
+                }
+                else
+                {
+                    // 正常模式：使用玩家当前位置和玩家旋转角度计算
+                    var me = Core.Me;
+                    if (me != null)
+                    {
+                        _forwardOrigin = me.Position;
+                        float rot = me.Rotation;
+                        float sinRot = MathF.Sin(rot);
+                        float cosRot = MathF.Cos(rot);
+                        _forwardDest = new Vector3(
+                            _forwardOrigin.X + _moveForwardDistance * sinRot,
+                            _forwardOrigin.Y,
+                            _forwardOrigin.Z + _moveForwardDistance * cosRot
+                        );
+                    }
+                }
+                _hasCalculatedForwardPos = true;
+            }
+
+            // 同一行添加一个按钮，用于清除当前计算出的绘制结果
+            ImGui.SameLine();
+            if (ImGui.Button("清理绘制##forward"))
+            {
+                _hasCalculatedForwardPos = false;
+            }
+
+            // 如果已经计算出落点，则显示坐标信息，并在屏幕上绘制连线和落点箭头
+            if (_hasCalculatedForwardPos)
+            {
+                ImGui.Text($"玩家位置: <{_forwardOrigin.X:F2}, {_forwardOrigin.Y:F2}, {_forwardOrigin.Z:F2}>");
+                ImGui.Text($"落点位置: <{_forwardDest.X:F2}, {_forwardDest.Y:F2}, {_forwardDest.Z:F2}>");
+                ImGui.Spacing();
+
+                // 将3D世界坐标转换为屏幕坐标，即使转换返回 false也直接用 out 出来的值绘制
+                Svc.GameGui.WorldToScreen(_forwardOrigin, out Vector2 screenPos1);
+                Svc.GameGui.WorldToScreen(_forwardDest, out Vector2 screenPos2);
+
+                // 使用前景绘制列表，确保绘制不受窗口裁剪影响，直接绘制在屏幕上
+                var drawList = ImGui.GetForegroundDrawList();
+                uint lineColor = ImGui.ColorConvertFloat4ToU32(new Vector4(0f, 1f, 0f, 1f)); // 绿色
+                float thickness = 4.0f; // 稍微加粗连线
+
+                // 绘制从起始点到落点之间的连线
+                drawList.AddLine(screenPos1, screenPos2, lineColor, thickness);
+
+                // 在落点处绘制箭头
+                // 箭头参数：箭头长度（像素）与箭头角度（弧度）
+                float arrowHeadLength = 18.0f;
+                float arrowHeadAngle = 30f * (MathF.PI / 180f); // 30度
+
+                // 箭头指向设定为连线方向的反向（从落点指向起始点）
+                Vector2 lineDir = screenPos1 - screenPos2;
+                if (lineDir.LengthSquared() > 1e-6f)
+                {
+                    lineDir = Vector2.Normalize(lineDir);
+
+                    // 分别旋转 lineDir +arrowHeadAngle 和 -arrowHeadAngle，得到箭头两侧分支
+                    Vector2 arrowDir1 = new Vector2(
+                        lineDir.X * MathF.Cos(arrowHeadAngle) - lineDir.Y * MathF.Sin(arrowHeadAngle),
+                        lineDir.X * MathF.Sin(arrowHeadAngle) + lineDir.Y * MathF.Cos(arrowHeadAngle)
+                    );
+                    Vector2 arrowDir2 = new Vector2(
+                        lineDir.X * MathF.Cos(-arrowHeadAngle) - lineDir.Y * MathF.Sin(-arrowHeadAngle),
+                        lineDir.X * MathF.Sin(-arrowHeadAngle) + lineDir.Y * MathF.Cos(-arrowHeadAngle)
+                    );
+
+                    // 根据箭头分支方向计算箭头终点
+                    Vector2 arrowPoint1 = screenPos2 + arrowDir1 * arrowHeadLength;
+                    Vector2 arrowPoint2 = screenPos2 + arrowDir2 * arrowHeadLength;
+
+                    // 绘制两条箭头分支线
+                    drawList.AddLine(screenPos2, arrowPoint1, lineColor, thickness);
+                    drawList.AddLine(screenPos2, arrowPoint2, lineColor, thickness);
+                }
+
+                ImGui.TextColored(new Vector4(0.2f, 1f, 0.2f, 1f), "已绘制预测落点位置");
+            }
+        }
+
+        
         /// <summary>
         /// 通过监听键盘按键（Ctrl、Shift、Alt）记录鼠标在世界坐标中的位置，
         /// 同时在记录 Debug 点时更新点1/点2/点3的值，并计算点1与点2之间的距离。
