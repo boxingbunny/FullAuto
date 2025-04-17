@@ -91,3 +91,5 @@ artifacts/
 project.lock.json
 project.fragment.lock.json
 artifacts/
+AutoRaidHelper/AutoRaidHelper.sln
+AutoRaidHelper/AutoRaidHelper.csproj

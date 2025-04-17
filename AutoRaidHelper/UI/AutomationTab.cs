@@ -94,13 +94,18 @@ namespace AutoRaidHelper.UI
 
         private bool _isLootCompleted;
         private IGameObject? _treasure;
+        // 添加战利品获取标志和尝试打开宝箱次数计数器
+        private bool _hasReceivedLoot;
+        private int _chestOpenAttempts;
 
         private readonly object _countdownLock = new();
         private readonly object _openChestLock = new();
         private readonly object _leaveLock = new();
         private readonly object _queueLock = new();
 
-     
+        // 添加确认弹窗状态变量
+        private bool _closeGameModalOpen = false;
+
         /// <summary>
         /// 在加载时，订阅副本状态相关事件（如副本完成和团灭）
         /// 以便更新自动化状态或低保统计数据。
@@ -110,6 +115,8 @@ namespace AutoRaidHelper.UI
         {
             Svc.DutyState.DutyCompleted += OnDutyCompleted;
             Svc.DutyState.DutyWiped += OnDutyWiped;
+            // 订阅游戏日志事件，用于监听战利品获取消息
+            AEAssist.DataBinding.TriggerlineData.Instance.OnCondParamsCreated += OnCondParamsCreated;
         }
 
         /// <summary>
@@ -120,6 +127,34 @@ namespace AutoRaidHelper.UI
         {
             Svc.DutyState.DutyCompleted -= OnDutyCompleted;
             Svc.DutyState.DutyWiped -= OnDutyWiped;
+            // 取消订阅游戏日志事件
+            AEAssist.DataBinding.TriggerlineData.Instance.OnCondParamsCreated -= OnCondParamsCreated;
+        }
+
+        /// <summary>
+        /// 处理条件参数创建事件，用于监听游戏日志中的战利品获取消息
+        /// </summary>
+        /// <param name="condParams">事件参数</param>
+        private void OnCondParamsCreated(AEAssist.DataBinding.BaseCondParams condParams)
+        {
+            try 
+            {
+                // 如果是游戏日志条件参数
+                if (condParams is AEAssist.DataBinding.GameLogCondParams gameLog)
+                {
+                    string logMessage = gameLog.ToString();
+                    // 检查日志是否包含"获得了新的战利品"字样
+                    if (logMessage.Contains("获得了新的战利品"))
+                    {
+                        LogHelper.Print($"检测到战利品获取消息: {logMessage}");
+                        _hasReceivedLoot = true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogHelper.Print($"处理游戏日志异常: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -255,7 +290,10 @@ namespace AutoRaidHelper.UI
             }
             ImGui.SameLine();
 
-            // 全队TP至指定位置，操作为“撞电网”
+            
+
+
+            // 全队TP至指定位置，操作为"撞电网"
             if (ImGui.Button("全队TP撞电网"))
             {
                 if (Core.Resolve<MemApiDuty>().InMission)
@@ -515,6 +553,15 @@ namespace AutoRaidHelper.UI
             if (_isOpenChestRunning) return;
             if (_isOpenChestCompleted) return;
             if (_isLootCompleted) return;
+            // 如果已收到战利品通知，则直接标记为完成状态
+            if (_hasReceivedLoot)
+            {
+                _isOpenChestCompleted = true;
+                _isLootCompleted = true;
+                _treasure = null;
+                LogHelper.Print("检测到已获得战利品，标记宝箱开启完成");
+                return;
+            }
 
             lock (_openChestLock)
             {
@@ -531,6 +578,16 @@ namespace AutoRaidHelper.UI
                 var isBoundByDuty = Core.Resolve<MemApiDuty>().IsBoundByDuty();
                 if (isBoundByDuty && _dutyCompleted)
                 {
+                    // 检查尝试次数是否超过10次，如果是则标记为完成
+                    if (_chestOpenAttempts >= 10)
+                    {
+                        _isOpenChestCompleted = true;
+                        _isLootCompleted = true;
+                        _treasure = null;
+                        LogHelper.Print("尝试打开宝箱次数已达上限(10次)，标记为完成");
+                        return;
+                    }
+
                     if (_treasure == null)
                     {
                         //LogHelper.Print("尝试寻找宝箱");
@@ -557,7 +614,6 @@ namespace AutoRaidHelper.UI
                             }
                             _treasure = treasure;
                         }
-
                     }
                     try
                     {
@@ -569,17 +625,23 @@ namespace AutoRaidHelper.UI
                         {
                             RemoteControlHelper.Cmd("", $"/aetp {_treasure.Position.X},{_treasure.Position.Y},{_treasure.Position.Z}");
                             await Coroutine.Instance.WaitAsync(3000);
-
                         }
+                        
                         if (_treasure.IsTargetable)
                         {
-                            LogHelper.Print("尝试打开宝箱");
+                            // 增加尝试次数计数
+                            _chestOpenAttempts++;
+                            LogHelper.Print($"尝试打开宝箱 (第{_chestOpenAttempts}次)");
                             Svc.Targets.Target = _treasure;
                             unsafe
                             {
                                 TargetSystem.Instance()->InteractWithObject((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)(void*)_treasure.Address);
                             }
                             await Coroutine.Instance.WaitAsync(3000);
+                            
+                            // 检查游戏日志是否包含获得战利品的信息
+                            // 此处可以添加针对游戏日志的检查逻辑，如果检测到"获得了新的战利品"消息
+                            // 则设置 _hasReceivedLoot = true;
                         }
                         else
                         {
@@ -695,6 +757,9 @@ namespace AutoRaidHelper.UI
                 _isLeaveCompleted = false;
                 _isQueueCompleted = false;
                 _isLootCompleted = false;
+                // 重置获取战利品标志和尝试次数
+                _hasReceivedLoot = false;
+                _chestOpenAttempts = 0;
             }
             catch (Exception e)
             {
