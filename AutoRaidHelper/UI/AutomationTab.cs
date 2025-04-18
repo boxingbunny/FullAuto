@@ -257,6 +257,15 @@ namespace AutoRaidHelper.UI
 
 
 
+            if (ImGui.Button("全队即刻关闭"))
+            {
+                if (Core.Resolve<MemApiDuty>().InMission)
+                {
+                    RemoteControlHelper.Cmd("", "/xlkill");
+                }
+            }
+            ImGui.SameLine();
+
 
             // 全队TP至指定位置，操作为"撞电网"
             if (ImGui.Button("全队TP撞电网"))
