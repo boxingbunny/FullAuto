@@ -1,12 +1,12 @@
 ﻿using AEAssist.AEPlugin;
-using AEAssist.Verify;
-using ImGuiNET;
-using System.Runtime.Loader;
 using AEAssist.CombatRoutine.Trigger;
-using AutoRaidHelper.UI;
+using AEAssist.Verify;
+using AutoRaidHelper.Hooks;
 using AutoRaidHelper.Triggers.TriggerAction;
 using AutoRaidHelper.Triggers.TriggerCondition;
-using AutoRaidHelper.Hooks;
+using AutoRaidHelper.UI;
+using ImGuiNET;
+using System.Runtime.Loader;
 
 namespace AutoRaidHelper.Plugin
 {
@@ -29,7 +29,7 @@ namespace AutoRaidHelper.Plugin
             return new PluginSetting
             {
                 Name = "全自动小助手",
-                LimitLevel = VIPLevel.Develop
+                LimitLevel = VIPLevel.VIP2,
             };
         }
 
@@ -85,7 +85,7 @@ namespace AutoRaidHelper.Plugin
         }
 
         #endregion
-               
+
 
     }
 }
