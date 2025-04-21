@@ -16,7 +16,7 @@ public static class Utilities
     public static void SetPosAndDebugPoint(string regexRole, Vector3 position)
     {
         RemoteControlHelper.SetPos(regexRole, position);
-        Share.TrustDebugPoint.Add(position);
+        // Share.TrustDebugPoint.Add(position);
     }
 
     /// <summary>
@@ -29,7 +29,7 @@ public static class Utilities
     public static void LockPosAndDebugPoint(string regexRole, Vector3 position, int time = 10000)
     {
         RemoteControlHelper.LockPos(regexRole, position, time);
-        Share.TrustDebugPoint.Add(position);
+        // Share.TrustDebugPoint.Add(position);
     }
 
     /// <summary>
@@ -361,7 +361,7 @@ public static class Utilities
                 pos);
             if (!FullAutoSettings.Instance.FaGeneralSetting.PrintDebugInfo) return;
             LogHelper.Print($"{dev}: {name} 移动至 {pos}");
-            Share.TrustDebugPoint.Add(pos);
+            // Share.TrustDebugPoint.Add(pos);
         }
         catch (Exception ex)
         {
@@ -384,7 +384,7 @@ public static class Utilities
             RemoteControlHelper.LockPos(!role.Contains(name) ? RemoteControlHelper.GetRoleByPlayerName(name) : name, pos, duration);
             RemoteControlHelper.LockPos(name, pos, duration);
             LogHelper.Print($"{dev}: {name} 锁定在 {pos} {duration}ms");
-            Share.TrustDebugPoint.Add(pos);
+            // Share.TrustDebugPoint.Add(pos);
         }
         catch (Exception ex)
         {
@@ -509,5 +509,22 @@ public static class Utilities
     public static Vector3 GetPosition(Direction baseDirection, float distance)
     {
         return _stageCenter + GetDirectionVector(baseDirection) * distance;
+    }
+    
+    /// <summary>
+    /// 扩展方法：将 IBattleChara 集合转换为元组集合。
+    /// </summary>
+    /// <param name="partyMembers">小队成员集合</param>
+    /// <returns>元组集合 (Member, Name, Role, StatusIds)</returns>
+    public static IEnumerable<(IBattleChara Member, string Name, string Role, IEnumerable<uint> StatusIds)> ToPartyMemberInfo(this IEnumerable<IBattleChara?> partyMembers)
+    {
+        return partyMembers
+            .Where(m => m != null)
+            .Select(m => (
+                Member: m!,
+                Name: m!.Name.ToString(),
+                Role: RemoteControlHelper.GetRoleByPlayerName(m.Name.ToString()),
+                StatusIds: m.StatusList.Select(s => s.StatusId)
+            ));
     }
 }

@@ -12,7 +12,7 @@ namespace AutoRaidHelper.Settings
     public sealed class FullAutoSettings
     {
         // 配置文件的存储路径，通过当前工作目录与相对路径构造出绝对路径
-        private static readonly string ConfigFilePath = Path.Combine(Share.CurrentDirectory, @"..\..\Settings\AutoRaidHelper\FullAutoSettings.json");
+        private static string ConfigFilePath = Path.Combine(Share.CurrentDirectory, @"..\..\Settings\AutoRaidHelper\FullAutoSettings",$"{Share.LocalContentId}.json");
 
         // 单例实例
         private static FullAutoSettings? _instance;
