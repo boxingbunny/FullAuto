@@ -10,6 +10,7 @@ using FFXIVClientStructs.FFXIV.Client.UI.Info;
 using ImGuiNET;
 using System.Numerics;
 using System.Runtime.Loader;
+using AEAssist.CombatRoutine.Module;
 using static FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCommonList.CharacterData.OnlineStatus;
 using DutyType = AutoRaidHelper.Settings.AutomationSettings.DutyType;
 
@@ -23,6 +24,8 @@ namespace AutoRaidHelper.UI
     {
         // 声明一个字典，用于将副本 ID (ushort) 映射到对应的更新操作
         private readonly Dictionary<DutyType, Action> _dutyUpdateActions;
+        private readonly List<string> party = ["MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4"];
+
         public AutomationTab()
         {
             _dutyUpdateActions = new Dictionary<DutyType, Action>
@@ -67,16 +70,22 @@ namespace AutoRaidHelper.UI
 
         // 记录上次发送自动排本命令的时间，避免频繁发送
         private DateTime _lastAutoQueueTime = DateTime.MinValue;
+
         // 标记副本是否已经完成，通常在 DutyCompleted 事件中设置
         private bool _dutyCompleted;
+
         // 记录龙诗低保数
         private int _dragonCompletedCount;
+
         // 记录欧米茄低保数（通过副本完成事件累加）
         private int _omegaCompletedCount;
+
         // 记录女王低保数（通过副本完成事件累加）
         private int _spheneCompletedCount;
+
         // 记录伊甸低保数
         private int _edenCompletedCount;
+
         // 记录零式阿罗阿罗岛低保数
         private int _alalCompletedCount;
         private bool _isCountdownRunning;
@@ -186,6 +195,7 @@ namespace AutoRaidHelper.UI
             {
                 Settings.UpdateAutoFuncZoneId(Core.Resolve<MemApiZoneInfo>().GetCurrTerrId());
             }
+
             ImGui.SameLine();
             ImGui.Text($"当前指定地图ID: {Settings.AutoFuncZoneId}");
 
@@ -195,6 +205,7 @@ namespace AutoRaidHelper.UI
             {
                 Settings.UpdateAutoCountdownEnabled(countdownEnabled);
             }
+
             ImGui.SameLine();
 
             // 输入倒计时延迟时间（秒）
@@ -204,6 +215,7 @@ namespace AutoRaidHelper.UI
             {
                 Settings.UpdateAutoCountdownDelay(countdownDelay);
             }
+
             ImGui.SameLine();
             ImGui.Text("秒");
 
@@ -213,6 +225,7 @@ namespace AutoRaidHelper.UI
             {
                 Settings.UpdateAutoLeaveEnabled(leaveEnabled);
             }
+
             ImGui.SameLine();
 
             // 输入退本延迟时间（秒）
@@ -222,6 +235,7 @@ namespace AutoRaidHelper.UI
             {
                 Settings.UpdateAutoLeaveDelay(leaveDelay);
             }
+
             ImGui.SameLine();
             ImGui.Text("秒");
 
@@ -253,19 +267,30 @@ namespace AutoRaidHelper.UI
                     RemoteControlHelper.Cmd("", "/pdr leaveduty");
                 }
             }
+
             ImGui.SameLine();
-
-
 
             if (ImGui.Button("全队即刻关闭"))
             {
                 if (Core.Resolve<MemApiDuty>().InMission)
                 {
-                    RemoteControlHelper.Cmd("", "/xlkill");
+                    var roleMe = AI.Instance.PartyRole;
+                    var partyExpectMe = party.Where(e => e != roleMe).ToList();
+                    foreach (var role in partyExpectMe)
+                    {
+                        RemoteControlHelper.Cmd(role, "/xlkill");
+                    }
                 }
             }
+
             ImGui.SameLine();
 
+            if (ImGui.Button("击杀8jr"))
+            {
+                Core.Resolve<MemApiChatMessage>().Toast2("🐷一样这个8jr", 1, 2000);
+            }
+
+            ImGui.SameLine();
 
             // 全队TP至指定位置，操作为"撞电网"
             if (ImGui.Button("全队TP撞电网"))
@@ -273,6 +298,7 @@ namespace AutoRaidHelper.UI
                 if (Core.Resolve<MemApiDuty>().InMission)
                     RemoteControlHelper.SetPos("", new Vector3(100, 0, 125));
             }
+
             ImGui.SameLine();
 
             // 为队长发送排本命令按钮，通过获取队长名称后发送命令
@@ -295,7 +321,8 @@ namespace AutoRaidHelper.UI
                 var enemies = Svc.Objects.OfType<IBattleNpc>().Where(x => x.IsTargetable && x.IsEnemy());
                 foreach (var enemy in enemies)
                 {
-                    LogHelper.Print($"敌对单位: {enemy.Name} (EntityIdID: {enemy.EntityId}, DataId: {enemy.DataId}), 位置: {enemy.Position}");
+                    LogHelper.Print(
+                        $"敌对单位: {enemy.Name} (EntityIdID: {enemy.EntityId}, DataId: {enemy.DataId}), 位置: {enemy.Position}");
                 }
             }
 
@@ -323,6 +350,7 @@ namespace AutoRaidHelper.UI
                 {
                     Settings.UpdateAutoQueueDelay(queueDelay);
                 }
+
                 ImGui.SameLine();
                 ImGui.Text("秒");
             }
@@ -334,6 +362,7 @@ namespace AutoRaidHelper.UI
             {
                 Settings.UpdateUnrestEnabled(unrest);
             }
+
             ImGui.Text("选择副本:");
 
             // 下拉框选择副本名称，包括预设名称和自定义选项
@@ -533,6 +562,7 @@ namespace AutoRaidHelper.UI
                 if (_isOpenChestRunning) return;
                 _isOpenChestRunning = true;
             }
+
             try
             {
                 if (Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() != Settings.AutoFuncZoneId)
@@ -541,6 +571,7 @@ namespace AutoRaidHelper.UI
                     _chestOpenAttempts = 0;
                     return;
                 }
+
                 if (!Settings.AutoOpenChestEnabled)
                     return;
 
@@ -562,11 +593,8 @@ namespace AutoRaidHelper.UI
                         // 寻找宝箱逻辑保持不变
                         var player = Core.Me;
                         if (player == null) return;
-                        unsafe
-                        {
-                            // 原有宝箱查找代码
-                        }
                     }
+
                     try
                     {
                         // 增加尝试次数计数
@@ -594,6 +622,7 @@ namespace AutoRaidHelper.UI
                 _isOpenChestRunning = false;
             }
         }
+
         /// <summary>
         /// 根据配置和当前队伍状态自动发送排本命令。
         /// 条件包括：启用自动排本、足够的时间间隔、队伍状态满足要求（队伍成员均在线、不在副本中、队伍人数为8）。
@@ -609,6 +638,7 @@ namespace AutoRaidHelper.UI
                 if (_isQueueRunning) return;
                 _isQueueRunning = true;
             }
+
             try
             {
                 // 根据选择的副本名称构造实际发送命令
@@ -634,13 +664,14 @@ namespace AutoRaidHelper.UI
                 // 检查跨服队伍中是否所有成员均在线且未在副本中，否则退出
                 var partyStatus = GetCrossRealmPartyStatus();
                 var invalidNames = partyStatus.Where(s => !s.IsOnline || s.IsInDuty)
-                                              .Select(s => s.Name)
-                                              .ToList();
+                    .Select(s => s.Name)
+                    .ToList();
                 if (invalidNames.Any())
                 {
                     LogHelper.Print("玩家不在线或在副本中：" + string.Join(", ", invalidNames));
                     return;
                 }
+
                 await Coroutine.Instance.WaitAsync(Settings.AutoQueueDelay * 1000);
                 // 发送排本命令，通过聊天输入框
                 ChatHelper.SendMessage("/pdr load ContentFinderCommand");
@@ -671,6 +702,7 @@ namespace AutoRaidHelper.UI
                     _isQueueCompleted = true;
                     return;
                 }
+
                 if (!_dutyCompleted)
                     return;
                 LogHelper.Print("检测到玩家不在副本内，自动重置_dutyCompleted");
@@ -720,6 +752,7 @@ namespace AutoRaidHelper.UI
                     result.Add((member.NameString, isOnline, isInDuty));
                 }
             }
+
             return result;
         }
 
@@ -740,6 +773,7 @@ namespace AutoRaidHelper.UI
                 if (data.State.HasFlag(PartyLeader) || data.State.HasFlag(PartyLeaderCrossWorld))
                     return data.NameString;
             }
+
             return null;
         }
     }
