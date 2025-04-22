@@ -287,7 +287,7 @@ namespace AutoRaidHelper.UI
 
             if (ImGui.Button("击杀8jr"))
             {
-                Core.Resolve<MemApiChatMessage>().Toast2("🐷一样这个8jr", 1, 2000);
+                Core.Resolve<MemApiChatMessage>().Toast2("猪一样这个8jr", 1, 2000);
             }
 
             ImGui.SameLine();
