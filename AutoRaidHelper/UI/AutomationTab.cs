@@ -1,8 +1,10 @@
 ﻿using AEAssist;
+using AEAssist.CombatRoutine.Module;
 using AEAssist.Extension;
 using AEAssist.Helper;
 using AEAssist.MemoryApi;
 using AutoRaidHelper.Settings;
+using AutoRaidHelper.Utils;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Types;
 using ECommons.DalamudServices;
@@ -10,7 +12,6 @@ using FFXIVClientStructs.FFXIV.Client.UI.Info;
 using ImGuiNET;
 using System.Numerics;
 using System.Runtime.Loader;
-using AEAssist.CombatRoutine.Module;
 using static FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCommonList.CharacterData.OnlineStatus;
 using DutyType = AutoRaidHelper.Settings.AutomationSettings.DutyType;
 
@@ -270,20 +271,56 @@ namespace AutoRaidHelper.UI
 
             ImGui.SameLine();
 
-            if (ImGui.Button("全队即刻关闭"))
+            // 修改为下拉菜单
+            if (ImGui.BeginCombo("##KillAllCombo", "全队即刻关闭"))
             {
-                if (Core.Resolve<MemApiDuty>().InMission)
+
+                // 获取当前玩家角色和队伍信息
+                var roleMe = AI.Instance.PartyRole;
+                // 使用 Svc.Party 获取队伍列表，并转换为 IBattleChara
+                var battleCharaMembers = Svc.Party
+                    .Select(p => p.GameObject as Dalamud.Game.ClientState.Objects.Types.IBattleChara)
+                    .Where(bc => bc != null);
+                // 获取包含 Role 的队伍信息
+                var partyInfo = battleCharaMembers.ToPartyMemberInfo();
+
+                // 添加原始功能选项
+                if (ImGui.Selectable("全队 (原功能)"))
                 {
-                    var roleMe = AI.Instance.PartyRole;
-                    var partyExpectMe = party.Where(e => e != roleMe).ToList();
+                    var partyExpectMe = partyInfo.Where(info => info.Role != roleMe).Select(info => info.Role);
                     foreach (var role in partyExpectMe)
                     {
-                        RemoteControlHelper.Cmd(role, "/xlkill");
+                        if (!string.IsNullOrEmpty(role)) // 确保 Role 不为空
+                        {
+                            RemoteControlHelper.Cmd(role, "/xlkill");
+                        }
                     }
                 }
+
+                ImGui.Separator();
+
+                // 列出队员并添加单独击杀按钮
+                foreach (var info in partyInfo)
+                {
+                    // 跳过自己
+                    if (info.Role == roleMe || info.Member == null) continue;
+
+                    // 显示队员信息和击杀按钮
+                    ImGui.Text($"{info.Name} (ID: {info.Member.EntityId})");
+                    ImGui.SameLine();
+                    if (ImGui.Button($"击杀##{info.Member.EntityId}"))
+                    {
+                        if (!string.IsNullOrEmpty(info.Role)) // 确保 Role 不为空
+                        {
+                            RemoteControlHelper.Cmd(info.Role, "/xlkill");
+                        }
+                    }
+                }
+
+                ImGui.EndCombo();
             }
 
-            ImGui.SameLine();
+
 
             if (ImGui.Button("击杀8jr"))
             {
