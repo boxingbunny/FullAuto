@@ -284,8 +284,10 @@ namespace AutoRaidHelper.UI
                 // 获取包含 Role 的队伍信息
                 var partyInfo = battleCharaMembers.ToPartyMemberInfo();
 
-                // 添加原始功能选项
-                if (ImGui.Selectable("全队 (原功能)"))
+                // 修改为 Text + Button
+                ImGui.Text("全队");
+                ImGui.SameLine();
+                if (ImGui.Button("击杀##All")) // 添加唯一 ID 防止冲突
                 {
                     var partyExpectMe = partyInfo.Where(info => info.Role != roleMe).Select(info => info.Role);
                     foreach (var role in partyExpectMe)
@@ -324,7 +326,38 @@ namespace AutoRaidHelper.UI
 
             if (ImGui.Button("击杀8jr"))
             {
-                Core.Resolve<MemApiChatMessage>().Toast2("猪一样这个8jr", 1, 2000);
+                // 查找名为 "歌无谢" 的玩家
+                string targetPlayerName = "歌无谢";
+                string? targetRole = null;
+
+                // 使用 Svc.Party 获取队伍列表，并转换为 IBattleChara
+                var battleCharaMembers = Svc.Party
+                    .Select(p => p.GameObject as Dalamud.Game.ClientState.Objects.Types.IBattleChara)
+                    .Where(bc => bc != null);
+                // 获取包含 Role 的队伍信息
+                var partyInfo = battleCharaMembers.ToPartyMemberInfo();
+
+                foreach (var info in partyInfo)
+                {
+                    if (info.Name == targetPlayerName)
+                    {
+                        targetRole = info.Role;
+                        break;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(targetRole))
+                {
+                    // 找到了玩家，执行击杀命令
+                    RemoteControlHelper.Cmd(targetRole, "/xlkill");
+                    LogHelper.Print($"已向 {targetPlayerName} (职能: {targetRole}) 发送击杀命令。");
+                }
+                else
+                {
+                    // 未找到玩家
+                    LogHelper.Print($"队伍中未找到玩家: {targetPlayerName}");
+                    Core.Resolve<MemApiChatMessage>().Toast2($"队伍中未找到玩家: {targetPlayerName}", 1, 2000); // 可以保留提示或移除
+                }
             }
 
             ImGui.SameLine();
