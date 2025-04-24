@@ -284,10 +284,8 @@ namespace AutoRaidHelper.UI
                 // 获取包含 Role 的队伍信息
                 var partyInfo = battleCharaMembers.ToPartyMemberInfo();
 
-                // 修改为 Text + Button
-                ImGui.Text("全队");
-                ImGui.SameLine();
-                if (ImGui.Button("击杀##All")) // 添加唯一 ID 防止冲突
+                // 添加原始功能选项
+                if (ImGui.Selectable("全队 (原功能)"))
                 {
                     var partyExpectMe = partyInfo.Where(info => info.Role != roleMe).Select(info => info.Role);
                     foreach (var role in partyExpectMe)
