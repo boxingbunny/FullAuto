@@ -57,7 +57,7 @@ public static class Utilities
     /// <param name="angle">旋转的角度</param>
     /// <param name="length">缩放的长度(正值朝内，负值朝外)</param>
     /// <returns>旋转并缩放后的坐标</returns>
-    public static Vector3 RotateAndExpend(Vector3 position, float angle, uint length = 0)
+    public static Vector3 RotateAndExpend(Vector3 position, float angle, float length = 0)
     {
         var center = new Vector3(100, 0, 100);
         var radian = angle * MathF.PI / 180;
