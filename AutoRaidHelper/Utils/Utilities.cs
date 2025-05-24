@@ -16,7 +16,7 @@ public static class Utilities
     public static void SetPosAndDebugPoint(string regexRole, Vector3 position)
     {
         RemoteControlHelper.SetPos(regexRole, position);
-        // Share.TrustDebugPoint.Add(position);
+        Share.TrustDebugPoint.Add(position);
     }
 
     /// <summary>
@@ -29,7 +29,7 @@ public static class Utilities
     public static void LockPosAndDebugPoint(string regexRole, Vector3 position, int time = 10000)
     {
         RemoteControlHelper.LockPos(regexRole, position, time);
-        // Share.TrustDebugPoint.Add(position);
+        Share.TrustDebugPoint.Add(position);
     }
 
     /// <summary>
