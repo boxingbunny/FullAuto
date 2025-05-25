@@ -198,6 +198,33 @@ public static class Utilities
     }
 
     /// <summary>
+    /// 计算两点相对于基准点的角度，角度在(180,180)范围
+    /// </summary>
+    /// <param name="pivot">基准点坐标</param>
+    /// <param name="reference">参考点坐标</param>
+    /// <param name="target">目标坐标</param>
+    /// <returns>旋转角度</returns>
+    public static float GetAngleClockwiseWithNegativeAngle(Vector3 pivot, Vector3 reference, Vector3 target)
+    {
+        var baselineVec = reference - pivot;
+        var targetVec = target - pivot;
+
+        var baselineAngle = Math.Atan2(baselineVec.X, baselineVec.Z) * (180.0 / Math.PI);
+        var targetAngle = Math.Atan2(targetVec.X, targetVec.Z) * (180.0 / Math.PI);
+
+        baselineAngle = (baselineAngle + 360.0) % 360.0;
+        targetAngle = (targetAngle + 360.0) % 360.0;
+
+        var diffAngleCW = baselineAngle - targetAngle;
+
+        diffAngleCW = (diffAngleCW + 360.0) % 360.0;
+
+        if (diffAngleCW >= 180.0) diffAngleCW -= 360.0;
+
+        return (float)diffAngleCW;
+    }
+
+    /// <summary>
     /// 输入坐标，获取逻辑方位（斜分割以正上为0，正分割以右上为0，顺时针增加）
     /// </summary>
     /// <param name="point">坐标点</param>
