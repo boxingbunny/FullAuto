@@ -26,6 +26,7 @@ namespace AutoRaidHelper.UI
         // 声明一个字典，用于将副本 ID (ushort) 映射到对应的更新操作
         private readonly Dictionary<DutyType, Action> _dutyUpdateActions;
         private readonly List<string> party = ["MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4"];
+        private int _runtimes = 0;
 
         public AutomationTab()
         {
@@ -163,6 +164,7 @@ namespace AutoRaidHelper.UI
             // 打印副本完成事件日志
             LogHelper.Print($"副本任务完成（DutyCompleted 事件，ID: {e}）");
             _dutyCompleted = true; // 标记副本已完成
+            _runtimes++;
 
             // 查找字典中是否存在与当前副本 ID 对应的更新操作
             if (_dutyUpdateActions.TryGetValue((DutyType)e, out var updateAction))
@@ -239,7 +241,7 @@ namespace AutoRaidHelper.UI
 
             ImGui.SameLine();
             ImGui.Text("秒");
-
+            
             //设置是否等待R点完成后再退本
             bool waitRCompleted = Settings.AutoLeaveAfterLootEnabled;
             if (ImGui.Checkbox("等待R点完成后再退本", ref waitRCompleted))
@@ -422,6 +424,42 @@ namespace AutoRaidHelper.UI
                 ImGui.SameLine();
                 ImGui.Text("秒");
             }
+            
+            // 设置指定次数自动结束是否启用
+            bool runtimeEnabled = Settings.RunTimeEnabled;
+            bool autokillEnabled = Settings.AutoKillEnabled;
+            if (autoQueue)
+            {
+                if (ImGui.Checkbox($"通过副本指定次后停止自动排本(目前已通过{_runtimes}次)", ref runtimeEnabled))
+                {
+                    Settings.UpdateRunTimeEnabled(runtimeEnabled);
+                    
+                    if (!runtimeEnabled)
+                        _runtimes = 0;
+                }
+
+                ImGui.SameLine();
+
+                // 输入自动结束次数（次）
+                ImGui.SetNextItemWidth(80f * scale);
+                int runtime = Settings.RunTimeLimit;
+                if (ImGui.InputInt("##RunTimeLimit", ref runtime))
+                {
+                    Settings.UpdateRunTimeLimit(runtime);
+                }
+
+                ImGui.SameLine();
+                ImGui.Text("次");
+                
+                if (runtimeEnabled)
+                {
+                    if (ImGui.Checkbox("完成指定次数后是否关闭所有人的游戏", ref autokillEnabled))
+                    {
+                        Settings.UpdateAutoKillEnabled(autokillEnabled);
+                    }
+                }
+            }
+
 
 
             // 设置解限（若启用则在排本命令中加入 "unrest"）
@@ -717,6 +755,20 @@ namespace AutoRaidHelper.UI
                     dutyName += " unrest";
                 Settings.UpdateFinalSendDutyName(dutyName);
 
+                //如果到达指定次数则停止排本
+
+                if (Settings.RunTimeEnabled && _runtimes >= Settings.RunTimeLimit)
+                {
+                    Settings.UpdateAutoQueueEnabled(false);
+                    _runtimes = 0;
+                    
+                    //如果开启了自动关闭则全员击杀
+                    if (Settings.AutoKillEnabled)
+                    {
+                        RemoteControlHelper.Cmd("", "/xlkill");
+                    }
+                }
+                
                 // 未启用自动排本或上次命令不足3秒则返回
                 if (!Settings.AutoQueueEnabled)
                     return;
