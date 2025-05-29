@@ -222,7 +222,10 @@ namespace AutoRaidHelper.Settings
 
         // 自动退本状态及延迟（单位：秒）
         public bool AutoLeaveEnabled { get; set; }
+        public bool RunTimeEnabled { get; set; }
         public int AutoLeaveDelay { get; set; } = 1;
+        
+        public int RunTimeLimit { get; set; } = 5;
 
         // 是否宝箱R点完成后再退本
         public bool AutoLeaveAfterLootEnabled { get; set; }
@@ -239,6 +242,7 @@ namespace AutoRaidHelper.Settings
 
         // 解限功能开关（用于排本命令中追加 "unrest"）
         public bool UnrestEnabled { get; set; }
+        public bool AutoKillEnabled { get; set; }
 
         // 最终生成的排本命令字符串（自动根据配置拼接组合）
         public string FinalSendDutyName { get; set; } = "";
@@ -285,6 +289,15 @@ namespace AutoRaidHelper.Settings
             AutoLeaveEnabled = enabled;
             FullAutoSettings.Instance.Save();
         }
+        
+        /// <summary>
+        /// 更新退本启用状态，并保存配置
+        /// </summary>
+        public void UpdateRunTimeEnabled(bool enabled)
+        {
+            RunTimeEnabled = enabled;
+            FullAutoSettings.Instance.Save();
+        }
 
         /// <summary>
         /// 更新退本延迟时间，并保存配置
@@ -292,6 +305,14 @@ namespace AutoRaidHelper.Settings
         public void UpdateAutoLeaveDelay(int delay)
         {
             AutoLeaveDelay = delay;
+            FullAutoSettings.Instance.Save();
+        }
+        /// <summary>
+        /// 更新本次运行限制次数，并保存配置
+        /// </summary>
+        public void UpdateRunTimeLimit(int runtime)
+        {
+            RunTimeLimit = runtime;
             FullAutoSettings.Instance.Save();
         }
 
@@ -355,6 +376,12 @@ namespace AutoRaidHelper.Settings
         public void UpdateUnrestEnabled(bool enabled)
         {
             UnrestEnabled = enabled;
+            FullAutoSettings.Instance.Save();
+        }
+        
+        public void UpdateAutoKillEnabled(bool enabled)
+        {
+            AutoKillEnabled = enabled;
             FullAutoSettings.Instance.Save();
         }
 
