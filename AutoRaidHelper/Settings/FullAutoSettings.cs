@@ -9,16 +9,19 @@ namespace AutoRaidHelper.Settings
     /// 本类负责读取、保存所有模块的配置，包括 GeometrySettings、AutomationSettings、FaGeneralSetting 和 DebugPrintSettings。
     /// 为保证全局唯一性，采用单例模式，并通过双重锁定实现线程安全的延迟加载。
     /// </summary>
-    public sealed class FullAutoSettings
+        public sealed class FullAutoSettings
     {
         // 配置文件的存储路径，通过当前工作目录与相对路径构造出绝对路径
-        private static string ConfigFilePath = Path.Combine(Share.CurrentDirectory, @"..\..\Settings\AutoRaidHelper\FullAutoSettings",$"{Share.LocalContentId}.json");
+        private static string ConfigFilePath = Path.Combine(Share.CurrentDirectory, @"..\..\Settings\AutoRaidHelper\FullAutoSettings", $"{Share.LocalContentId}.json");
 
         // 单例实例
         private static FullAutoSettings? _instance;
 
         // 线程安全锁对象，用于确保多线程环境下单例的唯一性
         private static readonly object _lock = new();
+
+        // 是否为只读模式（文件写入失败后将设置为 true，防止后续反复尝试）
+        private static bool _readOnlyMode = false;
 
         /// <summary>
         /// 获取全局唯一的 FullAutoSettings 实例
@@ -56,21 +59,31 @@ namespace AutoRaidHelper.Settings
 
         /// <summary>
         /// 保存当前配置到配置文件
-        /// 先确保配置文件所属目录存在，然后以格式化的 JSON 格式进行序列化保存
+        /// 若文件被占用，将进入只读模式，不再尝试写入
         /// </summary>
         public void Save()
         {
+            if (_readOnlyMode)
+            {
+                LogHelper.Info("当前处于只读模式，跳过保存配置。");
+                return;
+            }
+
             try
             {
-                // 获取配置文件所在目录，并创建目录（如果不存在）
                 string? dir = Path.GetDirectoryName(ConfigFilePath);
                 if (!string.IsNullOrEmpty(dir))
                 {
                     Directory.CreateDirectory(dir);
                 }
-                // 序列化当前配置对象，采用缩进格式写入文件
+
                 string json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(ConfigFilePath, json);
+            }
+            catch (IOException ex)
+            {
+                LogHelper.Error("配置文件被占用，切换为只读模式：" + ex.Message);
+                _readOnlyMode = true;
             }
             catch (Exception ex)
             {
@@ -79,11 +92,19 @@ namespace AutoRaidHelper.Settings
         }
 
         /// <summary>
+        /// 手动解除只读模式（如切换角色或退出副本后调用）
+        /// </summary>
+        public static void ForceWriteable()
+        {
+            _readOnlyMode = false;
+            LogHelper.Info("已解除只读模式，可以重新保存配置。");
+        }
+
+        /// <summary>
         /// 静态加载配置方法
         /// 尝试从配置文件中读取 JSON 数据并反序列化为 FullAutoSettings 对象，
         /// 如果读取失败或文件不存在，则返回一个新的默认实例
         /// </summary>
-        /// <returns>加载到的配置实例或全新的默认配置实例</returns>
         private static FullAutoSettings Load()
         {
             try
@@ -253,6 +274,8 @@ namespace AutoRaidHelper.Settings
         public int SpheneCompletedCount { get; set; }
         public int EdenCompletedCount { get; set; }
         public int AlalCompletedCount { get; set; }
+        public int ValigarmandaCompletedCount { get; set; }
+        public int UWUCompletedCount { get; set; }
 
         /// <summary>
         /// 更新当前地图 ID，并保存配置
@@ -401,7 +424,10 @@ namespace AutoRaidHelper.Settings
             Omega = 1122,
             Alal = 1180,
             Eden = 1238,
-            Sphene = 1243
+            Sphene = 1243,
+            Valigarmanda = 1196,
+            UWU = 777,
+            
         }
 
         public void UpdateDutyCount(DutyType duty, int count)
@@ -422,6 +448,12 @@ namespace AutoRaidHelper.Settings
                     break;
                 case DutyType.Alal:
                     AlalCompletedCount = count;
+                    break;
+                case DutyType.Valigarmanda:
+                    ValigarmandaCompletedCount = count;
+                    break;
+                case DutyType.UWU:
+                    UWUCompletedCount = count;
                     break;
                 default:
                     LogHelper.PrintError("未知的副本类型");
