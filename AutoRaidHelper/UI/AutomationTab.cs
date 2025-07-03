@@ -26,6 +26,22 @@ namespace AutoRaidHelper.UI
         // 声明一个字典，用于将副本 ID (ushort) 映射到对应的更新操作
         private readonly Dictionary<DutyType, Action> _dutyUpdateActions;
         private readonly List<string> party = ["MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4"];
+        private int _runtimes = 0;
+        private readonly Dictionary<string, bool> _roleSelection = new()
+        {
+            { "MT", false },
+            { "ST", false },
+            { "H1", false },
+            { "H2", false },
+            { "D1", false },
+            { "D2", false },
+            { "D3", false },
+            { "D4", false }
+        };
+        private string _selectedRoles = "";
+        private bool _customRoleEnabled;
+        private string _customRoleInput = "";
+        private string _customCmd = "";
 
         public AutomationTab()
         {
@@ -36,6 +52,8 @@ namespace AutoRaidHelper.UI
                 { DutyType.Alal, () => UpdateDuty(DutyType.Alal, ref _alalCompletedCount, 1, "阿罗阿罗") },
                 { DutyType.Eden, () => UpdateDuty(DutyType.Eden, ref _edenCompletedCount, 1, "伊甸") },
                 { DutyType.Sphene, () => UpdateDuty(DutyType.Sphene, ref _spheneCompletedCount, 2, "女王") },
+                { DutyType.Valigarmanda, () => UpdateDuty(DutyType.Valigarmanda, ref _valigarmandaCompletedCount, 1, "神兵") },
+                { DutyType.UWU, () => UpdateDuty(DutyType.UWU, ref _uwuCompletedCount, 1, "神兵") },
             };
         }
 
@@ -83,9 +101,15 @@ namespace AutoRaidHelper.UI
 
         // 记录女王低保数（通过副本完成事件累加）
         private int _spheneCompletedCount;
+        
+        // 记录蛇鸟低保数（通过副本完成事件累加）
+        private int _valigarmandaCompletedCount;
 
         // 记录伊甸低保数
         private int _edenCompletedCount;
+        
+        // 记录神兵低保数
+        private int _uwuCompletedCount;
 
         // 记录零式阿罗阿罗岛低保数
         private int _alalCompletedCount;
@@ -163,6 +187,7 @@ namespace AutoRaidHelper.UI
             // 打印副本完成事件日志
             LogHelper.Print($"副本任务完成（DutyCompleted 事件，ID: {e}）");
             _dutyCompleted = true; // 标记副本已完成
+            _runtimes++;
 
             // 查找字典中是否存在与当前副本 ID 对应的更新操作
             if (_dutyUpdateActions.TryGetValue((DutyType)e, out var updateAction))
@@ -239,7 +264,7 @@ namespace AutoRaidHelper.UI
 
             ImGui.SameLine();
             ImGui.Text("秒");
-
+            
             //设置是否等待R点完成后再退本
             bool waitRCompleted = Settings.AutoLeaveAfterLootEnabled;
             if (ImGui.Checkbox("等待R点完成后再退本", ref waitRCompleted))
@@ -381,6 +406,61 @@ namespace AutoRaidHelper.UI
                     LogHelper.Print($"为队长 {leaderName} 发送排本命令: /pdrduty n {Settings.FinalSendDutyName}");
                 }
             }
+            
+            ImGui.Text("选择队员职能：");
+
+            foreach (var role in _roleSelection.Keys.ToList())
+            {
+                ImGui.SameLine();
+
+                bool value = _roleSelection[role];
+                if (ImGui.Checkbox(role, ref value))
+                {
+                    _roleSelection[role] = value;
+
+                    var selected = _roleSelection
+                        .Where(pair => pair.Value)
+                        .Select(pair => pair.Key);
+                    _selectedRoles = string.Join("|", selected);
+                }
+            }
+            
+            ImGui.SameLine();
+            ImGui.Checkbox("自定义", ref _customRoleEnabled);
+            
+            if (_customRoleEnabled)
+            {
+                ImGui.SameLine();
+                ImGui.SetNextItemWidth(100f * scale); // 可选：设定宽度
+                ImGui.InputText("##_customRoleInput", ref _customRoleInput, 20);
+
+                // 更新字符串拼接逻辑
+                var selected = _roleSelection
+                    .Where(pair => pair.Value)
+                    .Select(pair => pair.Key)
+                    .ToList();
+
+                if (!string.IsNullOrWhiteSpace(_customRoleInput))
+                {
+                    selected.Add(_customRoleInput.Trim());
+                }
+
+                _selectedRoles = string.Join("|", selected);
+            }
+            
+            ImGui.InputTextWithHint("##_customCmd","请输入需要发送的指令", ref _customCmd, 256);
+            
+            ImGui.SameLine();
+            
+            if (ImGui.Button("发送指令"))
+            {
+                if (!string.IsNullOrEmpty(_selectedRoles))
+                {
+                    RemoteControlHelper.Cmd(_selectedRoles, _customCmd);
+                    LogHelper.Print($"为 {_selectedRoles} 发送了文本指令:{_customCmd}");
+                }
+            }
+            
 
             // 打印敌对单位信息（调试用按钮）
             ImGui.Text("Debug用按钮:");
@@ -393,6 +473,7 @@ namespace AutoRaidHelper.UI
                         $"敌对单位: {enemy.Name} (EntityIdID: {enemy.EntityId}, DataId: {enemy.DataId}), 位置: {enemy.Position}");
                 }
             }
+            
 
             //【自动排本设置】
 
@@ -422,6 +503,42 @@ namespace AutoRaidHelper.UI
                 ImGui.SameLine();
                 ImGui.Text("秒");
             }
+            
+            // 设置指定次数自动结束是否启用
+            bool runtimeEnabled = Settings.RunTimeEnabled;
+            bool autokillEnabled = Settings.AutoKillEnabled;
+            if (autoQueue)
+            {
+                if (ImGui.Checkbox($"通过副本指定次后停止自动排本(目前已通过{_runtimes}次)", ref runtimeEnabled))
+                {
+                    Settings.UpdateRunTimeEnabled(runtimeEnabled);
+                    
+                    if (!runtimeEnabled)
+                        _runtimes = 0;
+                }
+
+                ImGui.SameLine();
+
+                // 输入自动结束次数（次）
+                ImGui.SetNextItemWidth(80f * scale);
+                int runtime = Settings.RunTimeLimit;
+                if (ImGui.InputInt("##RunTimeLimit", ref runtime))
+                {
+                    Settings.UpdateRunTimeLimit(runtime);
+                }
+
+                ImGui.SameLine();
+                ImGui.Text("次");
+                
+                if (runtimeEnabled)
+                {
+                    if (ImGui.Checkbox("完成指定次数后是否关闭所有人的游戏", ref autokillEnabled))
+                    {
+                        Settings.UpdateAutoKillEnabled(autokillEnabled);
+                    }
+                }
+            }
+
 
 
             // 设置解限（若启用则在排本命令中加入 "unrest"）
@@ -437,12 +554,16 @@ namespace AutoRaidHelper.UI
             ImGui.SetNextItemWidth(150f * scale);
             if (ImGui.BeginCombo("##DutyName", Settings.SelectedDutyName))
             {
+                if (ImGui.Selectable("究极神兵绝境战", Settings.SelectedDutyName == "究极神兵绝境战"))
+                    Settings.UpdateSelectedDutyName("究极神兵绝境战");
                 if (ImGui.Selectable("欧米茄绝境验证战", Settings.SelectedDutyName == "欧米茄绝境验证战"))
                     Settings.UpdateSelectedDutyName("欧米茄绝境验证战");
                 if (ImGui.Selectable("幻想龙诗绝境战", Settings.SelectedDutyName == "幻想龙诗绝境战"))
                     Settings.UpdateSelectedDutyName("幻想龙诗绝境战");
                 if (ImGui.Selectable("光暗未来绝境战", Settings.SelectedDutyName == "光暗未来绝境战"))
                     Settings.UpdateSelectedDutyName("光暗未来绝境战");
+                if (ImGui.Selectable("艳翼蛇鸟歼殛战", Settings.SelectedDutyName == "艳翼蛇鸟歼殛战"))
+                    Settings.UpdateSelectedDutyName("艳翼蛇鸟歼殛战");
                 if (ImGui.Selectable("永恒女王忆想歼灭战", Settings.SelectedDutyName == "永恒女王忆想歼灭战"))
                     Settings.UpdateSelectedDutyName("永恒女王忆想歼灭战");
                 if (ImGui.Selectable("异闻阿罗阿罗岛", Settings.SelectedDutyName == "异闻阿罗阿罗岛"))
@@ -668,7 +789,8 @@ namespace AutoRaidHelper.UI
                         // 增加尝试次数计数
                         _chestOpenAttempts++;
                         LogHelper.Print($"尝试打开宝箱 (第{_chestOpenAttempts}次尝试)");
-
+                        
+                        await Coroutine.Instance.WaitAsync(500);
                         // 原有宝箱交互代码
                     }
                     catch (Exception ex)
@@ -717,6 +839,20 @@ namespace AutoRaidHelper.UI
                     dutyName += " unrest";
                 Settings.UpdateFinalSendDutyName(dutyName);
 
+                //如果到达指定次数则停止排本
+
+                if (Settings.RunTimeEnabled && _runtimes >= Settings.RunTimeLimit)
+                {
+                    Settings.UpdateAutoQueueEnabled(false);
+                    _runtimes = 0;
+                    
+                    //如果开启了自动关闭则全员击杀
+                    if (Settings.AutoKillEnabled)
+                    {
+                        RemoteControlHelper.Cmd("", "/xlkill");
+                    }
+                }
+                
                 // 未启用自动排本或上次命令不足3秒则返回
                 if (!Settings.AutoQueueEnabled)
                     return;
@@ -737,6 +873,7 @@ namespace AutoRaidHelper.UI
                 if (invalidNames.Any())
                 {
                     LogHelper.Print("玩家不在线或在副本中：" + string.Join(", ", invalidNames));
+                    await Coroutine.Instance.WaitAsync(1000);
                     return;
                 }
 
