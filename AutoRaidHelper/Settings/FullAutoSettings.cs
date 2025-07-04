@@ -250,9 +250,7 @@ namespace AutoRaidHelper.Settings
 
         // 是否宝箱R点完成后再退本
         public bool AutoLeaveAfterLootEnabled { get; set; }
-
-        //自动开启副本宝箱
-        public bool AutoOpenChestEnabled { get; set; }
+        
         // 自动排本开启状态及延迟（单位：秒）
         public bool AutoQueueEnabled { get; set; }
         public int AutoQueueDelay { get; set; } = 3;
@@ -276,6 +274,7 @@ namespace AutoRaidHelper.Settings
         public int AlalCompletedCount { get; set; }
         public int ValigarmandaCompletedCount { get; set; }
         public int UWUCompletedCount { get; set; }
+        public int RecollectionCompletedCount { get; set; }
 
         /// <summary>
         /// 更新当前地图 ID，并保存配置
@@ -345,15 +344,6 @@ namespace AutoRaidHelper.Settings
         public void UpdateAutoLeaveAfterLootEnabled(bool enabled)
         {
             AutoLeaveAfterLootEnabled = enabled;
-            FullAutoSettings.Instance.Save();
-        }
-
-        ///<summary>
-        /// 更新自动开启副本宝箱状态，并保存配置
-        ///</summary>
-        public void UpdateAutoOpenChestEnabled(bool enabled)
-        {
-            AutoOpenChestEnabled = enabled;
             FullAutoSettings.Instance.Save();
         }
 
@@ -427,8 +417,16 @@ namespace AutoRaidHelper.Settings
             Sphene = 1243,
             Valigarmanda = 1196,
             UWU = 777,
-            
+            Recollection = 1271,
         }
+        
+        // 有箱子的副本，用于辅助判断roll点后退本
+        public readonly HashSet<DutyType> DutiesWithChest =
+        [
+            DutyType.Sphene,
+            DutyType.Valigarmanda,
+            DutyType.Recollection
+        ];
 
         public void UpdateDutyCount(DutyType duty, int count)
         {
@@ -454,6 +452,9 @@ namespace AutoRaidHelper.Settings
                     break;
                 case DutyType.UWU:
                     UWUCompletedCount = count;
+                    break;
+                case DutyType.Recollection:
+                    RecollectionCompletedCount = count;
                     break;
                 default:
                     LogHelper.PrintError("未知的副本类型");

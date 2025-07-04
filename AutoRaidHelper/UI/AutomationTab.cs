@@ -12,6 +12,8 @@ using FFXIVClientStructs.FFXIV.Client.UI.Info;
 using ImGuiNET;
 using System.Numerics;
 using System.Runtime.Loader;
+using FFXIVClientStructs.FFXIV.Client.Game.Object;
+using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using static FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCommonList.CharacterData.OnlineStatus;
 using DutyType = AutoRaidHelper.Settings.AutomationSettings.DutyType;
 
@@ -25,7 +27,6 @@ namespace AutoRaidHelper.UI
     {
         // 声明一个字典，用于将副本 ID (ushort) 映射到对应的更新操作
         private readonly Dictionary<DutyType, Action> _dutyUpdateActions;
-        private readonly List<string> party = ["MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4"];
         private int _runtimes = 0;
         private readonly Dictionary<string, bool> _roleSelection = new()
         {
@@ -52,7 +53,8 @@ namespace AutoRaidHelper.UI
                 { DutyType.Alal, () => UpdateDuty(DutyType.Alal, ref _alalCompletedCount, 1, "阿罗阿罗") },
                 { DutyType.Eden, () => UpdateDuty(DutyType.Eden, ref _edenCompletedCount, 1, "伊甸") },
                 { DutyType.Sphene, () => UpdateDuty(DutyType.Sphene, ref _spheneCompletedCount, 2, "女王") },
-                { DutyType.Valigarmanda, () => UpdateDuty(DutyType.Valigarmanda, ref _valigarmandaCompletedCount, 1, "神兵") },
+                { DutyType.Valigarmanda, () => UpdateDuty(DutyType.Valigarmanda, ref _valigarmandaCompletedCount, 1, "蛇鸟") },
+                { DutyType.Recollection, () => UpdateDuty(DutyType.Recollection, ref _recollectionCompletedCount, 1, "泽莲尼娅") },
                 { DutyType.UWU, () => UpdateDuty(DutyType.UWU, ref _uwuCompletedCount, 1, "神兵") },
             };
         }
@@ -76,6 +78,9 @@ namespace AutoRaidHelper.UI
                 DutyType.Alal => Settings.AlalCompletedCount,
                 DutyType.Eden => Settings.EdenCompletedCount,
                 DutyType.Sphene => Settings.SpheneCompletedCount,
+                DutyType.Valigarmanda => Settings.ValigarmandaCompletedCount,
+                DutyType.UWU => Settings.UWUCompletedCount,
+                DutyType.Recollection => Settings.RecollectionCompletedCount,
                 _ => 0
             };
 
@@ -96,15 +101,18 @@ namespace AutoRaidHelper.UI
         // 记录龙诗低保数
         private int _dragonCompletedCount;
 
-        // 记录欧米茄低保数（通过副本完成事件累加）
+        // 记录欧米茄低保数
         private int _omegaCompletedCount;
 
-        // 记录女王低保数（通过副本完成事件累加）
+        // 记录女王低保数
         private int _spheneCompletedCount;
         
-        // 记录蛇鸟低保数（通过副本完成事件累加）
+        // 记录蛇鸟低保数
         private int _valigarmandaCompletedCount;
 
+        // 记录泽莲尼娅低保数
+        private int _recollectionCompletedCount;
+        
         // 记录伊甸低保数
         private int _edenCompletedCount;
         
@@ -113,27 +121,18 @@ namespace AutoRaidHelper.UI
 
         // 记录零式阿罗阿罗岛低保数
         private int _alalCompletedCount;
+        
         private bool _isCountdownRunning;
-        private bool _isOpenChestRunning;
         private bool _isLeaveRunning;
         private bool _isQueueRunning;
-
         private bool _isCountdownCompleted;
         private bool _isLeaveCompleted;
         private bool _isQueueCompleted;
-        private bool _isOpenChestCompleted;
-
-        private bool _isLootCompleted;
-        private IGameObject? _treasure;
-
-        private int _chestOpenAttempts = 0;
+        
         private readonly object _countdownLock = new();
-        private readonly object _openChestLock = new();
         private readonly object _leaveLock = new();
         private readonly object _queueLock = new();
-
-        // 添加确认弹窗状态变量
-        private bool _closeGameModalOpen = false;
+        
 
         /// <summary>
         /// 在加载时，订阅副本状态相关事件（如副本完成和团灭）
@@ -165,7 +164,6 @@ namespace AutoRaidHelper.UI
             try
             {
                 await UpdateAutoCountdown();
-                await UpdateAutoOpenChest();
                 await UpdateAutoLeave();
                 await UpdateAutoQueue();
                 ResetDutyFlag();
@@ -272,13 +270,6 @@ namespace AutoRaidHelper.UI
                 Settings.UpdateAutoLeaveAfterLootEnabled(waitRCompleted);
             }
 
-            //设置自动开宝箱是否启用
-            bool openChestEnabled = Settings.AutoOpenChestEnabled;
-            if (ImGui.Checkbox("副本结束后自动开宝箱", ref openChestEnabled))
-            {
-                Settings.UpdateAutoOpenChestEnabled(openChestEnabled);
-            }
-
             //【遥控按钮】
 
             ImGui.Separator();
@@ -304,7 +295,7 @@ namespace AutoRaidHelper.UI
                 var roleMe = AI.Instance.PartyRole;
                 // 使用 Svc.Party 获取队伍列表，并转换为 IBattleChara
                 var battleCharaMembers = Svc.Party
-                    .Select(p => p.GameObject as Dalamud.Game.ClientState.Objects.Types.IBattleChara)
+                    .Select(p => p.GameObject as IBattleChara)
                     .Where(bc => bc != null);
                 // 获取包含 Role 的队伍信息
                 var partyInfo = battleCharaMembers.ToPartyMemberInfo();
@@ -344,9 +335,7 @@ namespace AutoRaidHelper.UI
 
                 ImGui.EndCombo();
             }
-
-
-
+            
             if (ImGui.Button("击杀8jr"))
             {
                 // 查找名为 "歌无谢" 的玩家
@@ -355,7 +344,7 @@ namespace AutoRaidHelper.UI
 
                 // 使用 Svc.Party 获取队伍列表，并转换为 IBattleChara
                 var battleCharaMembers = Svc.Party
-                    .Select(p => p.GameObject as Dalamud.Game.ClientState.Objects.Types.IBattleChara)
+                    .Select(p => p.GameObject as IBattleChara)
                     .Where(bc => bc != null);
                 // 获取包含 Role 的队伍信息
                 var partyInfo = battleCharaMembers.ToPartyMemberInfo();
@@ -564,6 +553,8 @@ namespace AutoRaidHelper.UI
                     Settings.UpdateSelectedDutyName("光暗未来绝境战");
                 if (ImGui.Selectable("艳翼蛇鸟歼殛战", Settings.SelectedDutyName == "艳翼蛇鸟歼殛战"))
                     Settings.UpdateSelectedDutyName("艳翼蛇鸟歼殛战");
+                if (ImGui.Selectable("泽莲尼娅歼殛战", Settings.SelectedDutyName == "泽莲尼娅歼殛战"))
+                    Settings.UpdateSelectedDutyName("泽莲尼娅歼殛战");
                 if (ImGui.Selectable("永恒女王忆想歼灭战", Settings.SelectedDutyName == "永恒女王忆想歼灭战"))
                     Settings.UpdateSelectedDutyName("永恒女王忆想歼灭战");
                 if (ImGui.Selectable("异闻阿罗阿罗岛", Settings.SelectedDutyName == "异闻阿罗阿罗岛"))
@@ -616,7 +607,6 @@ namespace AutoRaidHelper.UI
                 ImGui.Text($"在副本中: {isBoundByDuty}");
                 ImGui.Text($"副本结束: {isOver}");
                 ImGui.Text($"跨服小队状态: {isCrossRealmParty}");
-                ImGui.Text($"是否完成宝箱拾取: {_isLootCompleted}");
                 ImGui.Separator();
 
                 // 如果为跨服小队，显示每个队员的在线与副本状态
@@ -687,129 +677,103 @@ namespace AutoRaidHelper.UI
         /// 当副本结束后，自动在等待设定的延迟时间后通过遥控命令退本。
         /// 前提条件：当前地图匹配、启用退本、在副本内且副本已完成。
         /// </summary>
+        private bool _hasLootAppeared; // 是否出现过roll点界面
         private async Task UpdateAutoLeave()
         {
-            if (_isLeaveRunning) return;
-            if (_isLeaveCompleted) return;
+            if (_isLeaveRunning || _isLeaveCompleted)
+                return;
 
             lock (_leaveLock)
-            {
-                if (_isLeaveRunning) return;
                 _isLeaveRunning = true;
-            }
 
             try
             {
-                if (Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() != Settings.AutoFuncZoneId)
-                    return;
                 if (!Settings.AutoLeaveEnabled && !Settings.AutoLeaveAfterLootEnabled)
                     return;
+                
+                if (Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() != Settings.AutoFuncZoneId)
+                    return;
 
-                var isBoundByDuty = Core.Resolve<MemApiDuty>().IsBoundByDuty();
-                if (isBoundByDuty && _dutyCompleted)
+                if (Core.Resolve<MemApiDuty>().IsBoundByDuty() && _dutyCompleted)
                 {
-                    if (Settings.AutoLeaveAfterLootEnabled)
+                    var dutyType = (DutyType)Settings.AutoFuncZoneId;
+                    bool hasChest = Settings.DutiesWithChest.Contains(dutyType);
+
+                    if (Settings.AutoLeaveAfterLootEnabled && hasChest)
                     {
-                        if (_isLootCompleted)
+                        unsafe
                         {
+                            var lootPtr = Loot.Instance();
+                            bool hasValidLoot = false;
+                            bool allAwarded = true;
+
+                            if (lootPtr != null)
+                            {
+                                var items = lootPtr->Items;
+                                for (int i = 0; i < items.Length; i++)
+                                {
+                                    var loot = items[i];
+                                    if (loot.ItemId != 0)
+                                    {
+                                        hasValidLoot = true;
+                                        if (loot.RollResult != RollResult.Awarded)
+                                        {
+                                            allAwarded = false;
+                                            break; // 还有未分配，不能退本
+                                        }
+                                    }
+                                }
+
+                                if (hasValidLoot && !_hasLootAppeared)
+                                {
+                                    LogHelper.Print("检测到roll点界面出现，开始等待分配");
+                                    _hasLootAppeared = true;
+                                }
+                            }
+
+                            // 没见过有掉落物的roll点界面
+                            if (!_hasLootAppeared)
+                                return;
+
+                            // 见过roll点界面，但是还有未分配物品
+                            if (!allAwarded)
+                                return;
+
+                            // 要么全部分配完成，要么面板已消失
+                            LogHelper.Print("所有物品已真正分配完成，准备退本");
                             RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
                             RemoteControlHelper.Cmd("", "/pdr leaveduty");
+
                             _isLeaveCompleted = true;
+                            _isLeaveRunning = false;
+                            return;
                         }
                     }
-                    else
+
+                    /*
+                    // 判断地上还有没有箱子
+                    bool HasTreasureCofferOnGround()
                     {
-                        await Coroutine.Instance.WaitAsync(Settings.AutoLeaveDelay * 1000);
-                        RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
-                        RemoteControlHelper.Cmd("", "/pdr leaveduty");
-                        _isLeaveCompleted = true;
+                        return Svc.Objects.Any(obj =>
+                            obj.IsValid() &&
+                            obj.ObjectKind == Dalamud.Game.ClientState.Objects.Enums.ObjectKind.Treasure);
                     }
+                    */
+                    
+                    // 否则直接延迟指定时间再退本
+                    await Task.Delay(Settings.AutoLeaveDelay * 1000);
+                    RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
+                    RemoteControlHelper.Cmd("", "/pdr leaveduty");
+                    _isLeaveCompleted = true;
                 }
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                LogHelper.Print(e.Message);
+                LogHelper.PrintError($"UpdateAutoLeave 异常: {ex}");
             }
             finally
             {
                 _isLeaveRunning = false;
-            }
-        }
-
-        /// <summary>
-        /// 当副本结束后，自动开启副本的战利品宝箱。
-        /// 前提条件：当前地图匹配、在副本内且副本已完成。
-        ///  </summary>
-        private async Task UpdateAutoOpenChest()
-        {
-            if (_isOpenChestRunning) return;
-            if (_isOpenChestCompleted) return;
-            if (_isLootCompleted) return;
-
-            lock (_openChestLock)
-            {
-                if (_isOpenChestRunning) return;
-                _isOpenChestRunning = true;
-            }
-
-            try
-            {
-                if (Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() != Settings.AutoFuncZoneId)
-                {
-                    // 切换地图时重置计数
-                    _chestOpenAttempts = 0;
-                    return;
-                }
-
-                if (!Settings.AutoOpenChestEnabled)
-                    return;
-
-                var isBoundByDuty = Core.Resolve<MemApiDuty>().IsBoundByDuty();
-                if (isBoundByDuty && _dutyCompleted)
-                {
-                    // 尝试次数超过10次，视为成功
-                    if (_chestOpenAttempts >= 10)
-                    {
-                        LogHelper.Print("尝试打开宝箱次数超过10次，视为已完成战利品分配");
-                        _isOpenChestCompleted = true;
-                        _isLootCompleted = true;
-                        _treasure = null;
-                        return;
-                    }
-
-                    if (_treasure == null)
-                    {
-                        // 寻找宝箱逻辑保持不变
-                        var player = Core.Me;
-                        if (player == null) return;
-                    }
-
-                    try
-                    {
-                        // 增加尝试次数计数
-                        _chestOpenAttempts++;
-                        LogHelper.Print($"尝试打开宝箱 (第{_chestOpenAttempts}次尝试)");
-                        
-                        await Coroutine.Instance.WaitAsync(500);
-                        // 原有宝箱交互代码
-                    }
-                    catch (Exception ex)
-                    {
-                        LogHelper.Print($"Failed to open the chest: {ex.Message}");
-                    }
-                    finally
-                    {
-                        _isOpenChestRunning = false;
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                LogHelper.Print(e.Message);
-            }
-            finally
-            {
-                _isOpenChestRunning = false;
             }
         }
 
@@ -912,12 +876,10 @@ namespace AutoRaidHelper.UI
                     return;
                 LogHelper.Print("检测到玩家不在副本内，自动重置_dutyCompleted");
                 _dutyCompleted = false;
-                _isOpenChestCompleted = false;
                 _isCountdownCompleted = false;
                 _isLeaveCompleted = false;
                 _isQueueCompleted = false;
-                _isLootCompleted = false;
-                _chestOpenAttempts = 0; // 重置尝试次数
+                _hasLootAppeared = false;
             }
             catch (Exception e)
             {
