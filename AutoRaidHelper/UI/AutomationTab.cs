@@ -278,11 +278,8 @@ namespace AutoRaidHelper.UI
             // 全队即刻退本按钮（需在副本内才可执行命令）
             if (ImGui.Button("全队即刻退本"))
             {
-                if (Core.Resolve<MemApiDuty>().InMission)
-                {
-                    RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
-                    RemoteControlHelper.Cmd("", "/pdr leaveduty");
-                }
+                RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
+                RemoteControlHelper.Cmd("", "/pdr leaveduty");
             }
 
             ImGui.SameLine();
@@ -380,21 +377,6 @@ namespace AutoRaidHelper.UI
                 if (Core.Resolve<MemApiDuty>().InMission)
                     RemoteControlHelper.SetPos("", new Vector3(100, 0, 125));
             }
-
-            ImGui.SameLine();
-
-            // 为队长发送排本命令按钮，通过获取队长名称后发送命令
-            if (ImGui.Button("为队长发送排本命令"))
-            {
-                var leaderName = GetPartyLeaderName();
-                if (!string.IsNullOrEmpty(leaderName))
-                {
-                    var leaderRole = RemoteControlHelper.GetRoleByPlayerName(leaderName);
-                    RemoteControlHelper.Cmd(leaderRole, "/pdr load ContentFinderCommand");
-                    RemoteControlHelper.Cmd(leaderRole, $"/pdrduty n {Settings.FinalSendDutyName}");
-                    LogHelper.Print($"为队长 {leaderName} 发送排本命令: /pdrduty n {Settings.FinalSendDutyName}");
-                }
-            }
             
             ImGui.Text("选择队员职能：");
 
@@ -482,16 +464,16 @@ namespace AutoRaidHelper.UI
             ImGui.SetNextItemWidth(80f * scale);
             ImGui.SameLine();
             int queueDelay = Settings.AutoQueueDelay;
-            if (queueDelay > 0)
+            
+            if (ImGui.InputInt("##QueueDelay", ref queueDelay))
             {
-                if (ImGui.InputInt("##QueueDelay", ref queueDelay))
-                {
-                    Settings.UpdateAutoQueueDelay(queueDelay);
-                }
-
-                ImGui.SameLine();
-                ImGui.Text("秒");
+                // 强制最小为 0
+                queueDelay = Math.Max(0, queueDelay);
+                Settings.UpdateAutoQueueDelay(queueDelay);
             }
+            
+            ImGui.SameLine();
+            ImGui.Text("秒");
             
             // 设置指定次数自动结束是否启用
             bool runtimeEnabled = Settings.RunTimeEnabled;
@@ -842,11 +824,15 @@ namespace AutoRaidHelper.UI
                 }
 
                 await Coroutine.Instance.WaitAsync(Settings.AutoQueueDelay * 1000);
-                // 发送排本命令，通过聊天输入框
-                ChatHelper.SendMessage("/pdr load ContentFinderCommand");
-                ChatHelper.SendMessage($"/pdrduty n {Settings.FinalSendDutyName}");
-                _lastAutoQueueTime = DateTime.Now;
-                LogHelper.Print($"自动排本命令已发送：/pdrduty n {Settings.FinalSendDutyName}");
+                // 为队长发送排本命令按钮，通过获取队长名称后发送命令
+                var leaderName = GetPartyLeaderName();
+                if (!string.IsNullOrEmpty(leaderName))
+                {
+                    var leaderRole = RemoteControlHelper.GetRoleByPlayerName(leaderName);
+                    RemoteControlHelper.Cmd(leaderRole, "/pdr load ContentFinderCommand");
+                    RemoteControlHelper.Cmd(leaderRole, $"/pdrduty n {Settings.FinalSendDutyName}");
+                    LogHelper.Print($"为队长 {leaderName} 发送排本命令: /pdrduty n {Settings.FinalSendDutyName}");
+                }
             }
             catch (Exception e)
             {
