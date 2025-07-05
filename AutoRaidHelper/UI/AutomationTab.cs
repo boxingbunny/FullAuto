@@ -377,7 +377,22 @@ namespace AutoRaidHelper.UI
                 if (Core.Resolve<MemApiDuty>().InMission)
                     RemoteControlHelper.SetPos("", new Vector3(100, 0, 125));
             }
-            
+
+            ImGui.SameLine();
+
+            // 为队长发送排本命令按钮，通过获取队长名称后发送命令
+            if (ImGui.Button("为队长发送排本命令"))
+            {
+                var leaderName = GetPartyLeaderName();
+                if (!string.IsNullOrEmpty(leaderName))
+                {
+                    var leaderRole = RemoteControlHelper.GetRoleByPlayerName(leaderName);
+                    RemoteControlHelper.Cmd(leaderRole, "/pdr load ContentFinderCommand");
+                    RemoteControlHelper.Cmd(leaderRole, $"/pdrduty n {Settings.FinalSendDutyName}");
+                    LogHelper.Print($"为队长 {leaderName} 发送排本命令: /pdrduty n {Settings.FinalSendDutyName}");
+                }
+            }
+
             ImGui.Text("选择队员职能：");
 
             foreach (var role in _roleSelection.Keys.ToList())
