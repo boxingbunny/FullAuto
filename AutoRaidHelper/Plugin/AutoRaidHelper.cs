@@ -16,6 +16,7 @@ namespace AutoRaidHelper.Plugin
         private readonly AutomationTab _automationTab = new();
         private readonly FaGeneralSettingTab _faGeneralSettingTab = new();
         private readonly DebugPrintTab _debugPrintTab = new();
+        private readonly BlackListTab _blackListTab = new();
         #region IAEPlugin Implementation
 
 
@@ -29,7 +30,7 @@ namespace AutoRaidHelper.Plugin
             return new PluginSetting
             {
                 Name = "全自动小助手",
-                LimitLevel = VIPLevel.VIP2,
+                LimitLevel = VIPLevel.VIP3,
             };
         }
 
@@ -50,6 +51,7 @@ namespace AutoRaidHelper.Plugin
         {
             _geometryTab.Update();
             _automationTab.Update();
+            _blackListTab.Update();
         }
 
         public void OnPluginUI()
@@ -79,7 +81,12 @@ namespace AutoRaidHelper.Plugin
                     _debugPrintTab.Draw();
                     ImGui.EndTabItem();
                 }
-
+                if (ImGui.BeginTabItem("黑名单管理"))
+                {
+                    _blackListTab.Draw();
+                    ImGui.EndTabItem();
+                }
+                
                 ImGui.EndTabBar();
             }
         }

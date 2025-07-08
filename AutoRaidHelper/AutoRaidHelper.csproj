@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Dalamud.CN.NET.Sdk/12.0.2">
 
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net9.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
@@ -9,7 +9,6 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <DalamudLibPath>$(appdata)\XIVlauncherCN\Addon\Hooks\dev\</DalamudLibPath>
     <!-- 如果AEPath环境变量存在，则使用，否则使用默认值 -->
     <AELibPath Condition="'$(AEPath)' != ''">$(AEPath)AEAssistCNVersion\AEAssist\</AELibPath>
     <AELibPath Condition="'$(AEPath)' == ''">..\..\..\AE\AEAssistCNVersion\AEAssist\</AELibPath>
@@ -29,35 +28,23 @@
     <OutputPath Condition="'$(AEPath)' == ''">E:\AE3.0\Plugins\AutoRaidHelper</OutputPath>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <DalamudPackagerEnabled>false</DalamudPackagerEnabled>
+  </PropertyGroup>
+
   <ItemGroup>
     <Reference Include="AEAssist">
       <HintPath>$(AELibPath)AEAssist.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Dalamud">
-      <HintPath>$(DalamudLibPath)Dalamud.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="ECommons">
       <HintPath>$(AELibPath)ECommons.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="FFXIVClientStructs">
-      <HintPath>$(DalamudLibPath)FFXIVClientStructs.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="ImGui.NET">
-      <HintPath>$(DalamudLibPath)ImGui.NET.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Lumina">
-      <HintPath>$(DalamudLibPath)Lumina.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Lumina.Excel">
-      <HintPath>$(DalamudLibPath)Lumina.Excel.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Remove="DalamudPackager" />
   </ItemGroup>
 
 </Project>

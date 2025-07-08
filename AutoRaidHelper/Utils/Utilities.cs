@@ -16,7 +16,7 @@ public static class Utilities
     public static void SetPosAndDebugPoint(string regexRole, Vector3 position)
     {
         RemoteControlHelper.SetPos(regexRole, position);
-        // Share.TrustDebugPoint.Add(position);
+        Share.TrustDebugPoint.Add(position);
     }
 
     /// <summary>
@@ -29,7 +29,7 @@ public static class Utilities
     public static void LockPosAndDebugPoint(string regexRole, Vector3 position, int time = 10000)
     {
         RemoteControlHelper.LockPos(regexRole, position, time);
-        // Share.TrustDebugPoint.Add(position);
+        Share.TrustDebugPoint.Add(position);
     }
 
     /// <summary>
@@ -57,7 +57,7 @@ public static class Utilities
     /// <param name="angle">旋转的角度</param>
     /// <param name="length">缩放的长度(正值朝内，负值朝外)</param>
     /// <returns>旋转并缩放后的坐标</returns>
-    public static Vector3 RotateAndExpend(Vector3 position, float angle, uint length = 0)
+    public static Vector3 RotateAndExpend(Vector3 position, float angle, float length = 0)
     {
         var center = new Vector3(100, 0, 100);
         var radian = angle * MathF.PI / 180;
@@ -193,6 +193,33 @@ public static class Utilities
         var diffAngleCW = baselineAngle - targetAngle;
 
         diffAngleCW = (diffAngleCW + 360.0) % 360.0;
+
+        return (float)diffAngleCW;
+    }
+
+    /// <summary>
+    /// 计算两点相对于基准点的角度，角度在(180,180)范围
+    /// </summary>
+    /// <param name="pivot">基准点坐标</param>
+    /// <param name="reference">参考点坐标</param>
+    /// <param name="target">目标坐标</param>
+    /// <returns>旋转角度</returns>
+    public static float GetAngleClockwiseWithNegativeAngle(Vector3 pivot, Vector3 reference, Vector3 target)
+    {
+        var baselineVec = reference - pivot;
+        var targetVec = target - pivot;
+
+        var baselineAngle = Math.Atan2(baselineVec.X, baselineVec.Z) * (180.0 / Math.PI);
+        var targetAngle = Math.Atan2(targetVec.X, targetVec.Z) * (180.0 / Math.PI);
+
+        baselineAngle = (baselineAngle + 360.0) % 360.0;
+        targetAngle = (targetAngle + 360.0) % 360.0;
+
+        var diffAngleCW = baselineAngle - targetAngle;
+
+        diffAngleCW = (diffAngleCW + 360.0) % 360.0;
+
+        if (diffAngleCW >= 180.0) diffAngleCW -= 360.0;
 
         return (float)diffAngleCW;
     }
