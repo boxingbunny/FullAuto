@@ -72,6 +72,7 @@ namespace AutoRaidHelper.UI
                 { DutyType.Valigarmanda, () => UpdateDuty(DutyType.Valigarmanda, ref _valigarmandaCompletedCount, 1, "蛇鸟") },
                 { DutyType.Recollection, () => UpdateDuty(DutyType.Recollection, ref _recollectionCompletedCount, 1, "泽莲尼娅") },
                 { DutyType.UWU, () => UpdateDuty(DutyType.UWU, ref _uwuCompletedCount, 1, "神兵") },
+                { DutyType.Everkeep, () => UpdateDuty(DutyType.Everkeep, ref _everkeepCompletedCount, 1, "佐拉加") }
             };
         }
 
@@ -97,6 +98,7 @@ namespace AutoRaidHelper.UI
                 DutyType.Valigarmanda => Settings.ValigarmandaCompletedCount,
                 DutyType.UWU => Settings.UWUCompletedCount,
                 DutyType.Recollection => Settings.RecollectionCompletedCount,
+                DutyType.Everkeep => Settings.EverkeepCompletedCount,
                 _ => 0
             };
 
@@ -134,6 +136,9 @@ namespace AutoRaidHelper.UI
 
         // 记录神兵低保数
         private int _uwuCompletedCount;
+        
+        // 记录佐拉加低保数
+        private int _everkeepCompletedCount;
 
         // 记录零式阿罗阿罗岛低保数
         private int _alalCompletedCount;
@@ -562,6 +567,8 @@ namespace AutoRaidHelper.UI
                     Settings.UpdateSelectedDutyName("幻想龙诗绝境战");
                 if (ImGui.Selectable("光暗未来绝境战", Settings.SelectedDutyName == "光暗未来绝境战"))
                     Settings.UpdateSelectedDutyName("光暗未来绝境战");
+                if (ImGui.Selectable("佐拉加歼殛战", Settings.SelectedDutyName == "佐拉加歼殛战"))
+                    Settings.UpdateSelectedDutyName("佐拉加歼殛战");
                 if (ImGui.Selectable("艳翼蛇鸟歼殛战", Settings.SelectedDutyName == "艳翼蛇鸟歼殛战"))
                     Settings.UpdateSelectedDutyName("艳翼蛇鸟歼殛战");
                 if (ImGui.Selectable("泽莲尼娅歼殛战", Settings.SelectedDutyName == "泽莲尼娅歼殛战"))
@@ -863,6 +870,8 @@ namespace AutoRaidHelper.UI
                     RemoteControlHelper.Cmd(leaderRole, $"/pdrduty n {Settings.FinalSendDutyName}");
                     LogHelper.Print($"为队长 {leaderName} 发送排本命令: /pdrduty n {Settings.FinalSendDutyName}");
                 }
+
+                await Coroutine.Instance.WaitAsync(3000);
             }
             catch (Exception e)
             {
