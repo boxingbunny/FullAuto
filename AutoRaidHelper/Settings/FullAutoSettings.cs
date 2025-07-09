@@ -275,6 +275,7 @@ namespace AutoRaidHelper.Settings
         public int ValigarmandaCompletedCount { get; set; }
         public int UWUCompletedCount { get; set; }
         public int RecollectionCompletedCount { get; set; }
+        public int EverkeepCompletedCount { get; set; }
 
         /// <summary>
         /// 更新当前地图 ID，并保存配置
@@ -418,6 +419,7 @@ namespace AutoRaidHelper.Settings
             Valigarmanda = 1196,
             UWU = 777,
             Recollection = 1271,
+            Everkeep = 1201,
         }
         
         // 有箱子的副本，用于辅助判断roll点后退本
@@ -425,7 +427,8 @@ namespace AutoRaidHelper.Settings
         [
             DutyType.Sphene,
             DutyType.Valigarmanda,
-            DutyType.Recollection
+            DutyType.Recollection,
+            DutyType.Everkeep,
         ];
 
         public void UpdateDutyCount(DutyType duty, int count)
