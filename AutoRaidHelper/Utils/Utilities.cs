@@ -408,7 +408,8 @@ public static class Utilities
         try
         {
             var role = new HashSet<string> { "D1", "D2", "D3", "D4", "H1", "H2", "MT", "ST" };
-            RemoteControlHelper.LockPos(!role.Contains(name) ? RemoteControlHelper.GetRoleByPlayerName(name) : name, pos, duration);
+            RemoteControlHelper.LockPos(!role.Contains(name) ? RemoteControlHelper.GetRoleByPlayerName(name) : name,
+                pos, duration);
             RemoteControlHelper.LockPos(name, pos, duration);
             LogHelper.Print($"{dev}: {name} 锁定在 {pos} {duration}ms");
             // Share.TrustDebugPoint.Add(pos);
@@ -460,7 +461,7 @@ public static class Utilities
             rotation += 2f * MathF.PI;
         return rotation;
     }
-    
+
     /// <summary>
     /// 计算两条无限直线的交点。
     /// 每条直线由一个经过的点和一个方向角（以度为单位）定义。
@@ -496,7 +497,7 @@ public static class Utilities
         double yIntersect = m1 * xIntersect + b1;
         return new Vector2((float)xIntersect, (float)yIntersect);
     }
-    
+
     public static Vector3 ExtendLine(Vector3 Center, Vector3 Direction, float distance)
     {
         var dx = Direction.X - Center.X;
@@ -537,13 +538,14 @@ public static class Utilities
     {
         return _stageCenter + GetDirectionVector(baseDirection) * distance;
     }
-    
+
     /// <summary>
     /// 扩展方法：将 IBattleChara 集合转换为元组集合。
     /// </summary>
     /// <param name="partyMembers">小队成员集合</param>
     /// <returns>元组集合 (Member, Name, Role, StatusIds)</returns>
-    public static IEnumerable<(IBattleChara Member, string Name, string Role, IEnumerable<uint> StatusIds)> ToPartyMemberInfo(this IEnumerable<IBattleChara?> partyMembers)
+    public static IEnumerable<(IBattleChara Member, string Name, string Role, IEnumerable<uint> StatusIds)>
+        ToPartyMemberInfo(this IEnumerable<IBattleChara?> partyMembers)
     {
         return partyMembers
             .Where(m => m != null)
@@ -553,5 +555,20 @@ public static class Utilities
                 Role: RemoteControlHelper.GetRoleByPlayerName(m.Name.ToString()),
                 StatusIds: m.StatusList.Select(s => s.StatusId)
             ));
+    }
+
+    /// <summary>
+    /// 八方分散
+    /// </summary>
+    /// <param name="posCenter">八方中心</param>
+    /// <param name="length">八方半径</param>
+    /// <param name="dude">八方的人</param>
+    /// <param name="offset">八方初始旋转偏移值(度)</param>
+    public static void Protean(Vector3 posCenter, float length, List<IBattleChara> dude, float offset = 0f)
+    {
+        for (var i = 0; i < dude.Count; i++)
+        {
+            SetPosAndDebugPoint(RemoteControlHelper.GetRoleByPlayerName(dude[i].Name.ToString()), RotateAndExpend(posCenter, RotateAndExpend(posCenter, posCenter with { Z = posCenter.Z - length }, offset), 360f / dude.Count * i));
+        }
     }
 }
