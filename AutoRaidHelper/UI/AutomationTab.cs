@@ -12,6 +12,7 @@ using FFXIVClientStructs.FFXIV.Client.UI.Info;
 using ImGuiNET;
 using System.Numerics;
 using System.Runtime.Loader;
+using AEAssist.GUI;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using static FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCommonList.CharacterData.OnlineStatus;
@@ -28,6 +29,7 @@ namespace AutoRaidHelper.UI
         // 声明一个字典，用于将副本 ID (ushort) 映射到对应的更新操作
         private readonly Dictionary<DutyType, Action> _dutyUpdateActions;
         private int _runtimes = 0;
+
         private readonly Dictionary<string, bool> _roleSelection = new()
         {
             { "MT", false },
@@ -39,10 +41,24 @@ namespace AutoRaidHelper.UI
             { "D3", false },
             { "D4", false }
         };
+
         private string _selectedRoles = "";
         private bool _customRoleEnabled;
         private string _customRoleInput = "";
         private string _customCmd = "";
+
+        // 添加击杀目标选择相关的状态变量
+        private string _selectedKillTarget = "请选择目标";
+        private string _selectedKillRole = "";
+        private string _selectedKillName = "";
+        private KillTargetType _killTargetType = KillTargetType.None;
+
+        private enum KillTargetType
+        {
+            None,
+            AllParty,
+            SinglePlayer
+        }
 
         public AutomationTab()
         {
@@ -108,16 +124,16 @@ namespace AutoRaidHelper.UI
 
         // 记录女王低保数
         private int _spheneCompletedCount;
-        
+
         // 记录蛇鸟低保数
         private int _valigarmandaCompletedCount;
 
         // 记录泽莲尼娅低保数
         private int _recollectionCompletedCount;
-        
+
         // 记录伊甸低保数
         private int _edenCompletedCount;
-        
+
         // 记录神兵低保数
         private int _uwuCompletedCount;
         
@@ -126,18 +142,18 @@ namespace AutoRaidHelper.UI
 
         // 记录零式阿罗阿罗岛低保数
         private int _alalCompletedCount;
-        
+
         private bool _isCountdownRunning;
         private bool _isLeaveRunning;
         private bool _isQueueRunning;
         private bool _isCountdownCompleted;
         private bool _isLeaveCompleted;
         private bool _isQueueCompleted;
-        
+
         private readonly object _countdownLock = new();
         private readonly object _leaveLock = new();
         private readonly object _queueLock = new();
-        
+
 
         /// <summary>
         /// 在加载时，订阅副本状态相关事件（如副本完成和团灭）
@@ -218,13 +234,13 @@ namespace AutoRaidHelper.UI
         public void Draw()
         {
             //【地图记录与倒计时设置】
-
+            ImGui.Text("本内自动化设置:");
             // 按钮用于记录当前地图ID，并更新相应设置
             if (ImGui.Button("记录当前地图ID"))
             {
                 Settings.UpdateAutoFuncZoneId(Core.Resolve<MemApiZoneInfo>().GetCurrTerrId());
             }
-
+            ImGuiHelper.SetHoverTooltip("设置本部分内容先记录地图。");
             ImGui.SameLine();
             ImGui.Text($"当前指定地图ID: {Settings.AutoFuncZoneId}");
 
@@ -267,7 +283,7 @@ namespace AutoRaidHelper.UI
 
             ImGui.SameLine();
             ImGui.Text("秒");
-            
+
             //设置是否等待R点完成后再退本
             bool waitRCompleted = Settings.AutoLeaveAfterLootEnabled;
             if (ImGui.Checkbox("等待R点完成后再退本", ref waitRCompleted))
@@ -280,6 +296,26 @@ namespace AutoRaidHelper.UI
             ImGui.Separator();
             ImGui.Text("遥控按钮:");
 
+            // 为队长发送排本命令按钮，通过获取队长名称后发送命令
+            if (ImGui.Button("为队长发送排本命令"))
+            {
+                var leaderName = GetPartyLeaderName();
+                if (!string.IsNullOrEmpty(leaderName))
+                {
+                    var leaderRole = RemoteControlHelper.GetRoleByPlayerName(leaderName);
+                    RemoteControlHelper.Cmd(leaderRole, "/pdr load ContentFinderCommand");
+                    RemoteControlHelper.Cmd(leaderRole, $"/pdrduty n {Settings.FinalSendDutyName}");
+                    LogHelper.Print($"为队长 {leaderName} 发送排本命令: /pdrduty n {Settings.FinalSendDutyName}");
+                }
+            }
+
+            // 全队TP至指定位置，操作为"撞电网"
+            if (ImGui.Button("全队TP撞电网"))
+            {
+                if (Core.Resolve<MemApiDuty>().InMission)
+                    RemoteControlHelper.SetPos("", new Vector3(100, 0, 125));
+            }
+
             // 全队即刻退本按钮（需在副本内才可执行命令）
             if (ImGui.Button("全队即刻退本"))
             {
@@ -287,12 +323,9 @@ namespace AutoRaidHelper.UI
                 RemoteControlHelper.Cmd("", "/pdr leaveduty");
             }
 
-            ImGui.SameLine();
-
-            // 修改为下拉菜单
-            if (ImGui.BeginCombo("##KillAllCombo", "全队即刻关闭"))
+            // 修改为下拉菜单选择目标
+            if (ImGui.BeginCombo("##KillAllCombo", _selectedKillTarget))
             {
-
                 // 获取当前玩家角色和队伍信息
                 var roleMe = AI.Instance.PartyRole;
                 // 使用 Svc.Party 获取队伍列表，并转换为 IBattleChara
@@ -302,43 +335,48 @@ namespace AutoRaidHelper.UI
                 // 获取包含 Role 的队伍信息
                 var partyInfo = battleCharaMembers.ToPartyMemberInfo();
 
-                // 添加原始功能选项
-                if (ImGui.Selectable("全队 (原功能)"))
+                // 添加全队选项
+                if (ImGui.Selectable("向7个队友发送Kill指令", _killTargetType == KillTargetType.AllParty))
                 {
-                    var partyExpectMe = partyInfo.Where(info => info.Role != roleMe).Select(info => info.Role);
-                    foreach (var role in partyExpectMe)
-                    {
-                        if (!string.IsNullOrEmpty(role)) // 确保 Role 不为空
-                        {
-                            RemoteControlHelper.Cmd(role, "/xlkill");
-                        }
-                    }
+                    _selectedKillTarget = "向7个队友发送Kill指令";
+                    _killTargetType = KillTargetType.AllParty;
+                    _selectedKillRole = "";
+                    _selectedKillName = "";
                 }
 
                 ImGui.Separator();
 
-                // 列出队员并添加单独击杀按钮
+                // 列出队员选项
                 foreach (var info in partyInfo)
                 {
                     // 跳过自己
                     if (info.Role == roleMe || info.Member == null) continue;
 
-                    // 显示队员信息和击杀按钮
-                    ImGui.Text($"{info.Name} (ID: {info.Member.EntityId})");
-                    ImGui.SameLine();
-                    if (ImGui.Button($"击杀##{info.Member.EntityId}"))
+                    var displayText = $"{info.Name} (ID: {info.Member.EntityId})";
+                    bool isSelected = _killTargetType == KillTargetType.SinglePlayer &&
+                                      _selectedKillRole == info.Role;
+
+                    if (ImGui.Selectable(displayText, isSelected))
                     {
-                        if (!string.IsNullOrEmpty(info.Role)) // 确保 Role 不为空
-                        {
-                            RemoteControlHelper.Cmd(info.Role, "/xlkill");
-                        }
+                        _selectedKillTarget = displayText;
+                        _killTargetType = KillTargetType.SinglePlayer;
+                        _selectedKillRole = info.Role;
+                        _selectedKillName = info.Name;
                     }
                 }
 
                 ImGui.EndCombo();
             }
-            
-            if (ImGui.Button("击杀8jr"))
+
+            ImGui.SameLine();
+
+            // 添加执行按钮
+            if (ImGui.Button("关闭所选目标游戏"))
+            {
+                ExecuteSelectedKillAction();
+            }
+
+            if (ImGui.Button("顶蟹"))
             {
                 // 查找名为 "歌无谢" 的玩家
                 string targetPlayerName = "歌无谢";
@@ -362,9 +400,9 @@ namespace AutoRaidHelper.UI
 
                 if (!string.IsNullOrEmpty(targetRole))
                 {
-                    // 找到了玩家，执行击杀命令
-                    RemoteControlHelper.Cmd(targetRole, "/xlkill");
-                    LogHelper.Print($"已向 {targetPlayerName} (职能: {targetRole}) 发送击杀命令。");
+                    // 找到了玩家，执行命令
+                    RemoteControlHelper.Cmd(targetRole, "/gaction 跳跃");
+                    LogHelper.Print($"顶蟹成功");
                 }
                 else
                 {
@@ -374,29 +412,6 @@ namespace AutoRaidHelper.UI
                 }
             }
 
-            ImGui.SameLine();
-
-            // 全队TP至指定位置，操作为"撞电网"
-            if (ImGui.Button("全队TP撞电网"))
-            {
-                if (Core.Resolve<MemApiDuty>().InMission)
-                    RemoteControlHelper.SetPos("", new Vector3(100, 0, 125));
-            }
-
-            ImGui.SameLine();
-
-            // 为队长发送排本命令按钮，通过获取队长名称后发送命令
-            if (ImGui.Button("为队长发送排本命令"))
-            {
-                var leaderName = GetPartyLeaderName();
-                if (!string.IsNullOrEmpty(leaderName))
-                {
-                    var leaderRole = RemoteControlHelper.GetRoleByPlayerName(leaderName);
-                    RemoteControlHelper.Cmd(leaderRole, "/pdr load ContentFinderCommand");
-                    RemoteControlHelper.Cmd(leaderRole, $"/pdrduty n {Settings.FinalSendDutyName}");
-                    LogHelper.Print($"为队长 {leaderName} 发送排本命令: /pdrduty n {Settings.FinalSendDutyName}");
-                }
-            }
 
             ImGui.Text("选择队员职能：");
 
@@ -415,10 +430,10 @@ namespace AutoRaidHelper.UI
                     _selectedRoles = string.Join("|", selected);
                 }
             }
-            
+
             ImGui.SameLine();
             ImGui.Checkbox("自定义", ref _customRoleEnabled);
-            
+
             if (_customRoleEnabled)
             {
                 ImGui.SameLine();
@@ -438,11 +453,11 @@ namespace AutoRaidHelper.UI
 
                 _selectedRoles = string.Join("|", selected);
             }
-            
-            ImGui.InputTextWithHint("##_customCmd","请输入需要发送的指令", ref _customCmd, 256);
-            
+
+            ImGui.InputTextWithHint("##_customCmd", "请输入需要发送的指令", ref _customCmd, 256);
+
             ImGui.SameLine();
-            
+
             if (ImGui.Button("发送指令"))
             {
                 if (!string.IsNullOrEmpty(_selectedRoles))
@@ -451,7 +466,7 @@ namespace AutoRaidHelper.UI
                     LogHelper.Print($"为 {_selectedRoles} 发送了文本指令:{_customCmd}");
                 }
             }
-            
+
 
             // 打印敌对单位信息（调试用按钮）
             ImGui.Text("Debug用按钮:");
@@ -464,12 +479,12 @@ namespace AutoRaidHelper.UI
                         $"敌对单位: {enemy.Name} (EntityIdID: {enemy.EntityId}, DataId: {enemy.DataId}), 位置: {enemy.Position}");
                 }
             }
-            
+
 
             //【自动排本设置】
 
             ImGui.Separator();
-
+            ImGui.Text("自动排本设置:");
             // 设置自动排本是否启用
             bool autoQueue = Settings.AutoQueueEnabled;
             if (ImGui.Checkbox("自动排本(需启用DR <任务搜索器指令> 模块)", ref autoQueue))
@@ -484,17 +499,17 @@ namespace AutoRaidHelper.UI
             ImGui.SetNextItemWidth(80f * scale);
             ImGui.SameLine();
             int queueDelay = Settings.AutoQueueDelay;
-            
+
             if (ImGui.InputInt("##QueueDelay", ref queueDelay))
             {
                 // 强制最小为 0
                 queueDelay = Math.Max(0, queueDelay);
                 Settings.UpdateAutoQueueDelay(queueDelay);
             }
-            
+
             ImGui.SameLine();
             ImGui.Text("秒");
-            
+
             // 设置指定次数自动结束是否启用
             bool runtimeEnabled = Settings.RunTimeEnabled;
             bool autokillEnabled = Settings.AutoKillEnabled;
@@ -503,7 +518,7 @@ namespace AutoRaidHelper.UI
                 if (ImGui.Checkbox($"通过副本指定次后停止自动排本(目前已通过{_runtimes}次)", ref runtimeEnabled))
                 {
                     Settings.UpdateRunTimeEnabled(runtimeEnabled);
-                    
+
                     if (!runtimeEnabled)
                         _runtimes = 0;
                 }
@@ -520,7 +535,7 @@ namespace AutoRaidHelper.UI
 
                 ImGui.SameLine();
                 ImGui.Text("次");
-                
+
                 if (runtimeEnabled)
                 {
                     if (ImGui.Checkbox("完成指定次数后是否关闭所有人的游戏", ref autokillEnabled))
@@ -529,7 +544,6 @@ namespace AutoRaidHelper.UI
                     }
                 }
             }
-
 
 
             // 设置解限（若启用则在排本命令中加入 "unrest"）
@@ -682,6 +696,7 @@ namespace AutoRaidHelper.UI
         /// 前提条件：当前地图匹配、启用退本、在副本内且副本已完成。
         /// </summary>
         private bool _hasLootAppeared; // 是否出现过roll点界面
+
         private async Task UpdateAutoLeave()
         {
             if (_isLeaveRunning || _isLeaveCompleted)
@@ -694,7 +709,7 @@ namespace AutoRaidHelper.UI
             {
                 if (!Settings.AutoLeaveEnabled && !Settings.AutoLeaveAfterLootEnabled)
                     return;
-                
+
                 if (Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() != Settings.AutoFuncZoneId)
                     return;
 
@@ -763,7 +778,7 @@ namespace AutoRaidHelper.UI
                             obj.ObjectKind == Dalamud.Game.ClientState.Objects.Enums.ObjectKind.Treasure);
                     }
                     */
-                    
+
                     // 否则直接延迟指定时间再退本
                     await Task.Delay(Settings.AutoLeaveDelay * 1000);
                     RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
@@ -813,14 +828,14 @@ namespace AutoRaidHelper.UI
                 {
                     Settings.UpdateAutoQueueEnabled(false);
                     _runtimes = 0;
-                    
+
                     //如果开启了自动关闭则全员击杀
                     if (Settings.AutoKillEnabled)
                     {
                         RemoteControlHelper.Cmd("", "/xlkill");
                     }
                 }
-                
+
                 // 未启用自动排本或上次命令不足3秒则返回
                 if (!Settings.AutoQueueEnabled)
                     return;
@@ -952,6 +967,58 @@ namespace AutoRaidHelper.UI
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// 执行选择的击杀操作
+        /// </summary>
+        private void ExecuteSelectedKillAction()
+        {
+            try
+            {
+                switch (_killTargetType)
+                {
+                    case KillTargetType.AllParty:
+                        // 执行全队击杀
+                        var roleMe = AI.Instance.PartyRole;
+                        var battleCharaMembers = Svc.Party
+                            .Select(p => p.GameObject as IBattleChara)
+                            .Where(bc => bc != null);
+                        var partyInfo = battleCharaMembers.ToPartyMemberInfo();
+                        var partyExpectMe = partyInfo.Where(info => info.Role != roleMe).Select(info => info.Role);
+
+                        foreach (var role in partyExpectMe)
+                        {
+                            if (!string.IsNullOrEmpty(role))
+                            {
+                                RemoteControlHelper.Cmd(role, "/xlkill");
+                            }
+                        }
+
+                        LogHelper.Print("已向全队发送击杀命令");
+                        break;
+
+                    case KillTargetType.SinglePlayer:
+                        // 执行单个玩家击杀
+                        if (!string.IsNullOrEmpty(_selectedKillRole))
+                        {
+                            RemoteControlHelper.Cmd(_selectedKillRole, "/xlkill");
+                            LogHelper.Print($"已向 {_selectedKillName} (职能: {_selectedKillRole}) 发送击杀命令");
+                        }
+
+                        break;
+
+                    case KillTargetType.None:
+                    default:
+                        LogHelper.Print("请先选择要击杀的目标");
+                        Core.Resolve<MemApiChatMessage>().Toast2("请先选择要击杀的目标", 1, 2000);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                LogHelper.PrintError($"执行击杀操作时发生异常: {ex}");
+            }
         }
     }
 }
