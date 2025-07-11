@@ -121,6 +121,23 @@ namespace AutoRaidHelper.UI
             bool actorControl = Settings.PrintActorControl;
             if (ImGui.Checkbox("ActorControl", ref actorControl))
                 Settings.UpdatePrintActorControl(actorControl);
+            
+            // 调试输出 PlayActionTimeline（通常涉及场地刷新相关）
+            bool playActionTimeline = Settings.PrintPlayActionTimeline;
+            if (ImGui.Checkbox("PlayActionTimeline", ref playActionTimeline))
+                Settings.UpdatePrintPlayActionTimeline(playActionTimeline);
+            
+            // 调试输出 EnvControl 事件（通常涉及MapEffect）
+            bool envControl = Settings.PrintEnvControl;
+            if (ImGui.Checkbox("EnvControl", ref envControl))
+                Settings.UpdatePrintEnvControl(envControl);
+            
+            // 调试输出 Npcyell 事件（巴哈台词）
+            bool npcYell = Settings.PrintNpcYell;
+            if (ImGui.Checkbox("Npcyell", ref npcYell))
+                Settings.UpdatePrintNpcYell(npcYell);
+            
+            
         }
 
         /// <summary>
@@ -161,6 +178,12 @@ namespace AutoRaidHelper.UI
                 LogHelper.Print($"{weatherChanged}");
             if (condParams is ActorControlCondParams actorControl && Settings.PrintActorControl)
                 LogHelper.Print($"{actorControl}");
+            if (condParams is PlayActionTimelineParams playActionTimeline && Settings.PrintPlayActionTimeline)
+                LogHelper.Print($"{playActionTimeline}");
+            if (condParams is OnEnvControlEvent envControl && Settings.PrintEnvControl)
+                LogHelper.Print($"{envControl}");
+            if (condParams is NpcYellCondParams npcYell && Settings.PrintNpcYell)
+                LogHelper.Print($"{npcYell}");
         }
     }
 }

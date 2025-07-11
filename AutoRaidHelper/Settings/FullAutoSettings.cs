@@ -522,6 +522,9 @@ namespace AutoRaidHelper.Settings
         public bool PrintGameLog { get; set; }
         public bool PrintWeatherChanged { get; set; }
         public bool PrintActorControl { get; set; }
+        public bool PrintPlayActionTimeline { get; set; }
+        public bool PrintEnvControl { get; set; }
+        public bool PrintNpcYell { get; set; }
 
         /// <summary>
         /// 更新 DebugPrintEnabled 总开关，并保存配置
@@ -601,6 +604,21 @@ namespace AutoRaidHelper.Settings
         public void UpdatePrintActorControl(bool value)
         {
             PrintActorControl = value;
+            FullAutoSettings.Instance.Save();
+        }
+        public void UpdatePrintPlayActionTimeline(bool value)
+        {
+            PrintPlayActionTimeline = value;
+            FullAutoSettings.Instance.Save();
+        }
+        public void UpdatePrintEnvControl(bool value)
+        {
+            PrintEnvControl = value;
+            FullAutoSettings.Instance.Save();
+        }
+        public void UpdatePrintNpcYell(bool value)
+        {
+            PrintNpcYell = value;
             FullAutoSettings.Instance.Save();
         }
     }
