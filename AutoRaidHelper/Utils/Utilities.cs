@@ -395,6 +395,37 @@ public static class Utilities
             LogHelper.PrintError($"移动到位置失败 ({dev}): {ex.Message}");
         }
     }
+    
+    /// <summary>
+    /// 指定角色绿玩移动到给定位置，并记录调试信息
+    /// </summary>
+    /// <param name="name">角色名称或职能</param>
+    /// <param name="pos">目标位置坐标</param>
+    /// <param name="dev">调试信息或调用描述</param>
+    public static void MovetobyRole(string name, Vector3 pos, string dev)
+    {
+        try
+        {
+            RemoteControlHelper.MoveTo(!new HashSet<string>()
+            {
+                "D1",
+                "D2",
+                "D3",
+                "D4",
+                "H1",
+                "H2",
+                "MT",
+                "ST"
+            }.Contains(name) ? RemoteControlHelper.GetRoleByPlayerName(name) : name, pos);
+            if (!FullAutoSettings.Instance.FaGeneralSetting.PrintDebugInfo)
+                return;
+            LogHelper.Print($"{dev}: {name} 绿玩移动至 {pos}");
+        }
+        catch (Exception ex)
+        {
+            LogHelper.PrintError($"移动到位置失败 ({dev}): {ex.Message}");
+        }
+    }
 
     /// <summary>
     /// 锁定指定角色到给定位置，并记录调试信息
