@@ -399,7 +399,7 @@ public static class Utilities
     /// <summary>
     /// 指定角色绿玩移动到给定位置，并记录调试信息
     /// </summary>
-    /// <param name="name">角色名称或职能</param>
+    /// <param name="name">角色名称或者职能</param>
     /// <param name="pos">目标位置坐标</param>
     /// <param name="dev">调试信息或调用描述</param>
     public static void MovetobyRole(string name, Vector3 pos, string dev)
