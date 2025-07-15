@@ -11,9 +11,9 @@ using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Client.UI.Info;
 using ImGuiNET;
 using System.Numerics;
+using System.Reflection;
 using System.Runtime.Loader;
 using AEAssist.GUI;
-using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using static FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCommonList.CharacterData.OnlineStatus;
 using DutyType = AutoRaidHelper.Settings.AutomationSettings.DutyType;
@@ -26,9 +26,10 @@ namespace AutoRaidHelper.UI
     /// </summary>
     public class AutomationTab
     {
+        private static readonly Version? Version = Assembly.GetExecutingAssembly().GetName().Version;
         // 声明一个字典，用于将副本 ID (ushort) 映射到对应的更新操作
         private readonly Dictionary<DutyType, Action> _dutyUpdateActions;
-        private int _runtimes = 0;
+        private int _runtimes;
 
         private readonly Dictionary<string, bool> _roleSelection = new()
         {
@@ -233,6 +234,8 @@ namespace AutoRaidHelper.UI
         /// </summary>
         public void Draw()
         {
+            ImGui.Text($"Version: {Version}");
+            ImGui.Separator();
             //【地图记录与倒计时设置】
             ImGui.Text("本内自动化设置:");
             // 按钮用于记录当前地图ID，并更新相应设置
@@ -707,7 +710,7 @@ namespace AutoRaidHelper.UI
 
             try
             {
-                if (!Settings.AutoLeaveEnabled && !Settings.AutoLeaveAfterLootEnabled)
+                if (Settings is { AutoLeaveEnabled: false, AutoLeaveAfterLootEnabled: false })
                     return;
 
                 if (Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() != Settings.AutoFuncZoneId)
