@@ -6,12 +6,10 @@
     <Nullable>enable</Nullable>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
-    <Deterministic>false</Deterministic>
-    <Version>1.$([System.DateTime]::UtcNow.AddHours(8).ToString("yy.MMdd.HHmm"))</Version>
-    <FileVersion>1.$([System.DateTime]::UtcNow.AddHours(8).ToString("yy.MMdd.HHmm"))</FileVersion>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
   </PropertyGroup>
-
-
 
   <PropertyGroup>
     <!-- 如果AEPath环境变量存在，则使用，否则使用默认值 -->
@@ -50,6 +48,10 @@
 
   <ItemGroup>
     <PackageReference Remove="DalamudPackager" />
+    <PackageReference Include="GitInfo" Version="3.5.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
 </Project>

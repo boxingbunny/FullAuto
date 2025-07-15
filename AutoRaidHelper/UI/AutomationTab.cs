@@ -1,4 +1,5 @@
-﻿using AEAssist;
+﻿using System.Diagnostics;
+using AEAssist;
 using AEAssist.CombatRoutine.Module;
 using AEAssist.Extension;
 using AEAssist.Helper;
@@ -26,7 +27,6 @@ namespace AutoRaidHelper.UI
     /// </summary>
     public class AutomationTab
     {
-        private static readonly Version? Version = Assembly.GetExecutingAssembly().GetName().Version;
         // 声明一个字典，用于将副本 ID (ushort) 映射到对应的更新操作
         private readonly Dictionary<DutyType, Action> _dutyUpdateActions;
         private int _runtimes;
@@ -234,7 +234,13 @@ namespace AutoRaidHelper.UI
         /// </summary>
         public void Draw()
         {
-            ImGui.Text($"Version: {Version}");
+            var assembly = Assembly.GetExecutingAssembly();
+            var infoAttr = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            if (!string.IsNullOrEmpty(infoAttr))
+            {
+                var parts = infoAttr.Split('+', '.');
+                ImGui.Text($"Version: {parts[0]}.{parts[1]}.{parts[2]}+{parts[4]}");
+            }
             ImGui.Separator();
             //【地图记录与倒计时设置】
             ImGui.Text("本内自动化设置:");
