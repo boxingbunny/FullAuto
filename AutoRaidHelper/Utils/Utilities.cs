@@ -334,6 +334,8 @@ public static class Utilities
         float angle = (rad * (180f / MathF.PI) + 360f) % 360f;
         return angle;
     }
+    
+    
 
     /// <summary>
     /// 判断两个地火位置相对于场地中心的刷新方向
@@ -353,7 +355,54 @@ public static class Utilities
 
         return diffCW < diffCCW;
     }
+    
+    /// <summary>
+    /// 以给定的点为中心，围绕它在 XZ 平面上旋转一个特定角度，然后沿旋转后的方向移动指定距离，计算得到旋转和平移后的新坐标。
+    /// </summary>
+    /// <param name="originalPosition">中心点</param>>
+    /// <param name="degrees">旋转角度</param>
+    /// <param name="clockwise">是否为顺时针</param>
+    /// <param name="distance">平移距离</param>
+    /// <returns>旋转和平移后的新坐标</returns>
+    public static Vector3 CalculateNewCoordinates(Vector3 originalPosition, float degrees, bool clockwise, float distance)
+    {
+        // 1. 创建旋转前的点，假设在 Z 轴方向上有一定的偏移
+        Vector3 point = new Vector3(originalPosition.X, 0, originalPosition.Z - 1);
+        Vector3 center = originalPosition;
 
+        // 2. 计算点相对原点的偏移
+        Vector3 translatedPoint = point - center;
+
+        // 3. 计算旋转角度的弧度值
+        float radians = MathF.PI * degrees / 180f * (clockwise ? 1 : -1);
+
+        // 4. 使用二维旋转公式计算旋转后的 X 和 Z 坐标
+        double rotatedX = translatedPoint.X * Math.Cos(radians) - translatedPoint.Z * Math.Sin(radians);
+        double rotatedZ = translatedPoint.X * Math.Sin(radians) + translatedPoint.Z * Math.Cos(radians);
+
+        // 5. 得到旋转后的点（忽略 Y 坐标变化）
+        Vector3 rotatedTranslatedPoint = new Vector3((float)rotatedX, 0, (float)rotatedZ);
+
+        // 6. 计算旋转后的位置，相对原始位置
+        Vector3 rotatedPoint = rotatedTranslatedPoint + center;
+
+        // 7. 计算旋转后的方向向量，并将该方向向量按 distance 缩放
+        Vector3 direction = rotatedPoint - center; // 方向向量
+        direction = Vector3.Normalize(direction); // 归一化方向向量
+        direction *= distance; // 按照给定的距离缩放方向向量
+
+        // 8. 根据方向向量和中心坐标计算新的最终位置
+        Vector3 finalPosition = center + direction;
+
+        // 9. 四舍五入最终的坐标（保留 2 位小数）
+        Vector3 curVector = new Vector3(
+            (float)Math.Round(finalPosition.X, 2),
+            (float)Math.Round(finalPosition.Y, 2),
+            (float)Math.Round(finalPosition.Z, 2)
+        );
+
+        return curVector;
+    }
 
     /// <summary>
     /// 将弧度转换为标准化角度（0-360度）
