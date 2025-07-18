@@ -385,43 +385,42 @@ namespace AutoRaidHelper.UI
                 ExecuteSelectedKillAction();
             }
 
+            // ────────────────────── 顶蟹 ──────────────────────
             if (ImGui.Button("顶蟹"))
             {
-                // 查找名为 "歌无谢" 的玩家
-                string targetPlayerName = "歌无谢";
+                const ulong targetCid = 19014409511470591UL; // 小猪蟹 Cid
                 string? targetRole = null;
 
-                // 使用 Svc.Party 获取队伍列表，并转换为 IBattleChara
-                var battleCharaMembers = Svc.Party
-                    .Select(p => p.GameObject as IBattleChara)
-                    .Where(bc => bc != null);
-                // 获取包含 Role 的队伍信息
-                var partyInfo = battleCharaMembers.ToPartyMemberInfo();
-
-                foreach (var info in partyInfo)
+                unsafe
                 {
-                    if (info.Name == targetPlayerName)
+                    var infoModule = InfoModule.Instance();
+                    var commonList = (InfoProxyCommonList*)infoModule->GetInfoProxyById(InfoProxyId.PartyMember);
+                    if (commonList != null)
                     {
-                        targetRole = info.Role;
-                        break;
+                        foreach (var data in commonList->CharDataSpan)
+                        {
+                            if (data.ContentId == targetCid)
+                            {
+                                var targetName = data.NameString;
+                                targetRole = RemoteControlHelper.GetRoleByPlayerName(targetName);
+                                break;
+                            }
+                        }
                     }
                 }
 
                 if (!string.IsNullOrEmpty(targetRole))
                 {
-                    // 找到了玩家，执行命令
                     RemoteControlHelper.Cmd(targetRole, "/gaction 跳跃");
-                    LogHelper.Print($"顶蟹成功");
+                    Core.Resolve<MemApiChatMessage>().Toast2("顶蟹成功!", 1, 2000);
                 }
                 else
                 {
-                    // 未找到玩家
-                    LogHelper.Print($"队伍中未找到玩家: {targetPlayerName}");
-                    Core.Resolve<MemApiChatMessage>().Toast2($"队伍中未找到玩家: {targetPlayerName}", 1, 2000); // 可以保留提示或移除
+                    string msg = $"队伍中未找到小猪蟹";
+                    LogHelper.Print(msg);
                 }
             }
-
-
+            
             ImGui.Text("选择队员职能：");
 
             foreach (var role in _roleSelection.Keys.ToList())
