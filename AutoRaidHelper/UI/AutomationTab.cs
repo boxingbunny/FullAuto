@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using AEAssist;
+﻿using AEAssist;
 using AEAssist.CombatRoutine.Module;
 using AEAssist.Extension;
 using AEAssist.Helper;
@@ -18,6 +17,7 @@ using AEAssist.GUI;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using static FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCommonList.CharacterData.OnlineStatus;
 using DutyType = AutoRaidHelper.Settings.AutomationSettings.DutyType;
+using DutyCategory = AutoRaidHelper.Settings.AutomationSettings.DutyCategory;
 
 namespace AutoRaidHelper.UI
 {
@@ -65,17 +65,17 @@ namespace AutoRaidHelper.UI
         {
             _dutyUpdateActions = new Dictionary<DutyType, Action>
             {
-                { DutyType.Dragon, () => UpdateDuty(DutyType.Dragon, ref _dragonCompletedCount, 1, "龙诗") },
-                { DutyType.Omega, () => UpdateDuty(DutyType.Omega, ref _omegaCompletedCount, 1, "绝欧") },
-                { DutyType.Alal, () => UpdateDuty(DutyType.Alal, ref _alalCompletedCount, 1, "阿罗阿罗") },
-                { DutyType.Eden, () => UpdateDuty(DutyType.Eden, ref _edenCompletedCount, 1, "伊甸") },
-                { DutyType.Sphene, () => UpdateDuty(DutyType.Sphene, ref _spheneCompletedCount, 2, "女王") },
-                { DutyType.Valigarmanda, () => UpdateDuty(DutyType.Valigarmanda, ref _valigarmandaCompletedCount, 1, "蛇鸟") },
-                { DutyType.Recollection, () => UpdateDuty(DutyType.Recollection, ref _recollectionCompletedCount, 1, "泽莲尼娅") },
-                { DutyType.UWU, () => UpdateDuty(DutyType.UWU, ref _uwuCompletedCount, 1, "神兵") },
                 { DutyType.UCOB, () => UpdateDuty(DutyType.UCOB, ref _ucobCompletedCount, 1, "巴哈") },
+                { DutyType.UWU, () => UpdateDuty(DutyType.UWU, ref _uwuCompletedCount, 1, "神兵") },
                 { DutyType.TEA, () => UpdateDuty(DutyType.TEA, ref _teaCompletedCount, 1, "绝亚") },
-                { DutyType.Everkeep, () => UpdateDuty(DutyType.Everkeep, ref _everkeepCompletedCount, 1, "佐拉加") }
+                { DutyType.DSR, () => UpdateDuty(DutyType.DSR, ref _dsrCompletedCount, 1, "龙诗") },
+                { DutyType.TOP, () => UpdateDuty(DutyType.TOP, ref _topCompletedCount, 1, "绝欧") },
+                { DutyType.FRU, () => UpdateDuty(DutyType.FRU, ref _fruCompletedCount, 1, "伊甸") },
+                { DutyType.Aloalo, () => UpdateDuty(DutyType.Aloalo, ref _aloaloCompletedCount, 1, "阿罗阿罗") },
+                { DutyType.Worqor, () => UpdateDuty(DutyType.Worqor, ref _worqorCompletedCount, 1, "蛇鸟") },
+                { DutyType.Everkeep, () => UpdateDuty(DutyType.Everkeep, ref _everkeepCompletedCount, 1, "佐拉加") },
+                { DutyType.Sphene, () => UpdateDuty(DutyType.Sphene, ref _spheneCompletedCount, 2, "女王") },
+                { DutyType.Recollection, () => UpdateDuty(DutyType.Recollection, ref _recollectionCompletedCount, 1, "泽莲尼娅") },
             };
         }
 
@@ -93,17 +93,17 @@ namespace AutoRaidHelper.UI
         private int GetGlobalCount(DutyType duty) =>
             duty switch
             {
-                DutyType.Dragon => Settings.DragonCompletedCount,
-                DutyType.Omega => Settings.OmegaCompletedCount,
-                DutyType.Alal => Settings.AlalCompletedCount,
-                DutyType.Eden => Settings.EdenCompletedCount,
-                DutyType.Sphene => Settings.SpheneCompletedCount,
-                DutyType.Valigarmanda => Settings.ValigarmandaCompletedCount,
                 DutyType.UCOB => Settings.UCOBCompletedCount,
                 DutyType.UWU => Settings.UWUCompletedCount,
                 DutyType.TEA => Settings.TEACompletedCount,
-                DutyType.Recollection => Settings.RecollectionCompletedCount,
+                DutyType.DSR => Settings.DSRCompletedCount,
+                DutyType.TOP => Settings.TOPCompletedCount,
+                DutyType.FRU => Settings.FRUCompletedCount,
+                DutyType.Aloalo => Settings.AloaloCompletedCount,
+                DutyType.Worqor => Settings.WorqorCompletedCount,
                 DutyType.Everkeep => Settings.EverkeepCompletedCount,
+                DutyType.Sphene => Settings.SpheneCompletedCount,
+                DutyType.Recollection => Settings.RecollectionCompletedCount,
                 _ => 0
             };
 
@@ -122,37 +122,27 @@ namespace AutoRaidHelper.UI
         private bool _dutyCompleted;
 
         // 记录龙诗低保数
-        private int _dragonCompletedCount;
-
+        private int _dsrCompletedCount;
         // 记录欧米茄低保数
-        private int _omegaCompletedCount;
-
+        private int _topCompletedCount;
         // 记录女王低保数
         private int _spheneCompletedCount;
-
         // 记录蛇鸟低保数
-        private int _valigarmandaCompletedCount;
-
+        private int _worqorCompletedCount;
         // 记录泽莲尼娅低保数
         private int _recollectionCompletedCount;
-
         // 记录伊甸低保数
-        private int _edenCompletedCount;
-
+        private int _fruCompletedCount;
         // 记录神兵低保数
         private int _uwuCompletedCount;
-
         // 记录巴哈低保数
         private int _ucobCompletedCount;
-
-        // 记录巴哈低保数
+        // 记录绝亚低保数
         private int _teaCompletedCount;
-        
         // 记录佐拉加低保数
         private int _everkeepCompletedCount;
-
         // 记录零式阿罗阿罗岛低保数
-        private int _alalCompletedCount;
+        private int _aloaloCompletedCount;
 
         private bool _isCountdownRunning;
         private bool _isLeaveRunning;
@@ -426,7 +416,7 @@ namespace AutoRaidHelper.UI
                 }
                 else
                 {
-                    string msg = $"队伍中未找到小猪蟹";
+                    string msg = "队伍中未找到小猪蟹";
                     LogHelper.Print(msg);
                 }
             }
@@ -574,42 +564,44 @@ namespace AutoRaidHelper.UI
             ImGui.Text("选择副本:");
 
             // 下拉框选择副本名称，包括预设名称和自定义选项
-            ImGui.SetNextItemWidth(150f * scale);
-            if (ImGui.BeginCombo("##DutyName", Settings.SelectedDutyName))
+            var settings = FullAutoSettings.Instance.AutomationSettings;
+
+            ImGui.SetNextItemWidth(200f * scale);
+            if (ImGui.BeginCombo("##DutyName", settings.SelectedDutyName))
             {
-                if (ImGui.Selectable("巴哈姆特绝境战", Settings.SelectedDutyName == "巴哈姆特绝境战"))
-                    Settings.UpdateSelectedDutyName("巴哈姆特绝境战");
-                if (ImGui.Selectable("究极神兵绝境战", Settings.SelectedDutyName == "究极神兵绝境战"))
-                    Settings.UpdateSelectedDutyName("究极神兵绝境战");
-                if (ImGui.Selectable("亚历山大绝境战", Settings.SelectedDutyName == "亚历山大绝境战"))
-                    Settings.UpdateSelectedDutyName("亚历山大绝境战");
-                if (ImGui.Selectable("幻想龙诗绝境战", Settings.SelectedDutyName == "幻想龙诗绝境战"))
-                    Settings.UpdateSelectedDutyName("幻想龙诗绝境战");
-                if (ImGui.Selectable("欧米茄绝境验证战", Settings.SelectedDutyName == "欧米茄绝境验证战"))
-                    Settings.UpdateSelectedDutyName("欧米茄绝境验证战");
-                if (ImGui.Selectable("光暗未来绝境战", Settings.SelectedDutyName == "光暗未来绝境战"))
-                    Settings.UpdateSelectedDutyName("光暗未来绝境战");
-                if (ImGui.Selectable("佐拉加歼殛战", Settings.SelectedDutyName == "佐拉加歼殛战"))
-                    Settings.UpdateSelectedDutyName("佐拉加歼殛战");
-                if (ImGui.Selectable("艳翼蛇鸟歼殛战", Settings.SelectedDutyName == "艳翼蛇鸟歼殛战"))
-                    Settings.UpdateSelectedDutyName("艳翼蛇鸟歼殛战");
-                if (ImGui.Selectable("泽莲尼娅歼殛战", Settings.SelectedDutyName == "泽莲尼娅歼殛战"))
-                    Settings.UpdateSelectedDutyName("泽莲尼娅歼殛战");
-                if (ImGui.Selectable("永恒女王忆想歼灭战", Settings.SelectedDutyName == "永恒女王忆想歼灭战"))
-                    Settings.UpdateSelectedDutyName("永恒女王忆想歼灭战");
-                if (ImGui.Selectable("异闻阿罗阿罗岛", Settings.SelectedDutyName == "异闻阿罗阿罗岛"))
-                    Settings.UpdateSelectedDutyName("异闻阿罗阿罗岛");
-                if (ImGui.Selectable("零式异闻阿罗阿罗岛", Settings.SelectedDutyName == "零式异闻阿罗阿罗岛"))
-                    Settings.UpdateSelectedDutyName("零式异闻阿罗阿罗岛");
-                if (ImGui.Selectable("自定义", Settings.SelectedDutyName == "自定义"))
-                    Settings.UpdateSelectedDutyName("自定义");
+                bool firstGroup = true;
+                foreach (DutyCategory category in Enum.GetValues<DutyCategory>())
+                {
+                    // 按分组筛选副本
+                    var duties = AutomationSettings.DutyPresets.Where(d => d.Category == category).ToList();
+                    if (duties.Count == 0) continue;
+
+                    if (!firstGroup) ImGui.Separator();
+                    firstGroup = false;
+
+                    string tag = category switch
+                    {
+                        DutyCategory.Ultimate => "绝本",
+                        DutyCategory.Extreme => "极神",
+                        DutyCategory.Savage => "零式",
+                        DutyCategory.Variant => "异闻",
+                        DutyCategory.Custom => "自定义",
+                        _ => "其它"
+                    };
+                    ImGui.TextColored(new Vector4(1.0f, 0.7f, 0.2f, 1.0f), tag);
+
+                    foreach (var duty in duties.Where(duty => ImGui.Selectable(duty.Name, settings.SelectedDutyName == duty.Name)))
+                    {
+                        settings.UpdateSelectedDutyName(duty.Name);
+                    }
+                }
                 ImGui.EndCombo();
             }
-
+            
             // 如果选择自定义，则允许用户输入副本名称
             if (Settings.SelectedDutyName == "自定义")
             {
-                ImGui.SetNextItemWidth(150f * scale);
+                ImGui.SetNextItemWidth(200f * scale);
                 string custom = Settings.CustomDutyName;
                 if (ImGui.InputText("自定义副本名称", ref custom, 50))
                 {
@@ -737,9 +729,11 @@ namespace AutoRaidHelper.UI
 
                 if (Core.Resolve<MemApiDuty>().IsBoundByDuty() && _dutyCompleted)
                 {
-                    var dutyType = (DutyType)Settings.AutoFuncZoneId;
-                    bool hasChest = Settings.DutiesWithChest.Contains(dutyType);
-
+                    // 获取当前副本信息
+                    var info = AutomationSettings.DutyPresets.FirstOrDefault(d => d.Name == Settings.SelectedDutyName);
+                    // 判断是否极神
+                    bool hasChest = info is { Category: DutyCategory.Extreme };
+                    
                     if (Settings.AutoLeaveAfterLootEnabled && hasChest)
                     {
                         unsafe
