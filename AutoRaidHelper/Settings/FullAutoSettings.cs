@@ -273,6 +273,7 @@ namespace AutoRaidHelper.Settings
         public int EdenCompletedCount { get; set; }
         public int AlalCompletedCount { get; set; }
         public int ValigarmandaCompletedCount { get; set; }
+        public int UCOBCompletedCount { get; set; }
         public int UWUCompletedCount { get; set; }
         public int RecollectionCompletedCount { get; set; }
         public int EverkeepCompletedCount { get; set; }
@@ -418,6 +419,7 @@ namespace AutoRaidHelper.Settings
             Sphene = 1243,
             Valigarmanda = 1196,
             UWU = 777,
+            UCOB = 733,
             Recollection = 1271,
             Everkeep = 1201,
         }

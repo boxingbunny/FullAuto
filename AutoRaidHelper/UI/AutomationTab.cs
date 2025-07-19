@@ -73,6 +73,7 @@ namespace AutoRaidHelper.UI
                 { DutyType.Valigarmanda, () => UpdateDuty(DutyType.Valigarmanda, ref _valigarmandaCompletedCount, 1, "蛇鸟") },
                 { DutyType.Recollection, () => UpdateDuty(DutyType.Recollection, ref _recollectionCompletedCount, 1, "泽莲尼娅") },
                 { DutyType.UWU, () => UpdateDuty(DutyType.UWU, ref _uwuCompletedCount, 1, "神兵") },
+                { DutyType.UCOB, () => UpdateDuty(DutyType.UCOB, ref _ucobCompletedCount, 1, "巴哈") },
                 { DutyType.Everkeep, () => UpdateDuty(DutyType.Everkeep, ref _everkeepCompletedCount, 1, "佐拉加") }
             };
         }
@@ -97,6 +98,7 @@ namespace AutoRaidHelper.UI
                 DutyType.Eden => Settings.EdenCompletedCount,
                 DutyType.Sphene => Settings.SpheneCompletedCount,
                 DutyType.Valigarmanda => Settings.ValigarmandaCompletedCount,
+                DutyType.UCOB => Settings.UCOBCompletedCount,
                 DutyType.UWU => Settings.UWUCompletedCount,
                 DutyType.Recollection => Settings.RecollectionCompletedCount,
                 DutyType.Everkeep => Settings.EverkeepCompletedCount,
@@ -137,6 +139,9 @@ namespace AutoRaidHelper.UI
 
         // 记录神兵低保数
         private int _uwuCompletedCount;
+
+        // 记录巴哈低保数
+        private int _ucobCompletedCount;
         
         // 记录佐拉加低保数
         private int _everkeepCompletedCount;
@@ -567,6 +572,8 @@ namespace AutoRaidHelper.UI
             ImGui.SetNextItemWidth(150f * scale);
             if (ImGui.BeginCombo("##DutyName", Settings.SelectedDutyName))
             {
+                if (ImGui.Selectable("巴哈姆特绝境战", Settings.SelectedDutyName == "巴哈姆特绝境战"))
+                    Settings.UpdateSelectedDutyName("巴哈姆特绝境战");
                 if (ImGui.Selectable("究极神兵绝境战", Settings.SelectedDutyName == "究极神兵绝境战"))
                     Settings.UpdateSelectedDutyName("究极神兵绝境战");
                 if (ImGui.Selectable("欧米茄绝境验证战", Settings.SelectedDutyName == "欧米茄绝境验证战"))
