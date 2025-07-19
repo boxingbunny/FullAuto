@@ -275,6 +275,7 @@ namespace AutoRaidHelper.Settings
         public int ValigarmandaCompletedCount { get; set; }
         public int UCOBCompletedCount { get; set; }
         public int UWUCompletedCount { get; set; }
+        public int TEACompletedCount { get; set; }
         public int RecollectionCompletedCount { get; set; }
         public int EverkeepCompletedCount { get; set; }
 
@@ -420,6 +421,7 @@ namespace AutoRaidHelper.Settings
             Valigarmanda = 1196,
             UWU = 777,
             UCOB = 733,
+            TEA = 887,
             Recollection = 1271,
             Everkeep = 1201,
         }
@@ -457,6 +459,12 @@ namespace AutoRaidHelper.Settings
                     break;
                 case DutyType.UWU:
                     UWUCompletedCount = count;
+                    break;
+                case DutyType.UCOB:
+                    UCOBCompletedCount = count;
+                    break;
+                case DutyType.TEA:
+                    TEACompletedCount = count;
                     break;
                 case DutyType.Recollection:
                     RecollectionCompletedCount = count;

@@ -74,6 +74,7 @@ namespace AutoRaidHelper.UI
                 { DutyType.Recollection, () => UpdateDuty(DutyType.Recollection, ref _recollectionCompletedCount, 1, "泽莲尼娅") },
                 { DutyType.UWU, () => UpdateDuty(DutyType.UWU, ref _uwuCompletedCount, 1, "神兵") },
                 { DutyType.UCOB, () => UpdateDuty(DutyType.UCOB, ref _ucobCompletedCount, 1, "巴哈") },
+                { DutyType.TEA, () => UpdateDuty(DutyType.TEA, ref _teaCompletedCount, 1, "绝亚") },
                 { DutyType.Everkeep, () => UpdateDuty(DutyType.Everkeep, ref _everkeepCompletedCount, 1, "佐拉加") }
             };
         }
@@ -100,6 +101,7 @@ namespace AutoRaidHelper.UI
                 DutyType.Valigarmanda => Settings.ValigarmandaCompletedCount,
                 DutyType.UCOB => Settings.UCOBCompletedCount,
                 DutyType.UWU => Settings.UWUCompletedCount,
+                DutyType.TEA => Settings.TEACompletedCount,
                 DutyType.Recollection => Settings.RecollectionCompletedCount,
                 DutyType.Everkeep => Settings.EverkeepCompletedCount,
                 _ => 0
@@ -142,6 +144,9 @@ namespace AutoRaidHelper.UI
 
         // 记录巴哈低保数
         private int _ucobCompletedCount;
+
+        // 记录巴哈低保数
+        private int _teaCompletedCount;
         
         // 记录佐拉加低保数
         private int _everkeepCompletedCount;
@@ -576,10 +581,12 @@ namespace AutoRaidHelper.UI
                     Settings.UpdateSelectedDutyName("巴哈姆特绝境战");
                 if (ImGui.Selectable("究极神兵绝境战", Settings.SelectedDutyName == "究极神兵绝境战"))
                     Settings.UpdateSelectedDutyName("究极神兵绝境战");
-                if (ImGui.Selectable("欧米茄绝境验证战", Settings.SelectedDutyName == "欧米茄绝境验证战"))
-                    Settings.UpdateSelectedDutyName("欧米茄绝境验证战");
+                if (ImGui.Selectable("亚历山大绝境战", Settings.SelectedDutyName == "亚历山大绝境战"))
+                    Settings.UpdateSelectedDutyName("亚历山大绝境战");
                 if (ImGui.Selectable("幻想龙诗绝境战", Settings.SelectedDutyName == "幻想龙诗绝境战"))
                     Settings.UpdateSelectedDutyName("幻想龙诗绝境战");
+                if (ImGui.Selectable("欧米茄绝境验证战", Settings.SelectedDutyName == "欧米茄绝境验证战"))
+                    Settings.UpdateSelectedDutyName("欧米茄绝境验证战");
                 if (ImGui.Selectable("光暗未来绝境战", Settings.SelectedDutyName == "光暗未来绝境战"))
                     Settings.UpdateSelectedDutyName("光暗未来绝境战");
                 if (ImGui.Selectable("佐拉加歼殛战", Settings.SelectedDutyName == "佐拉加歼殛战"))
