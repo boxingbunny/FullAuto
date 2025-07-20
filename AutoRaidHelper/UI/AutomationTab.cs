@@ -484,7 +484,7 @@ namespace AutoRaidHelper.UI
                 foreach (var enemy in enemies)
                 {
                     LogHelper.Print(
-                        $"敌对单位: {enemy.Name} (EntityIdID: {enemy.EntityId}, DataId: {enemy.DataId}), 位置: {enemy.Position}");
+                        $"敌对单位: {enemy.Name} (EntityId: {enemy.EntityId}, DataId: {enemy.DataId}, ObjId: {enemy.GameObjectId}), 位置: {enemy.Position}");
                 }
             }
 
