@@ -160,7 +160,7 @@ namespace AutoRaidHelper.UI
                 LogHelper.Print($"{mapEffect}");
             if (condParams is TetherCondParams tether && Settings.PrintTether)
                 LogHelper.Print($"{tether}");
-            if (condParams is TargetIconEffectCondParams iconEffect && Settings.PrintTargetIcon)
+            if (condParams is TargetIconEffectTestCondParams iconEffect && Settings.PrintTargetIcon)
                 LogHelper.Print($"{iconEffect}");
             if (condParams is UnitCreateCondParams unitCreate && Settings.PrintUnitCreate)
                 LogHelper.Print($"{unitCreate}");
