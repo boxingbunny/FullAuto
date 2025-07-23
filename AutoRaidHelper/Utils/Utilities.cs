@@ -469,6 +469,7 @@ public static class Utilities
             if (!FullAutoSettings.Instance.FaGeneralSetting.PrintDebugInfo)
                 return;
             LogHelper.Print($"{dev}: {name} 绿玩移动至 {pos}");
+            Share.TrustDebugPoint.Add(pos);
         }
         catch (Exception ex)
         {

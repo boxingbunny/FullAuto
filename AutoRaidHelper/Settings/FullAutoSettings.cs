@@ -267,13 +267,15 @@ namespace AutoRaidHelper.Settings
         public string FinalSendDutyName { get; set; } = "";
 
         // 低保统计数据：龙诗、欧米茄、淑芬、伊甸、阿罗阿罗低保计数
-        public int DragonCompletedCount { get; set; }
-        public int OmegaCompletedCount { get; set; }
+        public int DSRCompletedCount { get; set; }
+        public int TOPCompletedCount { get; set; }
         public int SpheneCompletedCount { get; set; }
-        public int EdenCompletedCount { get; set; }
-        public int AlalCompletedCount { get; set; }
-        public int ValigarmandaCompletedCount { get; set; }
+        public int FRUCompletedCount { get; set; }
+        public int AloaloCompletedCount { get; set; }
+        public int WorqorCompletedCount { get; set; }
+        public int UCOBCompletedCount { get; set; }
         public int UWUCompletedCount { get; set; }
+        public int TEACompletedCount { get; set; }
         public int RecollectionCompletedCount { get; set; }
         public int EverkeepCompletedCount { get; set; }
 
@@ -411,50 +413,82 @@ namespace AutoRaidHelper.Settings
         // 定义一个枚举类型
         public enum DutyType : ushort
         {
-            Dragon = 968,
-            Omega = 1122,
-            Alal = 1180,
-            Eden = 1238,
-            Sphene = 1243,
-            Valigarmanda = 1196,
+            UCOB = 733,
             UWU = 777,
-            Recollection = 1271,
+            TEA = 887,
+            DSR = 968,
+            TOP = 1122,
+            FRU = 1238,
+            Aloalo = 1180,
+            Worqor = 1196,
             Everkeep = 1201,
+            Sphene = 1243,
+            Recollection = 1271,
         }
         
-        // 有箱子的副本，用于辅助判断roll点后退本
-        public readonly HashSet<DutyType> DutiesWithChest =
+        public enum DutyCategory
+        {
+            Ultimate,   // 绝本
+            Extreme,    // 极神
+            Savage,     // 零式
+            Variant,    // 异闻
+            Custom      // 自定义
+        }
+
+        public record DutyInfo(string Name, DutyCategory Category);
+        // 副本预设
+        public static readonly List<DutyInfo> DutyPresets =
         [
-            DutyType.Sphene,
-            DutyType.Valigarmanda,
-            DutyType.Recollection,
-            DutyType.Everkeep,
+            // 绝本
+            new("巴哈姆特绝境战", DutyCategory.Ultimate),
+            new("究极神兵绝境战", DutyCategory.Ultimate),
+            new("亚历山大绝境战", DutyCategory.Ultimate),
+            new("幻想龙诗绝境战", DutyCategory.Ultimate),
+            new("欧米茄绝境验证战", DutyCategory.Ultimate),
+            new("光暗未来绝境战", DutyCategory.Ultimate),
+            // 极神
+            new("艳翼蛇鸟歼殛战", DutyCategory.Extreme),
+            new("佐拉加歼殛战", DutyCategory.Extreme),
+            new("永恒女王忆想歼灭战", DutyCategory.Extreme),
+            new("泽莲尼娅歼殛战", DutyCategory.Extreme),
+            // 异闻
+            new("异闻阿罗阿罗岛", DutyCategory.Variant),
+            new("零式异闻阿罗阿罗岛", DutyCategory.Variant),
+            // 自定义
+            new("自定义", DutyCategory.Custom)
         ];
+        
 
         public void UpdateDutyCount(DutyType duty, int count)
         {
             switch (duty)
             {
-                case DutyType.Dragon:
-                    DragonCompletedCount = count;
+                case DutyType.DSR:
+                    DSRCompletedCount = count;
                     break;
-                case DutyType.Omega:
-                    OmegaCompletedCount = count;
+                case DutyType.TOP:
+                    TOPCompletedCount = count;
                     break;
                 case DutyType.Sphene:
                     SpheneCompletedCount = count;
                     break;
-                case DutyType.Eden:
-                    EdenCompletedCount = count;
+                case DutyType.FRU:
+                    FRUCompletedCount = count;
                     break;
-                case DutyType.Alal:
-                    AlalCompletedCount = count;
+                case DutyType.Aloalo:
+                    AloaloCompletedCount = count;
                     break;
-                case DutyType.Valigarmanda:
-                    ValigarmandaCompletedCount = count;
+                case DutyType.Worqor:
+                    WorqorCompletedCount = count;
                     break;
                 case DutyType.UWU:
                     UWUCompletedCount = count;
+                    break;
+                case DutyType.UCOB:
+                    UCOBCompletedCount = count;
+                    break;
+                case DutyType.TEA:
+                    TEACompletedCount = count;
                     break;
                 case DutyType.Recollection:
                     RecollectionCompletedCount = count;
