@@ -261,8 +261,7 @@ namespace AutoRaidHelper.Settings
 
         // 解限功能开关（用于排本命令中追加 "unrest"）
         public bool UnrestEnabled { get; set; }
-        public bool AutoKillEnabled { get; set; }
-
+        
         // 最终生成的排本命令字符串（自动根据配置拼接组合）
         public string FinalSendDutyName { get; set; } = "";
 
@@ -395,9 +394,25 @@ namespace AutoRaidHelper.Settings
             FullAutoSettings.Instance.Save();
         }
         
-        public void UpdateAutoKillEnabled(bool enabled)
+        /// <summary>
+        /// 更新完成指定次数后关闭游戏职能，并保存配置
+        /// </summary>
+        public void UpdateKillRoleFlag(PartyRole role, bool enabled)
         {
-            AutoKillEnabled = enabled;
+            KillRoleFlags[role] = enabled;
+            if (enabled)
+                ShutdownRoleFlags[role] = false;
+            FullAutoSettings.Instance.Save();
+        }
+
+        /// <summary>
+        /// 更新完成指定次数后关闭电脑职能，并保存配置
+        /// </summary>
+        public void UpdateShutdownRoleFlag(PartyRole role, bool enabled)
+        {
+            ShutdownRoleFlags[role] = enabled;
+            if (enabled)
+                KillRoleFlags[role] = false;
             FullAutoSettings.Instance.Save();
         }
 
@@ -433,6 +448,30 @@ namespace AutoRaidHelper.Settings
             Savage,     // 零式
             Variant,    // 异闻
             Custom      // 自定义
+        }
+        
+        public enum KillTargetType
+        {
+            None,
+            AllParty,
+            SinglePlayer
+        }
+
+        public enum PartyRole { MT, ST, H1, H2, D1, D2, D3, D4 }
+
+        // 每个职能是否关游戏
+        public Dictionary<PartyRole, bool> KillRoleFlags { get; }
+            = Enum.GetValues<PartyRole>().ToDictionary(r => r, _ => false);
+
+        // 每个职能是否关机
+        public Dictionary<PartyRole, bool> ShutdownRoleFlags { get; }
+            = Enum.GetValues<PartyRole>().ToDictionary(r => r, _ => false);
+
+        // 根据勾选职能拼正则
+        public string BuildRegex(bool forKill)
+        {
+            var dict = forKill ? KillRoleFlags : ShutdownRoleFlags;
+            return string.Join("|", dict.Where(kv => kv.Value).Select(kv => kv.Key));
         }
 
         public record DutyInfo(string Name, DutyCategory Category);

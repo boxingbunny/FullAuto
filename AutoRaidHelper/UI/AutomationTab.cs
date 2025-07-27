@@ -18,6 +18,8 @@ using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using static FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCommonList.CharacterData.OnlineStatus;
 using DutyType = AutoRaidHelper.Settings.AutomationSettings.DutyType;
 using DutyCategory = AutoRaidHelper.Settings.AutomationSettings.DutyCategory;
+using KillTargetType = AutoRaidHelper.Settings.AutomationSettings.KillTargetType;
+using PartyRole = AutoRaidHelper.Settings.AutomationSettings.PartyRole;
 
 namespace AutoRaidHelper.UI
 {
@@ -53,14 +55,7 @@ namespace AutoRaidHelper.UI
         private string _selectedKillRole = "";
         private string _selectedKillName = "";
         private KillTargetType _killTargetType = KillTargetType.None;
-
-        private enum KillTargetType
-        {
-            None,
-            AllParty,
-            SinglePlayer
-        }
-
+        
         public AutomationTab()
         {
             _dutyUpdateActions = new Dictionary<DutyType, Action>
@@ -345,10 +340,10 @@ namespace AutoRaidHelper.UI
                 var partyInfo = battleCharaMembers.ToPartyMemberInfo();
 
                 // 添加全队选项
-                if (ImGui.Selectable("向7个队友发送Kill指令", _killTargetType == KillTargetType.AllParty))
+                if (ImGui.Selectable("向7个队友发送Kill指令", _killTargetType == AutomationSettings.KillTargetType.AllParty))
                 {
                     _selectedKillTarget = "向7个队友发送Kill指令";
-                    _killTargetType = KillTargetType.AllParty;
+                    _killTargetType = AutomationSettings.KillTargetType.AllParty;
                     _selectedKillRole = "";
                     _selectedKillName = "";
                 }
@@ -362,13 +357,13 @@ namespace AutoRaidHelper.UI
                     if (info.Role == roleMe || info.Member == null) continue;
 
                     var displayText = $"{info.Name} (ID: {info.Member.EntityId})";
-                    bool isSelected = _killTargetType == KillTargetType.SinglePlayer &&
+                    bool isSelected = _killTargetType == AutomationSettings.KillTargetType.SinglePlayer &&
                                       _selectedKillRole == info.Role;
 
                     if (ImGui.Selectable(displayText, isSelected))
                     {
                         _selectedKillTarget = displayText;
-                        _killTargetType = KillTargetType.SinglePlayer;
+                        _killTargetType = AutomationSettings.KillTargetType.SinglePlayer;
                         _selectedKillRole = info.Role;
                         _selectedKillName = info.Name;
                     }
@@ -518,42 +513,81 @@ namespace AutoRaidHelper.UI
             ImGui.SameLine();
             ImGui.Text("秒");
 
-            // 设置指定次数自动结束是否启用
-            bool runtimeEnabled = Settings.RunTimeEnabled;
-            bool autokillEnabled = Settings.AutoKillEnabled;
-            if (autoQueue)
+            //通过副本指定次数后停止自动排本 & 关游戏/关机
             {
+                // 读取指定次数
+                bool runtimeEnabled = Settings.RunTimeEnabled;
+
+                // 勾选总开关
                 if (ImGui.Checkbox($"通过副本指定次后停止自动排本(目前已通过{_runtimes}次)", ref runtimeEnabled))
                 {
                     Settings.UpdateRunTimeEnabled(runtimeEnabled);
-
-                    if (!runtimeEnabled)
+                    if (!runtimeEnabled) // 关掉时清零已通过次数
                         _runtimes = 0;
                 }
 
                 ImGui.SameLine();
 
-                // 输入自动结束次数（次）
+                // 输入指定次数
                 ImGui.SetNextItemWidth(80f * scale);
                 int runtime = Settings.RunTimeLimit;
                 if (ImGui.InputInt("##RunTimeLimit", ref runtime))
-                {
                     Settings.UpdateRunTimeLimit(runtime);
-                }
 
                 ImGui.SameLine();
                 ImGui.Text("次");
 
+                // 勾选各职能需不需要关游戏 / 关机
                 if (runtimeEnabled)
                 {
-                    if (ImGui.Checkbox("完成指定次数后是否关闭所有人的游戏", ref autokillEnabled))
+                    ImGui.Separator();
+                    ImGui.Text("完成指定次数后要操作的职能：");
+
+                    if (ImGui.BeginTable("##KillShutdownTable", 3,
+                                         ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
                     {
-                        Settings.UpdateAutoKillEnabled(autokillEnabled);
+                        // 列设置 + 彩色表头
+                        ImGui.TableSetupColumn("职能",   ImGuiTableColumnFlags.None, 70f);
+                        ImGui.TableSetupColumn("关游戏", ImGuiTableColumnFlags.None, 60f);
+                        ImGui.TableSetupColumn("关机",   ImGuiTableColumnFlags.None, 60f);
+
+                        ImGui.TableNextRow(ImGuiTableRowFlags.Headers);
+                        ImGui.TableSetColumnIndex(0);  ImGui.Text("职能");
+                        ImGui.TableSetColumnIndex(1);  ImGui.TextColored(new(1,0.70f,0,1), "关游戏");
+                        ImGui.TableSetColumnIndex(2);  ImGui.TextColored(new(1,0.25f,0.25f,1), "关机");
+
+                        var roles = new[]
+                        {
+                            PartyRole.MT, PartyRole.ST, PartyRole.H1, PartyRole.H2,
+                            PartyRole.D1, PartyRole.D2, PartyRole.D3, PartyRole.D4
+                        };
+
+                        foreach (var role in roles)
+                        {
+                            ImGui.TableNextRow();
+                            ImGui.TableSetColumnIndex(0); ImGui.Text(role.ToString());
+
+                            // 关游戏
+                            ImGui.TableSetColumnIndex(1);
+                            bool kill = Settings.KillRoleFlags[role];
+                            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.70f, 0f, 1f)); // 橙色
+                            if (ImGui.Checkbox($"##Kill{role}", ref kill))
+                                Settings.UpdateKillRoleFlag(role, kill);
+                            ImGui.PopStyleColor();
+
+                            // 关机
+                            ImGui.TableSetColumnIndex(2);
+                            bool shut = Settings.ShutdownRoleFlags[role];
+                            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.25f, 0.25f, 1f)); // 红色
+                            if (ImGui.Checkbox($"##Shut{role}", ref shut))
+                                Settings.UpdateShutdownRoleFlag(role, shut);
+                            ImGui.PopStyleColor();
+                        }
+                        ImGui.EndTable();
                     }
                 }
             }
-
-
+            
             // 设置解限（若启用则在排本命令中加入 "unrest"）
             bool unrest = Settings.UnrestEnabled;
             if (ImGui.Checkbox("解限", ref unrest))
@@ -838,17 +872,24 @@ namespace AutoRaidHelper.UI
                     dutyName += " unrest";
                 Settings.UpdateFinalSendDutyName(dutyName);
 
-                //如果到达指定次数则停止排本
-
+                // 如果到达指定次数则停止排本
                 if (Settings.RunTimeEnabled && _runtimes >= Settings.RunTimeLimit)
                 {
                     Settings.UpdateAutoQueueEnabled(false);
                     _runtimes = 0;
 
-                    //如果开启了自动关闭则全员击杀
-                    if (Settings.AutoKillEnabled)
+                    // 关游戏
+                    string killRegex = Settings.BuildRegex(forKill: true);
+                    if (!string.IsNullOrEmpty(killRegex))
                     {
-                        RemoteControlHelper.Cmd("", "/xlkill");
+                        RemoteControlHelper.Cmd(killRegex, "/xlkill");
+                    }
+
+                    // 关机
+                    string shutRegex = Settings.BuildRegex(forKill: false);
+                    if (!string.IsNullOrEmpty(shutRegex))
+                    {
+                        RemoteControlHelper.Shutdown(shutRegex);
                     }
                 }
 
@@ -994,7 +1035,7 @@ namespace AutoRaidHelper.UI
             {
                 switch (_killTargetType)
                 {
-                    case KillTargetType.AllParty:
+                    case AutomationSettings.KillTargetType.AllParty:
                         // 执行全队击杀
                         var roleMe = AI.Instance.PartyRole;
                         var battleCharaMembers = Svc.Party
@@ -1014,7 +1055,7 @@ namespace AutoRaidHelper.UI
                         LogHelper.Print("已向全队发送击杀命令");
                         break;
 
-                    case KillTargetType.SinglePlayer:
+                    case AutomationSettings.KillTargetType.SinglePlayer:
                         // 执行单个玩家击杀
                         if (!string.IsNullOrEmpty(_selectedKillRole))
                         {
@@ -1024,7 +1065,7 @@ namespace AutoRaidHelper.UI
 
                         break;
 
-                    case KillTargetType.None:
+                    case AutomationSettings.KillTargetType.None:
                     default:
                         LogHelper.Print("请先选择要击杀的目标");
                         Core.Resolve<MemApiChatMessage>().Toast2("请先选择要击杀的目标", 1, 2000);
