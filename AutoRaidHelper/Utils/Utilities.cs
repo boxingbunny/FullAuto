@@ -432,12 +432,21 @@ public static class Utilities
     {
         try
         {
-            var role = new HashSet<string> { "D1", "D2", "D3", "D4", "H1", "H2", "MT", "ST" };
-            RemoteControlHelper.SetPos(!role.Contains(name) ? RemoteControlHelper.GetRoleByPlayerName(name) : name,
-                pos);
-            if (!FullAutoSettings.Instance.FaGeneralSetting.PrintDebugInfo) return;
-            LogHelper.Print($"{dev}: {name} 移动至 {pos}");
-            // Share.TrustDebugPoint.Add(pos);
+            var roleSet = new HashSet<string> { "D1", "D2", "D3", "D4", "H1", "H2", "MT", "ST" };
+            var names = name.Contains('|') 
+                ? name.Split('|') 
+                : [name];
+            
+            foreach (var n in names)
+            {
+                string roleName = !roleSet.Contains(n) ? RemoteControlHelper.GetRoleByPlayerName(n) : n;
+                RemoteControlHelper.SetPos(roleName, pos);
+                if (!FullAutoSettings.Instance.FaGeneralSetting.PrintDebugInfo)
+                    return;
+                LogHelper.Print($"{dev}: {n} 移动至 {pos}");
+                // Share.TrustDebugPoint.Add(pos);
+            }
+
         }
         catch (Exception ex)
         {
@@ -455,21 +464,20 @@ public static class Utilities
     {
         try
         {
-            RemoteControlHelper.MoveTo(!new HashSet<string>()
+            var roleSet = new HashSet<string> { "D1", "D2", "D3", "D4", "H1", "H2", "MT", "ST" };
+            var names = name.Contains('|') 
+                ? name.Split('|') 
+                : [name];
+
+            foreach (var n in names)
             {
-                "D1",
-                "D2",
-                "D3",
-                "D4",
-                "H1",
-                "H2",
-                "MT",
-                "ST"
-            }.Contains(name) ? RemoteControlHelper.GetRoleByPlayerName(name) : name, pos);
-            if (!FullAutoSettings.Instance.FaGeneralSetting.PrintDebugInfo)
-                return;
-            LogHelper.Print($"{dev}: {name} 绿玩移动至 {pos}");
-            Share.TrustDebugPoint.Add(pos);
+                string roleName = !roleSet.Contains(n) ? RemoteControlHelper.GetRoleByPlayerName(n) : n;
+                RemoteControlHelper.MoveTo(roleName, pos);
+                if (!FullAutoSettings.Instance.FaGeneralSetting.PrintDebugInfo)
+                    return;
+                LogHelper.Print($"{dev}: {name} 绿玩移动至 {pos}");
+                Share.TrustDebugPoint.Add(pos);
+            }
         }
         catch (Exception ex)
         {
@@ -488,12 +496,21 @@ public static class Utilities
     {
         try
         {
-            var role = new HashSet<string> { "D1", "D2", "D3", "D4", "H1", "H2", "MT", "ST" };
-            RemoteControlHelper.LockPos(!role.Contains(name) ? RemoteControlHelper.GetRoleByPlayerName(name) : name,
-                pos, duration);
-            RemoteControlHelper.LockPos(name, pos, duration);
-            LogHelper.Print($"{dev}: {name} 锁定在 {pos} {duration}ms");
-            // Share.TrustDebugPoint.Add(pos);
+            var roleSet = new HashSet<string> { "D1", "D2", "D3", "D4", "H1", "H2", "MT", "ST" };
+            var names = name.Contains('|') 
+                ? name.Split('|') 
+                : [name];
+            
+            foreach (var n in names)
+            {
+                string roleName = !roleSet.Contains(n) ? RemoteControlHelper.GetRoleByPlayerName(n) : n;
+                RemoteControlHelper.LockPos(roleName, pos, duration);
+                if (!FullAutoSettings.Instance.FaGeneralSetting.PrintDebugInfo)
+                    return;
+                LogHelper.Print($"{dev}: {n} 锁定在 {pos} {duration}ms");
+                // Share.TrustDebugPoint.Add(pos);
+            }
+
         }
         catch (Exception ex)
         {
@@ -511,17 +528,25 @@ public static class Utilities
     {
         try
         {
-            name = RemoteControlHelper.GetRoleByPlayerName(name);
-            RemoteControlHelper.Stop(name, true);
-            await Coroutine.Instance.WaitAsync(500);
-            RemoteControlHelper.Cmd(name, "/共通技能 跳跃");
-            var offsetDistance = 1.0f;
-            var offsetAngle = NormalizeRotation(rot + MathF.PI);
-            var offsetX = offsetDistance * MathF.Sin(offsetAngle);
-            var offsetZ = offsetDistance * MathF.Cos(offsetAngle);
-            var offsetPos = new Vector3(targetPos.X + offsetX, targetPos.Y, targetPos.Z + offsetZ);
-            TPbyRole(name, offsetPos, "调整面向 - TP到偏移位置");
-            RemoteControlHelper.MoveTo(name, targetPos);
+            var roleSet = new HashSet<string> { "D1", "D2", "D3", "D4", "H1", "H2", "MT", "ST" };
+            var names = name.Contains('|') 
+                ? name.Split('|') 
+                : [name];
+
+            foreach (var n in names)
+            {
+                string roleName = roleSet.Contains(n) ? n : RemoteControlHelper.GetRoleByPlayerName(n);
+                RemoteControlHelper.Stop(roleName, true);
+                await Coroutine.Instance.WaitAsync(500);
+                RemoteControlHelper.Cmd(roleName, "/共通技能 跳跃");
+                var offsetDistance = 1.0f;
+                var offsetAngle = NormalizeRotation(rot + MathF.PI);
+                var offsetX = offsetDistance * MathF.Sin(offsetAngle);
+                var offsetZ = offsetDistance * MathF.Cos(offsetAngle);
+                var offsetPos = new Vector3(targetPos.X + offsetX, targetPos.Y, targetPos.Z + offsetZ);
+                TPbyRole(name, offsetPos, "调整面向 - TP到偏移位置");
+                RemoteControlHelper.MoveTo(name, targetPos);
+            }
         }
         catch (Exception ex)
         {
