@@ -764,7 +764,7 @@ namespace AutoRaidHelper.UI
                 if (Core.Resolve<MemApiDuty>().IsBoundByDuty() && _dutyCompleted)
                 {
                     // 获取当前副本信息
-                    var info = AutomationSettings.DutyPresets.FirstOrDefault(d => d.Name == Settings.SelectedDutyName);
+                    var info = AutomationSettings.DutyPresets.FirstOrDefault(d => d.Name == Settings.SelectedDutyName || d.Name == Settings.CustomDutyName);
                     // 判断是否极神
                     bool hasChest = info is { Category: DutyCategory.Extreme };
                     
