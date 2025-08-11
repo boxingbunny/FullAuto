@@ -435,6 +435,7 @@ namespace AutoRaidHelper.Settings
             TOP = 1122,
             FRU = 1238,
             Aloalo = 1180,
+            Zodiark = 993,
             Worqor = 1196,
             Everkeep = 1201,
             Sphene = 1243,
@@ -486,6 +487,7 @@ namespace AutoRaidHelper.Settings
             new("欧米茄绝境验证战", DutyCategory.Ultimate),
             new("光暗未来绝境战", DutyCategory.Ultimate),
             // 极神
+            new("佐迪亚克暝暗歼灭战", DutyCategory.Extreme),
             new("艳翼蛇鸟歼殛战", DutyCategory.Extreme),
             new("佐拉加歼殛战", DutyCategory.Extreme),
             new("永恒女王忆想歼灭战", DutyCategory.Extreme),

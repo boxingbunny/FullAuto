@@ -444,7 +444,7 @@ public static class Utilities
                 if (!FullAutoSettings.Instance.FaGeneralSetting.PrintDebugInfo)
                     return;
                 LogHelper.Print($"{dev}: {n} 移动至 {pos}");
-                // Share.TrustDebugPoint.Add(pos);
+                Share.TrustDebugPoint.Add(pos);
             }
 
         }
@@ -508,7 +508,7 @@ public static class Utilities
                 if (!FullAutoSettings.Instance.FaGeneralSetting.PrintDebugInfo)
                     return;
                 LogHelper.Print($"{dev}: {n} 锁定在 {pos} {duration}ms");
-                // Share.TrustDebugPoint.Add(pos);
+                Share.TrustDebugPoint.Add(pos);
             }
 
         }
@@ -539,7 +539,7 @@ public static class Utilities
                 RemoteControlHelper.Stop(roleName, true);
                 await Coroutine.Instance.WaitAsync(500);
                 RemoteControlHelper.Cmd(roleName, "/共通技能 跳跃");
-                var offsetDistance = 1.0f;
+                var offsetDistance = 1.5f;
                 var offsetAngle = NormalizeRotation(rot + MathF.PI);
                 var offsetX = offsetDistance * MathF.Sin(offsetAngle);
                 var offsetZ = offsetDistance * MathF.Cos(offsetAngle);

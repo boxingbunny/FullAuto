@@ -21,8 +21,7 @@ namespace AutoRaidHelper.Hooks
 
         public ActorControlHook()
         {
-            LogHelper.Print("ActorControlHook created");
-            HookActorControl();
+            // HookActorControl();
         }
 
         /// <summary>

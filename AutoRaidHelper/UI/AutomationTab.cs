@@ -898,11 +898,13 @@ namespace AutoRaidHelper.UI
                     return;
                 if (DateTime.Now - _lastAutoQueueTime < TimeSpan.FromSeconds(3))
                     return;
+                // 已经在排本队列中则返回
                 if (Svc.Condition[ConditionFlag.InDutyQueue])
                     return;
                 if (Core.Resolve<MemApiDuty>().IsBoundByDuty())
                     return;
-                if (InfoProxyCrossRealm.GetPartyMemberCount() < 8)
+                // 解限时不考虑人数
+                if (InfoProxyCrossRealm.GetPartyMemberCount() < 8 && !Settings.UnrestEnabled)
                     return;
 
                 // 检查跨服队伍中是否所有成员均在线且未在副本中，否则退出
