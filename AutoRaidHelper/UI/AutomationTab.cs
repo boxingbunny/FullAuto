@@ -275,7 +275,7 @@ namespace AutoRaidHelper.UI
 
             // 设置自动退本是否启用
             bool leaveEnabled = Settings.AutoLeaveEnabled;
-            if (ImGui.Checkbox("副本结束后自动退本(需启用DR <即刻退本> 模块)", ref leaveEnabled))
+            if (ImGui.Checkbox("副本结束后自动退本", ref leaveEnabled))
             {
                 Settings.UpdateAutoLeaveEnabled(leaveEnabled);
             }
@@ -492,7 +492,7 @@ namespace AutoRaidHelper.UI
             ImGui.Text("自动排本设置:");
             // 设置自动排本是否启用
             bool autoQueue = Settings.AutoQueueEnabled;
-            if (ImGui.Checkbox("自动排本(需启用DR <任务搜索器指令> 模块)", ref autoQueue))
+            if (ImGui.Checkbox("自动排本", ref autoQueue))
             {
                 Settings.UpdateAutoQueueEnabled(autoQueue);
             }
@@ -659,7 +659,7 @@ namespace AutoRaidHelper.UI
             ImGui.Text("自动进岛设置:");
             // 设置自动排本是否启用
             bool enterOccult = Settings.AutoEnterOccult;
-            if (ImGui.Checkbox("自动进岛/换岛(需启用DR <快捷特殊场景探索进入指令> 模块)", ref enterOccult))
+            if (ImGui.Checkbox("自动进岛/换岛", ref enterOccult))
             {
                 Settings.AutoEnterOccult = enterOccult;
             }
