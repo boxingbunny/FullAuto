@@ -478,6 +478,23 @@ namespace AutoRaidHelper.Settings
             return string.Join("|", dict.Where(kv => kv.Value).Select(kv => kv.Key));
         }
 
+        public enum SupportJobId
+        {
+            Freelancer = 0,
+            Knight = 1,
+            Berserker = 2,
+            Monk = 3,
+            Ranger = 4,
+            Samurai = 5,
+            Bard = 6,
+            Geomancer = 7,
+            TimeMage = 8,
+            Cannoneer = 9,
+            Chemist = 10,
+            Oracle = 11,
+            Thief = 12
+        }
+        
         public record DutyInfo(string Name, DutyCategory Category);
         // 副本预设
         public static readonly List<DutyInfo> DutyPresets =

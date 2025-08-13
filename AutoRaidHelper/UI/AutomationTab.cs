@@ -700,12 +700,27 @@ namespace AutoRaidHelper.UI
                     }
                 }
                 // 如果在新月岛内
-                var pOccult = PublicContentOccultCrescent.GetInstance();
-                if (pOccult != null)
+                var instancePtr = PublicContentOccultCrescent.GetInstance();
+                var statePtr = PublicContentOccultCrescent.GetState();
+                if (instancePtr != null && statePtr != null)
                 {
                     ImGui.Text("新月岛内状态");
-                    float remainingTime = pOccult->ContentTimeLeft;
+                    float remainingTime = instancePtr->ContentTimeLeft;
                     ImGui.Text($"剩余时间: {(int)(remainingTime / 60)}分{(int)(remainingTime % 60)}秒");
+                    
+                    ImGui.Text("职业等级:");
+                    var supportLevels = statePtr->SupportJobLevels;
+                    for (byte i = 0; i < supportLevels.Length; i++)
+                    {
+                        var job = (AutomationSettings.SupportJobId)i;
+                        byte level = supportLevels[i];
+                        ImGui.Text($"{job}: Level {level}");
+                        ImGui.SameLine();
+                        if (ImGui.Button($"切换##{i}") && statePtr->CurrentSupportJob != i)
+                        {
+                            PublicContentOccultCrescent.ChangeSupportJob(i);
+                        }
+                    }
                 }
             }
         }
@@ -974,18 +989,22 @@ namespace AutoRaidHelper.UI
                 if (DateTime.Now - _lastAutoQueueTime < TimeSpan.FromSeconds(5))
                     return;
                 
-                // 剩余时间不足90分钟直接退岛
-                unsafe
+                // 剩余时间不足90分钟且在大水晶边上直接退岛
+                if (Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() == 1252 && Vector3.Distance(Core.Me.Position, new Vector3(828, 73, -696)) < 25 && Svc.ClientState.LocalPlayer != null)
                 {
-                    if (Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() == 1252 && PublicContentOccultCrescent.GetInstance()->ContentTimeLeft / 60 < 90 && !Core.Me.InCombat())
+                    unsafe
                     {
-                        RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
-                        RemoteControlHelper.Cmd("", "/pdr leaveduty");
-                        _lastAutoQueueTime = DateTime.Now;
-                        return;
+                        var instancePtr = PublicContentOccultCrescent.GetInstance();
+                        if (instancePtr != null && instancePtr->ContentTimeLeft / 60 is < 90 and > 0)
+                        {
+                            RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
+                            RemoteControlHelper.Cmd("", "/pdr leaveduty");
+                            _lastAutoQueueTime = DateTime.Now;
+                            return;
+                        }
                     }
                 }
-
+                
                 // 已经在排本队列中则返回
                 if (Svc.Condition[ConditionFlag.InDutyQueue])
                     return;
