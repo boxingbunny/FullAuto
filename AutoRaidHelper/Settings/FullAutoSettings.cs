@@ -236,39 +236,31 @@ namespace AutoRaidHelper.Settings
     {
         // 当前自动功能所在地图的 ID（默认值为 1238）
         public uint AutoFuncZoneId { get; set; } = 1238;
-
         // 自动倒计时开启与否，以及相应的倒计时延迟（单位：秒）
         public bool AutoCountdownEnabled { get; set; }
         public int AutoCountdownDelay { get; set; } = 15;
-
         // 自动退本状态及延迟（单位：秒）
         public bool AutoLeaveEnabled { get; set; }
         public bool RunTimeEnabled { get; set; }
         public int AutoLeaveDelay { get; set; } = 1;
-        
         public int RunTimeLimit { get; set; } = 5;
-
         // 是否宝箱R点完成后再退本
         public bool AutoLeaveAfterLootEnabled { get; set; }
-        
         // 自动排本开启状态及延迟（单位：秒）
         public bool AutoQueueEnabled { get; set; }
         public int AutoQueueDelay { get; set; } = 3;
-
         // 选定的副本名称（默认："光暗未来绝境战"）以及自定义副本名称
         public string SelectedDutyName { get; set; } = "光暗未来绝境战";
         public string CustomDutyName { get; set; } = "";
-
         // 解限功能开关（用于排本命令中追加 "unrest"）
         public bool UnrestEnabled { get; set; }
-        
         // 最终生成的排本命令字符串（自动根据配置拼接组合）
         public string FinalSendDutyName { get; set; } = "";
-        
         // 是否自动进新月岛
         public bool AutoEnterOccult { get; set; }
-
-        // 低保统计数据：龙诗、欧米茄、淑芬、伊甸、阿罗阿罗低保计数
+        // 新月岛时候自动切换未满级职业
+        public bool AutoSwitchNotMaxSupJob { get; set; }
+        // 低保统计数据
         public int DSRCompletedCount { get; set; }
         public int TOPCompletedCount { get; set; }
         public int SpheneCompletedCount { get; set; }
@@ -428,6 +420,15 @@ namespace AutoRaidHelper.Settings
             FullAutoSettings.Instance.Save();
         }
         
+        /// <summary>
+        /// 更新是否自动切换新月岛未满级辅助职业，并保存配置
+        /// </summary>
+        public void UpdateAutoSwitchNotMaxSupJob(bool enabled)
+        {
+            AutoSwitchNotMaxSupJob = enabled;
+            FullAutoSettings.Instance.Save();
+        }
+        
         // 定义一个枚举类型
         public enum DutyType : ushort
         {
@@ -478,22 +479,23 @@ namespace AutoRaidHelper.Settings
             return string.Join("|", dict.Where(kv => kv.Value).Select(kv => kv.Key));
         }
 
-        public enum SupportJobId
+        // 新月岛辅助职业数据
+        public static readonly Dictionary<byte, (string Name, byte MaxLevel)> SupportJobData = new()
         {
-            Freelancer = 0,
-            Knight = 1,
-            Berserker = 2,
-            Monk = 3,
-            Ranger = 4,
-            Samurai = 5,
-            Bard = 6,
-            Geomancer = 7,
-            TimeMage = 8,
-            Cannoneer = 9,
-            Chemist = 10,
-            Oracle = 11,
-            Thief = 12
-        }
+            { 0, ("自由人", 0) },
+            { 1, ("骑士", 6) },
+            { 2, ("狂战士", 3) },
+            { 3, ("武僧", 6) },
+            { 4, ("猎人", 6) },
+            { 5, ("武士", 5) },
+            { 6, ("吟游诗人", 4) },
+            { 7, ("风水师", 5) },
+            { 8, ("时魔法师", 5) },
+            { 9, ("炮击士", 6) },
+            { 10, ("药剂师", 4) },
+            { 11, ("预言师", 5) },
+            { 12, ("盗贼", 6) }
+        };
         
         public record DutyInfo(string Name, DutyCategory Category);
         // 副本预设

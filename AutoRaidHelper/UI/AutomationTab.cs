@@ -145,15 +145,19 @@ namespace AutoRaidHelper.UI
         private bool _isLeaveRunning;
         private bool _isQueueRunning;
         private bool _isEnterOccultRunning;
+        private bool _isSwitchNotMaxSupJobRunning;
+        
         private bool _isCountdownCompleted;
         private bool _isLeaveCompleted;
         private bool _isQueueCompleted;
         private bool _isEnterOccultCompleted;
+        private bool _isSwitchNotMaxSupJobCompleted;
 
         private readonly object _countdownLock = new();
         private readonly object _leaveLock = new();
         private readonly object _queueLock = new();
         private readonly object _enterOccultLock = new();
+        private readonly object _switchNotMaxSupJobLock = new();
 
         /// <summary>
         /// 在加载时，订阅副本状态相关事件（如副本完成和团灭）
@@ -188,6 +192,7 @@ namespace AutoRaidHelper.UI
                 await UpdateAutoLeave();
                 await UpdateAutoQueue();
                 await UpdateAutoEnterOccult();
+                await UpdateAutoSwitchNotMaxSupJob();
                 ResetDutyFlag();
             }
             catch (Exception e)
@@ -332,10 +337,10 @@ namespace AutoRaidHelper.UI
                 var partyInfo = battleCharaMembers.ToPartyMemberInfo();
 
                 // 添加全队选项
-                if (ImGui.Selectable("向7个队友发送Kill指令", _killTargetType == AutomationSettings.KillTargetType.AllParty))
+                if (ImGui.Selectable("向7个队友发送Kill指令", _killTargetType == KillTargetType.AllParty))
                 {
                     _selectedKillTarget = "向7个队友发送Kill指令";
-                    _killTargetType = AutomationSettings.KillTargetType.AllParty;
+                    _killTargetType = KillTargetType.AllParty;
                     _selectedKillRole = "";
                     _selectedKillName = "";
                 }
@@ -346,16 +351,16 @@ namespace AutoRaidHelper.UI
                 foreach (var info in partyInfo)
                 {
                     // 跳过自己
-                    if (info.Role == roleMe || info.Member == null) continue;
+                    if (info.Role == roleMe) continue;
 
                     var displayText = $"{info.Name} (ID: {info.Member.EntityId})";
-                    bool isSelected = _killTargetType == AutomationSettings.KillTargetType.SinglePlayer &&
+                    bool isSelected = _killTargetType == KillTargetType.SinglePlayer &&
                                       _selectedKillRole == info.Role;
 
                     if (ImGui.Selectable(displayText, isSelected))
                     {
                         _selectedKillTarget = displayText;
-                        _killTargetType = AutomationSettings.KillTargetType.SinglePlayer;
+                        _killTargetType = KillTargetType.SinglePlayer;
                         _selectedKillRole = info.Role;
                         _selectedKillName = info.Name;
                     }
@@ -641,12 +646,18 @@ namespace AutoRaidHelper.UI
 
             ImGui.Separator();
             
-            ImGui.Text("自动进岛设置:");
+            ImGui.Text("新月岛设置:");
             // 设置自动排本是否启用
             bool enterOccult = Settings.AutoEnterOccult;
             if (ImGui.Checkbox("自动进岛/换岛", ref enterOccult))
             {
+                // 不用Update，免得下次上线自动传送到新月岛
                 Settings.AutoEnterOccult = enterOccult;
+            }
+            bool switchNotMaxSupJob = Settings.AutoSwitchNotMaxSupJob;
+            if (ImGui.Checkbox("自动切换未满级辅助职业", ref switchNotMaxSupJob))
+            {
+                Settings.UpdateAutoSwitchNotMaxSupJob(switchNotMaxSupJob);
             }
             
             ImGui.Separator();
@@ -709,7 +720,7 @@ namespace AutoRaidHelper.UI
                     var supportLevels = statePtr->SupportJobLevels;
                     for (byte i = 0; i < supportLevels.Length; i++)
                     {
-                        var job = (AutomationSettings.SupportJobId)i;
+                        var job = AutomationSettings.SupportJobData[i].Name;
                         byte level = supportLevels[i];
                         ImGui.Text($"{job}: Level {level}");
                         ImGui.SameLine();
@@ -755,7 +766,7 @@ namespace AutoRaidHelper.UI
                 // 若条件满足，则等待8秒后发送倒计时命令
                 if (notInCombat && inMission && partyIs8)
                 {
-                    await Coroutine.Instance.WaitAsync(8000);
+                    await Task.Delay(8000);
                     ChatHelper.SendMessage($"/countdown {Settings.AutoCountdownDelay}");
                     _isCountdownCompleted = true;
                 }
@@ -936,11 +947,11 @@ namespace AutoRaidHelper.UI
                 if (invalidNames.Any())
                 {
                     LogHelper.Print("玩家不在线或在副本中：" + string.Join(", ", invalidNames));
-                    await Coroutine.Instance.WaitAsync(1000);
+                    await Task.Delay(1000);
                     return;
                 }
 
-                await Coroutine.Instance.WaitAsync(Settings.AutoQueueDelay * 1000);
+                await Task.Delay(Settings.AutoQueueDelay * 1000);
 
                 _lastAutoQueueTime = DateTime.Now;
             }
@@ -1007,7 +1018,7 @@ namespace AutoRaidHelper.UI
                 if (invalidNames.Any())
                 {
                     LogHelper.Print("玩家不在线或在副本中：" + string.Join(", ", invalidNames));
-                    await Coroutine.Instance.WaitAsync(1000);
+                    await Task.Delay(1000);
                     return;
                 }
                 
@@ -1043,6 +1054,61 @@ namespace AutoRaidHelper.UI
         }
 
         /// <summary>
+        /// 新月岛自动切换到未满级的辅助职业。
+        /// </summary>
+        private async Task UpdateAutoSwitchNotMaxSupJob()
+        {
+            if (_isSwitchNotMaxSupJobRunning) return;
+            if (_isSwitchNotMaxSupJobCompleted) return;
+            lock (_switchNotMaxSupJobLock)
+            {
+                if (_isSwitchNotMaxSupJobRunning) return;
+                _isSwitchNotMaxSupJobRunning = true;
+            }
+
+            try
+            {
+                if (!Settings.AutoSwitchNotMaxSupJob)
+                    return;
+                // 如果不在新月岛内或距离大水晶太远则不切换
+                if (Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() != 1252 || Vector3.Distance(Core.Me.Position, new Vector3(828, 73, -696)) > 10)
+                    return;
+                
+                await Task.Delay(5000);
+                unsafe
+                {
+                    var statePtr = PublicContentOccultCrescent.GetState();
+                    if (statePtr == null)
+                        return;
+                    var levels = statePtr->SupportJobLevels;
+                    byte currentJob = statePtr->CurrentSupportJob;
+                    // 当前职业未满级则不切换
+                     if (levels[currentJob] < AutomationSettings.SupportJobData[currentJob].MaxLevel)
+                         return;
+                    for (byte jobId = 0; jobId < AutomationSettings.SupportJobData.Count; jobId++)
+                    {
+                        var (name, maxLevel) = AutomationSettings.SupportJobData[jobId];
+                        byte level = levels[jobId];
+                        // 已解锁且未满级
+                        if (level <= 0 || level >= maxLevel || jobId == currentJob)
+                            continue;
+                        PublicContentOccultCrescent.ChangeSupportJob(jobId);
+                        LogHelper.Print($"自动切换到 {name} (Lv.{level} / Max {maxLevel})");
+                        return;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                LogHelper.Print(e.Message);
+            }
+            finally
+            {
+                _isSwitchNotMaxSupJobRunning = false;
+            }
+        }
+        
+        /// <summary>
         /// 重置副本完成标志 _dutyCompleted，当检测到玩家已经不在副本中时调用，
         /// 防止在下一次副本前仍保留上次完成状态。
         /// </summary>
@@ -1064,6 +1130,7 @@ namespace AutoRaidHelper.UI
                 _isLeaveCompleted = false;
                 _isQueueCompleted = false;
                 _isEnterOccultCompleted = false;
+                _isSwitchNotMaxSupJobCompleted = false;
                 _hasLootAppeared = false;
             }
             catch (Exception e)
