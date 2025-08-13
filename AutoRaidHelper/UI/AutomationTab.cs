@@ -304,27 +304,14 @@ namespace AutoRaidHelper.UI
 
             ImGui.Separator();
             ImGui.Text("遥控按钮:");
-
-            // 为队长发送排本命令按钮，通过获取队长名称后发送命令
-            if (ImGui.Button("为队长发送排本命令"))
-            {
-                var leaderName = GetPartyLeaderName();
-                if (!string.IsNullOrEmpty(leaderName))
-                {
-                    var leaderRole = RemoteControlHelper.GetRoleByPlayerName(leaderName);
-                    RemoteControlHelper.Cmd(leaderRole, "/pdr load ContentFinderCommand");
-                    RemoteControlHelper.Cmd(leaderRole, $"/pdrduty n {Settings.FinalSendDutyName}");
-                    LogHelper.Print($"为队长 {leaderName} 发送排本命令: /pdrduty n {Settings.FinalSendDutyName}");
-                }
-            }
-
+            
             // 全队TP至指定位置，操作为"撞电网"
             if (ImGui.Button("全队TP撞电网"))
             {
                 if (Core.Resolve<MemApiDuty>().InMission)
                     RemoteControlHelper.SetPos("", new Vector3(100, 0, 125));
             }
-
+            ImGui.SameLine();
             // 全队即刻退本按钮（需在副本内才可执行命令）
             if (ImGui.Button("全队即刻退本"))
             {
@@ -384,39 +371,6 @@ namespace AutoRaidHelper.UI
             {
                 ExecuteSelectedKillAction();
             }
-
-            // ────────────────────── 顶蟹 ──────────────────────
-            if (ImGui.Button("顶蟹"))
-            {
-                const ulong targetCid = 19014409511470591UL; // 小猪蟹 Cid
-                string? targetRole = null;
-                
-                var infoModule = InfoModule.Instance();
-                var commonList = (InfoProxyCommonList*)infoModule->GetInfoProxyById(InfoProxyId.PartyMember);
-                if (commonList != null)
-                {
-                    foreach (var data in commonList->CharDataSpan)
-                    {
-                        if (data.ContentId == targetCid)
-                        {
-                            var targetName = data.NameString;
-                            targetRole = RemoteControlHelper.GetRoleByPlayerName(targetName);
-                            break;
-                        }
-                    }
-                }
-
-                if (!string.IsNullOrEmpty(targetRole))
-                {
-                    RemoteControlHelper.Cmd(targetRole, "/gaction 跳跃");
-                    Core.Resolve<MemApiChatMessage>().Toast2("顶蟹成功!", 1, 2000);
-                }
-                else
-                {
-                    string msg = "队伍中未找到小猪蟹";
-                    LogHelper.Print(msg);
-                }
-            }
             
             ImGui.Text("选择队员职能：");
 
@@ -471,23 +425,41 @@ namespace AutoRaidHelper.UI
                     LogHelper.Print($"为 {_selectedRoles} 发送了文本指令:{_customCmd}");
                 }
             }
-
-
-            // 打印敌对单位信息（调试用按钮）
-            ImGui.Text("Debug用按钮:");
-            if (ImGui.Button("打印可选中敌对单位信息"))
+            
+            // ────────────────────── 顶蟹 ──────────────────────
+            if (ImGui.Button("顶蟹"))
             {
-                var enemies = Svc.Objects.OfType<IBattleNpc>().Where(x => x.IsTargetable && x.IsEnemy());
-                foreach (var enemy in enemies)
+                const ulong targetCid = 19014409511470591UL; // 小猪蟹 Cid
+                string? targetRole = null;
+                
+                var infoModule = InfoModule.Instance();
+                var commonList = (InfoProxyCommonList*)infoModule->GetInfoProxyById(InfoProxyId.PartyMember);
+                if (commonList != null)
                 {
-                    LogHelper.Print(
-                        $"敌对单位: {enemy.Name} (EntityId: {enemy.EntityId}, DataId: {enemy.DataId}, ObjId: {enemy.GameObjectId}), 位置: {enemy.Position}");
+                    foreach (var data in commonList->CharDataSpan)
+                    {
+                        if (data.ContentId == targetCid)
+                        {
+                            var targetName = data.NameString;
+                            targetRole = RemoteControlHelper.GetRoleByPlayerName(targetName);
+                            break;
+                        }
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(targetRole))
+                {
+                    RemoteControlHelper.Cmd(targetRole, "/gaction 跳跃");
+                    Core.Resolve<MemApiChatMessage>().Toast2("顶蟹成功!", 1, 2000);
+                }
+                else
+                {
+                    string msg = "队伍中未找到小猪蟹";
+                    LogHelper.Print(msg);
                 }
             }
-
-
+            
             //【自动排本设置】
-
             ImGui.Separator();
             ImGui.Text("自动排本设置:");
             // 设置自动排本是否启用
@@ -514,6 +486,13 @@ namespace AutoRaidHelper.UI
 
             ImGui.SameLine();
             ImGui.Text("秒");
+            ImGui.SameLine();
+            // 设置解限（若启用则在排本命令中加入 "unrest"）
+            bool unrest = Settings.UnrestEnabled;
+            if (ImGui.Checkbox("解限", ref unrest))
+            {
+                Settings.UpdateUnrestEnabled(unrest);
+            }
 
             //通过副本指定次数后停止自动排本 & 关游戏/关机
             {
@@ -589,13 +568,6 @@ namespace AutoRaidHelper.UI
                     }
                 }
             }
-            
-            // 设置解限（若启用则在排本命令中加入 "unrest"）
-            bool unrest = Settings.UnrestEnabled;
-            if (ImGui.Checkbox("解限", ref unrest))
-            {
-                Settings.UpdateUnrestEnabled(unrest);
-            }
 
             ImGui.Text("选择副本:");
 
@@ -644,6 +616,19 @@ namespace AutoRaidHelper.UI
                     Settings.UpdateCustomDutyName(custom);
                 }
             }
+            ImGui.SameLine();
+            // 为队长发送排本命令按钮，通过获取队长名称后发送命令
+            if (ImGui.Button("为队长发送排本命令"))
+            {
+                var leaderName = GetPartyLeaderName();
+                if (!string.IsNullOrEmpty(leaderName))
+                {
+                    var leaderRole = RemoteControlHelper.GetRoleByPlayerName(leaderName);
+                    RemoteControlHelper.Cmd(leaderRole, "/pdr load ContentFinderCommand");
+                    RemoteControlHelper.Cmd(leaderRole, $"/pdrduty n {Settings.FinalSendDutyName}");
+                    LogHelper.Print($"为队长 {leaderName} 发送排本命令: /pdrduty n {Settings.FinalSendDutyName}");
+                }
+            }
 
             // 根据当前选择的副本和解限选项构造最终排本命令
             string finalDuty = Settings.SelectedDutyName == "自定义" && !string.IsNullOrEmpty(Settings.CustomDutyName)
@@ -668,6 +653,18 @@ namespace AutoRaidHelper.UI
             //【调试区域】
             if (ImGui.CollapsingHeader("自动化Debug"))
             {
+                // 打印敌对单位信息（调试用按钮）
+                ImGui.Text("Debug用按钮:");
+                if (ImGui.Button("打印可选中敌对单位信息"))
+                {
+                    var enemies = Svc.Objects.OfType<IBattleNpc>().Where(x => x.IsTargetable && x.IsEnemy());
+                    foreach (var enemy in enemies)
+                    {
+                        LogHelper.Print(
+                            $"敌对单位: {enemy.Name} (EntityId: {enemy.EntityId}, DataId: {enemy.DataId}, ObjId: {enemy.GameObjectId}), 位置: {enemy.Position}");
+                    }
+                }
+                
                 // 显示自动倒计时、战斗状态、副本状态和跨服小队状态等辅助调试信息
                 var autoCountdownStatus = Settings.AutoCountdownEnabled ? _isCountdownCompleted ? "已触发" : "待触发" : "未启用";
                 var inCombat = Core.Me.InCombat();
@@ -944,15 +941,6 @@ namespace AutoRaidHelper.UI
                 }
 
                 await Coroutine.Instance.WaitAsync(Settings.AutoQueueDelay * 1000);
-                // 为队长发送排本命令按钮，通过获取队长名称后发送命令
-                var leaderName = GetPartyLeaderName();
-                if (!string.IsNullOrEmpty(leaderName))
-                {
-                    var leaderRole = RemoteControlHelper.GetRoleByPlayerName(leaderName);
-                    RemoteControlHelper.Cmd(leaderRole, "/pdr load ContentFinderCommand");
-                    RemoteControlHelper.Cmd(leaderRole, $"/pdrduty n {Settings.FinalSendDutyName}");
-                    LogHelper.Print($"为队长 {leaderName} 发送排本命令: /pdrduty n {Settings.FinalSendDutyName}");
-                }
 
                 _lastAutoQueueTime = DateTime.Now;
             }
