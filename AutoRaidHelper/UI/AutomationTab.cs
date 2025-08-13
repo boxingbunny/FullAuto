@@ -996,6 +996,7 @@ namespace AutoRaidHelper.UI
                         var instancePtr = PublicContentOccultCrescent.GetInstance();
                         if (instancePtr != null && instancePtr->ContentTimeLeft / 60 is < 90 and > 0)
                         {
+                            RemoteControlHelper.Cmd("", "/xldisableplugin BOCCHI");
                             RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
                             RemoteControlHelper.Cmd("", "/pdr leaveduty");
                             _lastAutoQueueTime = DateTime.Now;
@@ -1031,6 +1032,8 @@ namespace AutoRaidHelper.UI
                         var leaderRole = RemoteControlHelper.GetRoleByPlayerName(leaderName);
                         RemoteControlHelper.Cmd(leaderRole, "/pdr load FieldEntryCommand");
                         RemoteControlHelper.Cmd(leaderRole, "/pdrfe occultcrescent");
+                        RemoteControlHelper.Cmd("", "/xlenableplugin BOCCHI");
+                        await Task.Delay(1500);
                         RemoteControlHelper.Cmd("", "/bocchiillegal on");
                         
                         RemoteControlHelper.Cmd("", "/pdr unload FasterTerritoryTransport");
