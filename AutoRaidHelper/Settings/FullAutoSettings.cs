@@ -264,6 +264,9 @@ namespace AutoRaidHelper.Settings
         
         // 最终生成的排本命令字符串（自动根据配置拼接组合）
         public string FinalSendDutyName { get; set; } = "";
+        
+        // 是否自动进新月岛
+        public bool AutoEnterOccult { get; set; }
 
         // 低保统计数据：龙诗、欧米茄、淑芬、伊甸、阿罗阿罗低保计数
         public int DSRCompletedCount { get; set; }
