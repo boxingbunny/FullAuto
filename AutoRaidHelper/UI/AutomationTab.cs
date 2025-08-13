@@ -655,6 +655,20 @@ namespace AutoRaidHelper.UI
                 Settings.AutoEnterOccult = enterOccult;
             }
             bool switchNotMaxSupJob = Settings.AutoSwitchNotMaxSupJob;
+            
+            ImGui.Text("设置剩余多少分钟时换岛:");
+            ImGui.SameLine();
+            
+            // 输入换岛时间
+            ImGui.SetNextItemWidth(80f * scale);
+            int reentrytimelimit = Settings.ReEntryTimeLimit;
+            if (ImGui.InputInt("##ReEntryTimeLimit", ref reentrytimelimit))
+                Settings.UpdateReEntryTimeLimit(reentrytimelimit);
+
+            ImGui.SameLine();
+            ImGui.Text("分钟");
+            
+            
             if (ImGui.Checkbox("自动切换未满级辅助职业", ref switchNotMaxSupJob))
             {
                 Settings.UpdateAutoSwitchNotMaxSupJob(switchNotMaxSupJob);
@@ -991,14 +1005,31 @@ namespace AutoRaidHelper.UI
                 // 剩余时间不足90分钟且在大水晶边上直接退岛
                 if (Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() == 1252 && Vector3.Distance(Core.Me.Position, new Vector3(828, 73, -696)) < 25 && Svc.ClientState.LocalPlayer != null)
                 {
+                    
                     unsafe
                     {
                         var instancePtr = PublicContentOccultCrescent.GetInstance();
-                        if (instancePtr != null && instancePtr->ContentTimeLeft / 60 is < 90 and > 0)
+                        if (instancePtr == null) return;
+
+                        // 假设 ContentTimeLeft 是秒；避免整除丢精度，可用 double
+                        var minutesLeft = instancePtr->ContentTimeLeft / 60.0;
+                        var time = Settings.ReEntryTimeLimit;
+                        
+
+                        if (minutesLeft > 0 && minutesLeft < time)
                         {
-                            RemoteControlHelper.Cmd("", "/xldisableplugin BOCCHI");
-                            RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
-                            RemoteControlHelper.Cmd("", "/pdr leaveduty");
+                            if (string.IsNullOrEmpty(RemoteControlHelper.RoomId) && PartyHelper.Party.Count == 1)
+                            {
+                                ChatHelper.SendMessage("/xldisableplugin BOCCHI");
+                                ChatHelper.SendMessage("/pdr load InstantLeaveDuty");
+                                ChatHelper.SendMessage("/pdr leaveduty");
+                            }
+                            if (!string.IsNullOrEmpty(RemoteControlHelper.RoomId))
+                            {
+                                RemoteControlHelper.Cmd("", "/xldisableplugin BOCCHI");
+                                RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
+                                RemoteControlHelper.Cmd("", "/pdr leaveduty");
+                            }
                             _lastAutoQueueTime = DateTime.Now;
                             return;
                         }
@@ -1022,6 +1053,26 @@ namespace AutoRaidHelper.UI
                     await Task.Delay(1000);
                     return;
                 }
+
+                if (string.IsNullOrEmpty(RemoteControlHelper.RoomId) && PartyHelper.Party.Count == 1)
+                {
+                    if (Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() != 1252)
+                    {
+                        ChatHelper.SendMessage("/pdr load FieldEntryCommand");
+                        ChatHelper.SendMessage("/pdrfe ocs");
+                        ChatHelper.SendMessage("/xlenableplugin BOCCHI");
+                        
+                        ChatHelper.SendMessage("/pdr unload FasterTerritoryTransport");
+                        ChatHelper.SendMessage("/pdr unload NoUIFade");
+                        ChatHelper.SendMessage("/pdr unload OptimizedInteraction");
+                        ChatHelper.SendMessage("/pdrspeed 1");
+                        ChatHelper.SendMessage("/aeTargetSelector off");
+                        
+                        await Task.Delay(2000);
+                        ChatHelper.SendMessage("/bocchiillegal on");
+                        
+                    }
+                }
                 
                 var leaderName = GetPartyLeaderName();
                 if (!string.IsNullOrEmpty(leaderName))
@@ -1031,16 +1082,17 @@ namespace AutoRaidHelper.UI
                     {
                         var leaderRole = RemoteControlHelper.GetRoleByPlayerName(leaderName);
                         RemoteControlHelper.Cmd(leaderRole, "/pdr load FieldEntryCommand");
-                        RemoteControlHelper.Cmd(leaderRole, "/pdrfe occultcrescent");
+                        RemoteControlHelper.Cmd(leaderRole, "/pdrfe ocs");
                         RemoteControlHelper.Cmd("", "/xlenableplugin BOCCHI");
-                        await Task.Delay(1500);
-                        RemoteControlHelper.Cmd("", "/bocchiillegal on");
                         
                         RemoteControlHelper.Cmd("", "/pdr unload FasterTerritoryTransport");
                         RemoteControlHelper.Cmd("", "/pdr unload NoUIFade");
                         RemoteControlHelper.Cmd("", "/pdr unload OptimizedInteraction");
                         RemoteControlHelper.Cmd("", "/pdrspeed 1");
                         RemoteControlHelper.Cmd("", "/aeTargetSelector off");
+                        
+                        await Task.Delay(2000);
+                        RemoteControlHelper.Cmd("", "/bocchiillegal on");
                     }
                 }
             

@@ -260,7 +260,9 @@ namespace AutoRaidHelper.Settings
         public bool AutoEnterOccult { get; set; }
         // 新月岛时候自动切换未满级职业
         public bool AutoSwitchNotMaxSupJob { get; set; }
-        // 低保统计数据
+        // 新月岛时候自动切换未满级职业
+        public int ReEntryTimeLimit { get; set; } = 90;
+        // 新月岛换岛剩余时间
         public int DSRCompletedCount { get; set; }
         public int TOPCompletedCount { get; set; }
         public int SpheneCompletedCount { get; set; }
@@ -428,6 +430,16 @@ namespace AutoRaidHelper.Settings
             AutoSwitchNotMaxSupJob = enabled;
             FullAutoSettings.Instance.Save();
         }
+        
+        /// <summary>
+        /// 更新是否自动切换新月岛未满级辅助职业，并保存配置
+        /// </summary>
+        public void UpdateReEntryTimeLimit(int time)
+        {
+            ReEntryTimeLimit = time;
+            FullAutoSettings.Instance.Save();
+        }
+        
         
         // 定义一个枚举类型
         public enum DutyType : ushort
