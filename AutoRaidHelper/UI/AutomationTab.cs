@@ -14,6 +14,7 @@ using System.Numerics;
 using System.Reflection;
 using System.Runtime.Loader;
 using AEAssist.GUI;
+using FFXIVClientStructs.FFXIV.Client.Game.InstanceContent;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using static FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCommonList.CharacterData.OnlineStatus;
 using DutyType = AutoRaidHelper.Settings.AutomationSettings.DutyType;
@@ -72,6 +73,7 @@ namespace AutoRaidHelper.UI
                 { DutyType.Sphene, () => UpdateDuty(DutyType.Sphene, ref _spheneCompletedCount, 2, "女王") },
                 { DutyType.Recollection, () => UpdateDuty(DutyType.Recollection, ref _recollectionCompletedCount, 1, "泽莲尼娅") },
             };
+            Settings.AutoEnterOccult = false;
         }
 
         private void UpdateDuty(DutyType duty, ref int localCount, int increment, string dutyName)
@@ -142,14 +144,16 @@ namespace AutoRaidHelper.UI
         private bool _isCountdownRunning;
         private bool _isLeaveRunning;
         private bool _isQueueRunning;
+        private bool _isEnterOccultRunning;
         private bool _isCountdownCompleted;
         private bool _isLeaveCompleted;
         private bool _isQueueCompleted;
+        private bool _isEnterOccultCompleted;
 
         private readonly object _countdownLock = new();
         private readonly object _leaveLock = new();
         private readonly object _queueLock = new();
-
+        private readonly object _enterOccultLock = new();
 
         /// <summary>
         /// 在加载时，订阅副本状态相关事件（如副本完成和团灭）
@@ -183,6 +187,7 @@ namespace AutoRaidHelper.UI
                 await UpdateAutoCountdown();
                 await UpdateAutoLeave();
                 await UpdateAutoQueue();
+                await UpdateAutoEnterOccult();
                 ResetDutyFlag();
             }
             catch (Exception e)
@@ -227,7 +232,7 @@ namespace AutoRaidHelper.UI
         /// 绘制 AutomationTab 的所有 UI 控件，
         /// 包括地图记录、自动倒计时、自动退本、遥控按钮以及自动排本的设置和调试信息。
         /// </summary>
-        public void Draw()
+        public unsafe void Draw()
         {
             var assembly = Assembly.GetExecutingAssembly();
             var infoAttr = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
@@ -385,21 +390,18 @@ namespace AutoRaidHelper.UI
             {
                 const ulong targetCid = 19014409511470591UL; // 小猪蟹 Cid
                 string? targetRole = null;
-
-                unsafe
+                
+                var infoModule = InfoModule.Instance();
+                var commonList = (InfoProxyCommonList*)infoModule->GetInfoProxyById(InfoProxyId.PartyMember);
+                if (commonList != null)
                 {
-                    var infoModule = InfoModule.Instance();
-                    var commonList = (InfoProxyCommonList*)infoModule->GetInfoProxyById(InfoProxyId.PartyMember);
-                    if (commonList != null)
+                    foreach (var data in commonList->CharDataSpan)
                     {
-                        foreach (var data in commonList->CharDataSpan)
+                        if (data.ContentId == targetCid)
                         {
-                            if (data.ContentId == targetCid)
-                            {
-                                var targetName = data.NameString;
-                                targetRole = RemoteControlHelper.GetRoleByPlayerName(targetName);
-                                break;
-                            }
+                            var targetName = data.NameString;
+                            targetRole = RemoteControlHelper.GetRoleByPlayerName(targetName);
+                            break;
                         }
                     }
                 }
@@ -653,7 +655,16 @@ namespace AutoRaidHelper.UI
             ImGui.Text($"将发送的排本命令: /pdrduty n {finalDuty}");
 
             ImGui.Separator();
-
+            
+            ImGui.Text("自动进岛设置:");
+            // 设置自动排本是否启用
+            bool enterOccult = Settings.AutoEnterOccult;
+            if (ImGui.Checkbox("自动进岛/换岛(需启用DR <快捷特殊场景探索进入指令> 模块)", ref enterOccult))
+            {
+                Settings.AutoEnterOccult = enterOccult;
+            }
+            
+            ImGui.Separator();
             //【调试区域】
             if (ImGui.CollapsingHeader("自动化Debug"))
             {
@@ -687,6 +698,14 @@ namespace AutoRaidHelper.UI
                         var dutyText = status.IsInDuty ? "副本中" : "副本外";
                         ImGui.Text($"[{i}] {status.Name} 状态: {onlineText}, {dutyText}");
                     }
+                }
+                // 如果在新月岛内
+                var pOccult = PublicContentOccultCrescent.GetInstance();
+                if (pOccult != null)
+                {
+                    ImGui.Text("新月岛内状态");
+                    float remainingTime = pOccult->ContentTimeLeft;
+                    ImGui.Text($"剩余时间: {(int)(remainingTime / 60)}分{(int)(remainingTime % 60)}秒");
                 }
             }
         }
@@ -818,17 +837,7 @@ namespace AutoRaidHelper.UI
                             return;
                         }
                     }
-
-                    /*
-                    // 判断地上还有没有箱子
-                    bool HasTreasureCofferOnGround()
-                    {
-                        return Svc.Objects.Any(obj =>
-                            obj.IsValid() &&
-                            obj.ObjectKind == Dalamud.Game.ClientState.Objects.Enums.ObjectKind.Treasure);
-                    }
-                    */
-
+                    
                     // 否则直接延迟指定时间再退本
                     await Task.Delay(Settings.AutoLeaveDelay * 1000);
                     RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
@@ -930,7 +939,7 @@ namespace AutoRaidHelper.UI
                     LogHelper.Print($"为队长 {leaderName} 发送排本命令: /pdrduty n {Settings.FinalSendDutyName}");
                 }
 
-                await Coroutine.Instance.WaitAsync(3000);
+                _lastAutoQueueTime = DateTime.Now;
             }
             catch (Exception e)
             {
@@ -939,6 +948,88 @@ namespace AutoRaidHelper.UI
             finally
             {
                 _isQueueRunning = false;
+            }
+        }
+
+        /// <summary>
+        /// 根据配置和当前队伍状态自动发送进岛命令。
+        /// 条件包括：启用自动进岛、足够的时间间隔、队伍状态满足要求（队伍成员均在线、不在副本中）。
+        /// 若任一条件不满足则不发送进岛命令。
+        /// </summary>
+        private async Task UpdateAutoEnterOccult()
+        {
+            if (_isEnterOccultRunning) return;
+            if (_isEnterOccultCompleted) return;
+            lock (_enterOccultLock)
+            {
+                if (_isEnterOccultRunning) return;
+                _isEnterOccultRunning = true;
+            }
+
+            try
+            {
+                // 未启用自动进岛或上次命令不足5秒则返回
+                if (!Settings.AutoEnterOccult)
+                    return;
+                if (DateTime.Now - _lastAutoQueueTime < TimeSpan.FromSeconds(5))
+                    return;
+                
+                // 剩余时间不足90分钟直接退岛
+                unsafe
+                {
+                    if (Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() == 1252 && PublicContentOccultCrescent.GetInstance()->ContentTimeLeft / 60 < 90 && !Core.Me.InCombat())
+                    {
+                        RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
+                        RemoteControlHelper.Cmd("", "/pdr leaveduty");
+                    }
+                }
+
+                // 已经在排本队列中则返回
+                if (Svc.Condition[ConditionFlag.InDutyQueue])
+                    return;
+                if (Core.Resolve<MemApiDuty>().IsBoundByDuty())
+                    return;
+
+                // 检查跨服队伍中是否所有成员均在线且未在副本中，否则退出
+                var partyStatus = GetCrossRealmPartyStatus();
+                var invalidNames = partyStatus.Where(s => !s.IsOnline || s.IsInDuty)
+                    .Select(s => s.Name)
+                    .ToList();
+                if (invalidNames.Any())
+                {
+                    LogHelper.Print("玩家不在线或在副本中：" + string.Join(", ", invalidNames));
+                    await Coroutine.Instance.WaitAsync(1000);
+                    return;
+                }
+                
+                var leaderName = GetPartyLeaderName();
+                if (!string.IsNullOrEmpty(leaderName))
+                {
+
+                    if (Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() != 1252)
+                    {
+                        var leaderRole = RemoteControlHelper.GetRoleByPlayerName(leaderName);
+                        RemoteControlHelper.Cmd(leaderRole, "/pdr load FieldEntryCommand");
+                        RemoteControlHelper.Cmd(leaderRole, "/pdrfe occultcrescent");
+                        RemoteControlHelper.Cmd("", "/bocchiillegal on");
+                        
+                        RemoteControlHelper.Cmd("", "/pdr unload FasterTerritoryTransport");
+                        RemoteControlHelper.Cmd("", "/pdr unload NoUIFade");
+                        RemoteControlHelper.Cmd("", "/pdr unload OptimizedInteraction");
+                        RemoteControlHelper.Cmd("", "/pdr unload AutoSpeedMultiplier");
+                        RemoteControlHelper.Cmd("", "/aeTargetSelector off");
+                    }
+                }
+            
+                _lastAutoQueueTime = DateTime.Now;
+            }
+            catch (Exception e)
+            {
+                LogHelper.Print(e.Message);
+            }
+            finally
+            {
+                _isEnterOccultRunning = false;
             }
         }
 
@@ -963,6 +1054,7 @@ namespace AutoRaidHelper.UI
                 _isCountdownCompleted = false;
                 _isLeaveCompleted = false;
                 _isQueueCompleted = false;
+                _isEnterOccultCompleted = false;
                 _hasLootAppeared = false;
             }
             catch (Exception e)
@@ -1037,7 +1129,7 @@ namespace AutoRaidHelper.UI
             {
                 switch (_killTargetType)
                 {
-                    case AutomationSettings.KillTargetType.AllParty:
+                    case KillTargetType.AllParty:
                         // 执行全队击杀
                         var roleMe = AI.Instance.PartyRole;
                         var battleCharaMembers = Svc.Party
@@ -1057,7 +1149,7 @@ namespace AutoRaidHelper.UI
                         LogHelper.Print("已向全队发送击杀命令");
                         break;
 
-                    case AutomationSettings.KillTargetType.SinglePlayer:
+                    case KillTargetType.SinglePlayer:
                         // 执行单个玩家击杀
                         if (!string.IsNullOrEmpty(_selectedKillRole))
                         {
@@ -1067,7 +1159,7 @@ namespace AutoRaidHelper.UI
 
                         break;
 
-                    case AutomationSettings.KillTargetType.None:
+                    case KillTargetType.None:
                     default:
                         LogHelper.Print("请先选择要击杀的目标");
                         Core.Resolve<MemApiChatMessage>().Toast2("请先选择要击杀的目标", 1, 2000);
