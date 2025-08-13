@@ -1025,7 +1025,7 @@ namespace AutoRaidHelper.UI
                         RemoteControlHelper.Cmd("", "/pdr unload FasterTerritoryTransport");
                         RemoteControlHelper.Cmd("", "/pdr unload NoUIFade");
                         RemoteControlHelper.Cmd("", "/pdr unload OptimizedInteraction");
-                        RemoteControlHelper.Cmd("", "/pdr unload AutoSpeedMultiplier");
+                        RemoteControlHelper.Cmd("", "/pdrspeed 1");
                         RemoteControlHelper.Cmd("", "/aeTargetSelector off");
                     }
                 }
