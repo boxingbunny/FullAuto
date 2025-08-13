@@ -981,6 +981,8 @@ namespace AutoRaidHelper.UI
                     {
                         RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
                         RemoteControlHelper.Cmd("", "/pdr leaveduty");
+                        _lastAutoQueueTime = DateTime.Now;
+                        return;
                     }
                 }
 
