@@ -1101,6 +1101,7 @@ namespace AutoRaidHelper.UI
                     {
                         ChatHelper.SendMessage("/pdr load FieldEntryCommand");
                         ChatHelper.SendMessage("/pdrfe ocs");
+                        ChatHelper.SendMessage("/xlenableplugin BOCCHI");
                         
                         ChatHelper.SendMessage("/pdr unload FasterTerritoryTransport");
                         ChatHelper.SendMessage("/pdr unload NoUIFade");
@@ -1123,6 +1124,7 @@ namespace AutoRaidHelper.UI
                         var leaderRole = RemoteControlHelper.GetRoleByPlayerName(leaderName);
                         RemoteControlHelper.Cmd(leaderRole, "/pdr load FieldEntryCommand");
                         RemoteControlHelper.Cmd(leaderRole, "/pdrfe ocs");
+                        RemoteControlHelper.Cmd(leaderRole, "/xlenableplugin BOCCHI");
                         
                         RemoteControlHelper.Cmd("", "/pdr unload FasterTerritoryTransport");
                         RemoteControlHelper.Cmd("", "/pdr unload NoUIFade");
@@ -1142,14 +1144,16 @@ namespace AutoRaidHelper.UI
                     if (string.IsNullOrEmpty(RemoteControlHelper.RoomId) && PartyHelper.Party.Count == 1)
                     {
                         ChatHelper.SendMessage("/bocchiillegal off");
-                        await Task.Delay(2500);
+                        ChatHelper.SendMessage("/xldisableplugin BOCCHI");
+                        await Task.Delay(1000);
                         ChatHelper.SendMessage("/pdr load InstantLeaveDuty");
                         ChatHelper.SendMessage("/pdr leaveduty");
                     }
                     else if (!string.IsNullOrEmpty(RemoteControlHelper.RoomId))
                     {
                         RemoteControlHelper.Cmd("", "/bocchiillegal off");
-                        await Task.Delay(2500);
+                        RemoteControlHelper.Cmd("", "/xldisableplugin BOCCHI");
+                        await Task.Delay(1000);
                         RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
                         RemoteControlHelper.Cmd("", "/pdr leaveduty");
                     }
