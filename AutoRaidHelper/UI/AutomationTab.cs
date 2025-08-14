@@ -115,6 +115,16 @@ namespace AutoRaidHelper.UI
         // 记录上次发送自动排本命令的时间，避免频繁发送
         private DateTime _lastAutoQueueTime = DateTime.MinValue;
 
+        /// <summary>
+        /// 记录新月岛区域人数：
+        /// - _recentMaxCounts：保存最近若干个采样区间的最大人数，用于判定锁岛
+        /// - _currentIntervalMax：当前区间的最大人数，每个区间结束后加入队列
+        /// - _lastSampleTime：上一次区间结束时间，用于控制采样间隔
+        /// </summary>
+        private readonly Queue<uint> _recentMaxCounts = new();
+        private uint _currentIntervalMax;
+        private DateTime _lastSampleTime = DateTime.MinValue;
+        
         // 标记副本是否已经完成，通常在 DutyCompleted 事件中设置
         private bool _dutyCompleted;
 
@@ -193,6 +203,7 @@ namespace AutoRaidHelper.UI
                 await UpdateAutoQueue();
                 await UpdateAutoEnterOccult();
                 await UpdateAutoSwitchNotMaxSupJob();
+                UpdatePlayerCountInOccult();
                 ResetDutyFlag();
             }
             catch (Exception e)
@@ -658,16 +669,29 @@ namespace AutoRaidHelper.UI
             
             ImGui.Text("设置剩余多少分钟时换岛:");
             ImGui.SameLine();
-            
             // 输入换岛时间
             ImGui.SetNextItemWidth(80f * scale);
-            int reentrytimelimit = Settings.ReEntryTimeLimit;
-            if (ImGui.InputInt("##ReEntryTimeLimit", ref reentrytimelimit))
-                Settings.UpdateReEntryTimeLimit(reentrytimelimit);
-
+            int reEnterTimeThreshold = Settings.OccultReEnterThreshold;
+            if (ImGui.InputInt("##OccultReEnterThreshold", ref reEnterTimeThreshold))
+            {
+                reEnterTimeThreshold = Math.Clamp(reEnterTimeThreshold, 0, 180);
+                Settings.UpdateOccultReEnterThreshold(reEnterTimeThreshold);
+            }
             ImGui.SameLine();
             ImGui.Text("分钟");
             
+            // 锁岛人数判断设置
+            ImGui.Text("设置锁岛人数阈值:");
+            ImGui.SameLine();
+            ImGui.SetNextItemWidth(80f * scale);
+            int lockThreshold = Settings.OccultLockThreshold;
+            if (ImGui.InputInt("##OccultLockThreshold", ref lockThreshold))
+            {
+                lockThreshold = Math.Clamp(lockThreshold, 1, 72);
+                Settings.UpdateOccultLockThreshold(lockThreshold);
+            }
+            ImGui.SameLine();
+            ImGui.Text("人(连续5次采样低于此值则视为锁岛)");
             
             if (ImGui.Checkbox("自动切换未满级辅助职业", ref switchNotMaxSupJob))
             {
@@ -751,6 +775,17 @@ namespace AutoRaidHelper.UI
                             PublicContentOccultCrescent.ChangeSupportJob(i);
                         }
                     }
+                    ImGui.Text($"现在岛内人数: {((InfoProxy24*)InfoModule.Instance()->GetInfoProxyById((InfoProxyId)24))->EntryCount}");
+                    // 打印最近检测到的区域人数
+                    ImGui.Text("最近采样人数: " + string.Join(", ", _recentMaxCounts));
+                    // 是否满足退岛条件
+                    bool needLeave = false;
+                    if (_recentMaxCounts.Count == 5)
+                    {
+                        var arr = _recentMaxCounts.ToArray();
+                        needLeave = arr.All(x => x < Settings.OccultLockThreshold) && arr[0] >= arr[1] && arr[1] >= arr[2] && arr[2] >= arr[3] && arr[3] >= arr[4];
+                    }
+                    ImGui.Text($"退岛条件: {(needLeave ? "满足" : "不满足")}");
                 }
             }
         }
@@ -1010,37 +1045,35 @@ namespace AutoRaidHelper.UI
                 if (DateTime.Now - _lastAutoQueueTime < TimeSpan.FromSeconds(5))
                     return;
                 
-                // 剩余时间不足90分钟且在大水晶边上直接退岛
-                if (Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() == 1252 && Vector3.Distance(Core.Me.Position, new Vector3(828, 73, -696)) < 25 && Svc.ClientState.LocalPlayer != null)
+                // 剩余时间不足或锁岛
+                unsafe
                 {
-                    
-                    unsafe
+                    bool needLeave = false;
+
+                    // 获取新月岛实例
+                    var instancePtr = PublicContentOccultCrescent.GetInstance();
+                    if (instancePtr != null)
                     {
-                        var instancePtr = PublicContentOccultCrescent.GetInstance();
-                        if (instancePtr == null) return;
-
-                        // 假设 ContentTimeLeft 是秒；避免整除丢精度，可用 double
+                        // 剩余时间判断
                         var minutesLeft = instancePtr->ContentTimeLeft / 60.0;
-                        var time = Settings.ReEntryTimeLimit;
-                        
-
-                        if (minutesLeft > 0 && minutesLeft < time)
-                        {
-                            if (string.IsNullOrEmpty(RemoteControlHelper.RoomId) && PartyHelper.Party.Count == 1)
-                            {
-                                ChatHelper.SendMessage("/xldisableplugin BOCCHI");
-                                ChatHelper.SendMessage("/pdr load InstantLeaveDuty");
-                                ChatHelper.SendMessage("/pdr leaveduty");
-                            }
-                            if (!string.IsNullOrEmpty(RemoteControlHelper.RoomId))
-                            {
-                                RemoteControlHelper.Cmd("", "/xldisableplugin BOCCHI");
-                                RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
-                                RemoteControlHelper.Cmd("", "/pdr leaveduty");
-                            }
-                            _lastAutoQueueTime = DateTime.Now;
-                            return;
-                        }
+                        if (minutesLeft > 0 && minutesLeft < Settings.OccultReEnterThreshold)
+                            needLeave = true;
+                    }
+                    // 判断锁岛：连续5次下降且都低于40
+                    if (_recentMaxCounts.Count == 5)
+                    {
+                        var arr = _recentMaxCounts.ToArray();
+                        bool canLeaveByLock = arr.All(x => x < Settings.OccultLockThreshold) && arr[0] >= arr[1] && arr[1] >= arr[2] && arr[2] >= arr[3] && arr[3] >= arr[4];
+                        if (canLeaveByLock)
+                            needLeave = true;
+                    }
+                    // 最终退岛动作必须在大水晶边上
+                    if (needLeave && Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() == 1252 && Vector3.Distance(Core.Me.Position, new Vector3(828, 73, -696)) < 10 && Svc.ClientState.LocalPlayer != null)
+                    {
+                        LeaveDuty();
+                        _lastAutoQueueTime = DateTime.Now;
+                        _recentMaxCounts.Clear();
+                        return;
                     }
                 }
                 
@@ -1068,7 +1101,6 @@ namespace AutoRaidHelper.UI
                     {
                         ChatHelper.SendMessage("/pdr load FieldEntryCommand");
                         ChatHelper.SendMessage("/pdrfe ocs");
-                        ChatHelper.SendMessage("/xlenableplugin BOCCHI");
                         
                         ChatHelper.SendMessage("/pdr unload FasterTerritoryTransport");
                         ChatHelper.SendMessage("/pdr unload NoUIFade");
@@ -1091,7 +1123,6 @@ namespace AutoRaidHelper.UI
                         var leaderRole = RemoteControlHelper.GetRoleByPlayerName(leaderName);
                         RemoteControlHelper.Cmd(leaderRole, "/pdr load FieldEntryCommand");
                         RemoteControlHelper.Cmd(leaderRole, "/pdrfe ocs");
-                        RemoteControlHelper.Cmd("", "/xlenableplugin BOCCHI");
                         
                         RemoteControlHelper.Cmd("", "/pdr unload FasterTerritoryTransport");
                         RemoteControlHelper.Cmd("", "/pdr unload NoUIFade");
@@ -1103,8 +1134,26 @@ namespace AutoRaidHelper.UI
                         RemoteControlHelper.Cmd("", "/bocchiillegal on");
                     }
                 }
-            
                 _lastAutoQueueTime = DateTime.Now;
+                
+                // 退岛方法
+                async void LeaveDuty()
+                {
+                    if (string.IsNullOrEmpty(RemoteControlHelper.RoomId) && PartyHelper.Party.Count == 1)
+                    {
+                        ChatHelper.SendMessage("/bocchiillegal off");
+                        await Task.Delay(2000);
+                        ChatHelper.SendMessage("/pdr load InstantLeaveDuty");
+                        ChatHelper.SendMessage("/pdr leaveduty");
+                    }
+                    else if (!string.IsNullOrEmpty(RemoteControlHelper.RoomId))
+                    {
+                        RemoteControlHelper.Cmd("", "/bocchiillegal off");
+                        await Task.Delay(2000);
+                        RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
+                        RemoteControlHelper.Cmd("", "/pdr leaveduty");
+                    }
+                }
             }
             catch (Exception e)
             {
@@ -1195,6 +1244,43 @@ namespace AutoRaidHelper.UI
                 _isEnterOccultCompleted = false;
                 _isSwitchNotMaxSupJobCompleted = false;
                 _hasLootAppeared = false;
+            }
+            catch (Exception e)
+            {
+                LogHelper.Print(e.Message);
+            }
+        }
+
+        /// <summary>
+        /// 定期采样新月岛区域人数。
+        /// </summary>
+        private unsafe void UpdatePlayerCountInOccult()
+        {
+            try
+            {
+                // 获取区域人数
+                var proxy = (InfoProxy24*)InfoModule.Instance()->GetInfoProxyById((InfoProxyId)24);
+                if (proxy != null && proxy->EntryCount > 0)
+                {
+                    // 每10秒采样一次区间最大人数
+                    if ((DateTime.Now - _lastSampleTime).TotalSeconds < 10)
+                    {
+                        // 区间内持续更新最大人数
+                        _currentIntervalMax = Math.Max(_currentIntervalMax, proxy->EntryCount);
+                    }
+                    else
+                    {
+                        // 区间结束，记录当前区间最大人数
+                        _lastSampleTime = DateTime.Now;
+                        if (_currentIntervalMax > 0)
+                        {
+                            if (_recentMaxCounts.Count >= 5)
+                                _recentMaxCounts.Dequeue();
+                            _recentMaxCounts.Enqueue(_currentIntervalMax);
+                        }
+                        _currentIntervalMax = 0;
+                    }
+                }
             }
             catch (Exception e)
             {

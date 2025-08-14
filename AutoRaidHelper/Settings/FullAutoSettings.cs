@@ -260,9 +260,10 @@ namespace AutoRaidHelper.Settings
         public bool AutoEnterOccult { get; set; }
         // 新月岛时候自动切换未满级职业
         public bool AutoSwitchNotMaxSupJob { get; set; }
-        // 新月岛时候自动切换未满级职业
-        public int ReEntryTimeLimit { get; set; } = 90;
         // 新月岛换岛剩余时间
+        public int OccultReEnterThreshold { get; set; } = 90;
+        // 新月岛判断锁岛所需人数
+        public int OccultLockThreshold { get; set; } = 40;
         public int DSRCompletedCount { get; set; }
         public int TOPCompletedCount { get; set; }
         public int SpheneCompletedCount { get; set; }
@@ -432,14 +433,22 @@ namespace AutoRaidHelper.Settings
         }
         
         /// <summary>
-        /// 更新是否自动切换新月岛未满级辅助职业，并保存配置
+        /// 更新新月岛重新进岛时间限制，并保存配置
         /// </summary>
-        public void UpdateReEntryTimeLimit(int time)
+        public void UpdateOccultReEnterThreshold(int minutes)
         {
-            ReEntryTimeLimit = time;
+            OccultReEnterThreshold = minutes;
             FullAutoSettings.Instance.Save();
         }
         
+        /// <summary>
+        /// 更新新月岛锁岛判断所需人数，并保存配置
+        /// </summary>
+        public void UpdateOccultLockThreshold(int count)
+        {
+            OccultLockThreshold = count;
+            FullAutoSettings.Instance.Save();
+        }
         
         // 定义一个枚举类型
         public enum DutyType : ushort
