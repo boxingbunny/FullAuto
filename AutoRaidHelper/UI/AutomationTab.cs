@@ -1068,7 +1068,7 @@ namespace AutoRaidHelper.UI
                             needLeave = true;
                     }
                     // 最终退岛动作必须在大水晶边上
-                    if (needLeave && Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() == 1252 && Vector3.Distance(Core.Me.Position, new Vector3(828, 73, -696)) < 10 && Svc.ClientState.LocalPlayer != null)
+                    if (needLeave && Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() == 1252 && Vector3.Distance(Core.Me.Position, new Vector3(828, 73, -696)) < 8 && Svc.ClientState.LocalPlayer != null)
                     {
                         LeaveDuty();
                         _lastAutoQueueTime = DateTime.Now;
@@ -1142,14 +1142,14 @@ namespace AutoRaidHelper.UI
                     if (string.IsNullOrEmpty(RemoteControlHelper.RoomId) && PartyHelper.Party.Count == 1)
                     {
                         ChatHelper.SendMessage("/bocchiillegal off");
-                        await Task.Delay(2000);
+                        await Task.Delay(2500);
                         ChatHelper.SendMessage("/pdr load InstantLeaveDuty");
                         ChatHelper.SendMessage("/pdr leaveduty");
                     }
                     else if (!string.IsNullOrEmpty(RemoteControlHelper.RoomId))
                     {
                         RemoteControlHelper.Cmd("", "/bocchiillegal off");
-                        await Task.Delay(2000);
+                        await Task.Delay(2500);
                         RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
                         RemoteControlHelper.Cmd("", "/pdr leaveduty");
                     }
@@ -1183,7 +1183,7 @@ namespace AutoRaidHelper.UI
                 if (!Settings.AutoSwitchNotMaxSupJob)
                     return;
                 // 如果不在新月岛内或距离大水晶太远则不切换
-                if (Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() != 1252 || Vector3.Distance(Core.Me.Position, new Vector3(828, 73, -696)) > 10)
+                if (Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() != 1252 || Vector3.Distance(Core.Me.Position, new Vector3(828, 73, -696)) > 8)
                     return;
                 
                 await Task.Delay(5000);
