@@ -494,7 +494,7 @@ namespace AutoRaidHelper.Settings
         // 新月岛辅助职业数据
         public static readonly Dictionary<byte, (string Name, byte MaxLevel)> SupportJobData = new()
         {
-            { 0, ("自由人", 0) },
+            { 0, ("自由人", 10) },
             { 1, ("骑士", 6) },
             { 2, ("狂战士", 3) },
             { 3, ("武僧", 6) },

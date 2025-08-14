@@ -737,6 +737,14 @@ namespace AutoRaidHelper.UI
                         var job = AutomationSettings.SupportJobData[i].Name;
                         byte level = supportLevels[i];
                         ImGui.Text($"{job}: Level {level}");
+                        // 如果已满级就标注Max
+                        if (level >= AutomationSettings.SupportJobData[i].MaxLevel)
+                        {
+                            ImGui.SameLine();
+                            ImGui.TextColored(new Vector4(1.0f, 1.0f, 0.0f, 1.0f), "Max"); // 黄色
+                        }
+                        if (level <= 0) 
+                            continue;
                         ImGui.SameLine();
                         if (ImGui.Button($"切换##{i}") && statePtr->CurrentSupportJob != i)
                         {
@@ -1144,8 +1152,8 @@ namespace AutoRaidHelper.UI
                     {
                         var (name, maxLevel) = AutomationSettings.SupportJobData[jobId];
                         byte level = levels[jobId];
-                        // 已解锁且未满级
-                        if (level <= 0 || level >= maxLevel || jobId == currentJob)
+                        // 已解锁且未满级且不是当前职业，跳过自由人
+                        if (jobId == 0 || level <= 0 || level >= maxLevel || jobId == currentJob)
                             continue;
                         PublicContentOccultCrescent.ChangeSupportJob(jobId);
                         LogHelper.Print($"自动切换到 {name} (Lv.{level} / Max {maxLevel})");
