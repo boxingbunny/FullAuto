@@ -778,14 +778,6 @@ namespace AutoRaidHelper.UI
                     ImGui.Text($"现在岛内人数: {((InfoProxy24*)InfoModule.Instance()->GetInfoProxyById((InfoProxyId)24))->EntryCount}");
                     // 打印最近检测到的区域人数
                     ImGui.Text("最近采样人数: " + string.Join(", ", _recentMaxCounts));
-                    // 是否满足退岛条件
-                    bool needLeave = false;
-                    if (_recentMaxCounts.Count == 5)
-                    {
-                        var arr = _recentMaxCounts.ToArray();
-                        needLeave = arr.All(x => x < Settings.OccultLockThreshold) && arr[0] >= arr[1] && arr[1] >= arr[2] && arr[2] >= arr[3] && arr[3] >= arr[4];
-                    }
-                    ImGui.Text($"退岛条件: {(needLeave ? "满足" : "不满足")}");
                 }
             }
         }
@@ -1058,22 +1050,23 @@ namespace AutoRaidHelper.UI
                         var minutesLeft = instancePtr->ContentTimeLeft / 60.0;
                         if (minutesLeft > 0 && minutesLeft < Settings.OccultReEnterThreshold)
                             needLeave = true;
-                    }
-                    // 判断锁岛：连续5次下降且都低于40
-                    if (_recentMaxCounts.Count == 5)
-                    {
-                        var arr = _recentMaxCounts.ToArray();
-                        bool canLeaveByLock = arr.All(x => x < Settings.OccultLockThreshold) && arr[0] >= arr[1] && arr[1] >= arr[2] && arr[2] >= arr[3] && arr[3] >= arr[4];
-                        if (canLeaveByLock)
-                            needLeave = true;
-                    }
-                    // 最终退岛动作必须在大水晶边上
-                    if (needLeave && Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() == 1252 && Vector3.Distance(Core.Me.Position, new Vector3(828, 73, -696)) < 8 && Svc.ClientState.LocalPlayer != null)
-                    {
-                        LeaveDuty();
-                        _lastAutoQueueTime = DateTime.Now;
-                        _recentMaxCounts.Clear();
-                        return;
+                    
+                        // 判断锁岛：连续5次下降且都低于40
+                        if (_recentMaxCounts.Count == 5 && minutesLeft < 150)
+                        {
+                            var arr = _recentMaxCounts.ToArray();
+                            bool canLeaveByLock = arr.All(x => x < Settings.OccultLockThreshold) && arr[0] >= arr[1] && arr[1] >= arr[2] && arr[2] >= arr[3] && arr[3] >= arr[4];
+                            if (canLeaveByLock)
+                                needLeave = true;
+                        }
+                        // 最终退岛动作必须在大水晶边上
+                        if (needLeave && Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() == 1252 && Vector3.Distance(Core.Me.Position, new Vector3(828, 73, -696)) < 8 && Svc.ClientState.LocalPlayer != null)
+                        {
+                            LeaveDuty();
+                            _lastAutoQueueTime = DateTime.Now;
+                            _recentMaxCounts.Clear();
+                            return;
+                        }
                     }
                 }
                 
@@ -1101,7 +1094,7 @@ namespace AutoRaidHelper.UI
                     {
                         ChatHelper.SendMessage("/pdr load FieldEntryCommand");
                         ChatHelper.SendMessage("/pdrfe ocs");
-                        ChatHelper.SendMessage("/xlenableplugin BOCCHI");
+                        // ChatHelper.SendMessage("/xlenableplugin BOCCHI");
                         
                         ChatHelper.SendMessage("/xlenableplugin BOCCHI");
                         ChatHelper.SendMessage("/pdr unload FasterTerritoryTransport");
@@ -1125,7 +1118,7 @@ namespace AutoRaidHelper.UI
                         var leaderRole = RemoteControlHelper.GetRoleByPlayerName(leaderName);
                         RemoteControlHelper.Cmd(leaderRole, "/pdr load FieldEntryCommand");
                         RemoteControlHelper.Cmd(leaderRole, "/pdrfe ocs");
-                        RemoteControlHelper.Cmd(leaderRole, "/xlenableplugin BOCCHI");
+                        // RemoteControlHelper.Cmd(, "/xlenableplugin BOCCHI");
                         
                         RemoteControlHelper.Cmd("", "/xlenableplugin BOCCHI");
                         RemoteControlHelper.Cmd("", "/pdr unload FasterTerritoryTransport");
@@ -1146,16 +1139,16 @@ namespace AutoRaidHelper.UI
                     if (string.IsNullOrEmpty(RemoteControlHelper.RoomId) && PartyHelper.Party.Count == 1)
                     {
                         ChatHelper.SendMessage("/bocchiillegal off");
-                        ChatHelper.SendMessage("/xldisableplugin BOCCHI");
-                        await Task.Delay(1000);
+                        // ChatHelper.SendMessage("/xldisableplugin BOCCHI");
+                        await Task.Delay(3000);
                         ChatHelper.SendMessage("/pdr load InstantLeaveDuty");
                         ChatHelper.SendMessage("/pdr leaveduty");
                     }
                     else if (!string.IsNullOrEmpty(RemoteControlHelper.RoomId))
                     {
                         RemoteControlHelper.Cmd("", "/bocchiillegal off");
-                        RemoteControlHelper.Cmd("", "/xldisableplugin BOCCHI");
-                        await Task.Delay(1000);
+                        // RemoteControlHelper.Cmd("", "/xldisableplugin BOCCHI");
+                        await Task.Delay(3000);
                         RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
                         RemoteControlHelper.Cmd("", "/pdr leaveduty");
                     }
