@@ -1101,6 +1101,7 @@ namespace AutoRaidHelper.UI
                     {
                         ChatHelper.SendMessage("/pdr load FieldEntryCommand");
                         ChatHelper.SendMessage("/pdrfe ocs");
+                        ChatHelper.SendMessage("/xlenableplugin BOCCHI");
                         
                         ChatHelper.SendMessage("/xlenableplugin BOCCHI");
                         ChatHelper.SendMessage("/pdr unload FasterTerritoryTransport");
@@ -1124,6 +1125,7 @@ namespace AutoRaidHelper.UI
                         var leaderRole = RemoteControlHelper.GetRoleByPlayerName(leaderName);
                         RemoteControlHelper.Cmd(leaderRole, "/pdr load FieldEntryCommand");
                         RemoteControlHelper.Cmd(leaderRole, "/pdrfe ocs");
+                        RemoteControlHelper.Cmd(leaderRole, "/xlenableplugin BOCCHI");
                         
                         RemoteControlHelper.Cmd("", "/xlenableplugin BOCCHI");
                         RemoteControlHelper.Cmd("", "/pdr unload FasterTerritoryTransport");
