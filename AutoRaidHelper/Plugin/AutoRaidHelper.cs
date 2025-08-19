@@ -30,7 +30,7 @@ namespace AutoRaidHelper.Plugin
             return new PluginSetting
             {
                 Name = "全自动小助手",
-                LimitLevel = VIPLevel.VIP3,
+                LimitLevel = VIPLevel.Normal,
             };
         }
 

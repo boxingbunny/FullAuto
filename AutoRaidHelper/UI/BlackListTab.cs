@@ -1,19 +1,15 @@
+using System.Numerics;
 using System.Text.Json;
 using AEAssist;
 using AEAssist.Helper;
+using AEAssist.MemoryApi;
 using ImGuiNET;
 using FFXIVClientStructs.FFXIV.Client.UI.Info;
-using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 
 namespace AutoRaidHelper.UI;
 
-/// <summary>
-/// BlackListTab 提供队伍成员 CID 获取以及黑名单编辑和踢人功能。
-/// 使用 AutomationTab.scale 统一缩放。
-/// </summary>
 public unsafe class BlackListTab
 {
-    // 黑名单条目定义
     private class Entry
     {
         public string Name { get; set; } = string.Empty;
@@ -23,8 +19,17 @@ public unsafe class BlackListTab
     }
 
     private readonly List<Entry> _entries = new();
-    private readonly HashSet<ulong> _lastParty = new();
     private readonly string _filePath;
+
+    // 黑名单命中
+    private readonly HashSet<ulong> _hitCids = new();
+    private readonly Dictionary<ulong, string> _cidToName = new();
+    public static int LastHitCount { get; private set; }
+    // 玩家列表缓存
+    private DateTime _nextPlayerRefresh = DateTime.MinValue;
+    private readonly List<(string Name, ulong CID)> _cachedPlayers = new();
+    // 玩家数量
+    private int _lastPlayerCount;
 
     public BlackListTab()
     {
@@ -73,129 +78,117 @@ public unsafe class BlackListTab
     {
         var infoModule = InfoModule.Instance();
         if (infoModule == null) return;
-        var commonList = (InfoProxyCommonList*)infoModule->GetInfoProxyById(InfoProxyId.PartyMember);
-        if (commonList == null) return;
 
-        var currentParty = new HashSet<ulong>();
-        int count = commonList->CharDataSpan.Length;
-        for (int i = 0; i < count; i++)
+        var proxy = (InfoProxy24*)infoModule->GetInfoProxyById((InfoProxyId)24);
+        if (proxy == null) return;
+
+        var span = proxy->CharDataSpan;
+        int len = span.Length;
+        _lastPlayerCount = len;
+
+        _hitCids.Clear();
+        _cidToName.Clear();
+
+        for (int i = 0; i < len; i++)
         {
-            var data = commonList->CharDataSpan[i];
-            if (data.NameString.Length == 0) continue;
-            currentParty.Add(data.ContentId);
-        }
+            ref readonly var d = ref span[i];
+            if (d.Name.Length == 0 || d.Name[0] == 0) continue;
 
-        // 检测新加入的成员
-        foreach (var cid in currentParty)
-        {
-            if (_lastParty.Contains(cid)) continue;
-            // 找到姓名
-            string name = string.Empty;
-            for (int i = 0; i < count; i++)
-            {
-                var d = commonList->CharDataSpan[i];
-                if (d.ContentId != cid) continue;
-                name = d.NameString;
-                break;
-            }
-            var entry = _entries.Find(e => e.CID == cid || e.Name == name);
-            if (entry != null)
-            {
-                LogHelper.Print($"检测到黑名单玩家: {entry.Name} (CID: {entry.CID})，危险等级: {entry.RiskLv}，备注: {entry.Comment}");
-            }
-        }
+            string name = d.NameString;
+            ulong cid = d.ContentId;
+            if (cid == 0) continue;
 
-        _lastParty.Clear();
-        foreach (var cid in currentParty)
-            _lastParty.Add(cid);
+            _cidToName[cid] = name;
+
+            if (_entries.Any(e => e.CID != 0 && e.CID == cid))
+                _hitCids.Add(cid);
+            LastHitCount = _hitCids.Count;
+        }
     }
 
     public void Draw()
     {
         float scale = AutomationTab.scale;
-        ImGui.Text($"当前队伍类型: {(InfoProxyCrossRealm.IsCrossRealmParty() ? "跨服小队" : "普通组队")}");
+
+        if (Core.Resolve<MemApiMap>().GetCurrTerrId() != 1252)
+        {
+            ImGui.TextDisabled("不在新月岛内");
+            return;
+        }
+
+        ImGui.Text($"岛内玩家：{_lastPlayerCount} 人");
+
+        // 黑名单命中
+        if (_hitCids.Count > 0)
+        {
+            ImGui.Text("扫到黑名单玩家：");
+            var yellow = new Vector4(1f, 1f, 0f, 1f);
+            foreach (var cid in _hitCids.OrderBy(c => c))
+            {
+                if (_cidToName.TryGetValue(cid, out var name) && !string.IsNullOrEmpty(name))
+                    ImGui.TextColored(yellow, $"{name} (CID:{cid})");
+            }
+        }
+        
         ImGui.Separator();
 
-        var infoModule = InfoModule.Instance();
-        if (infoModule == null)
+        //  玩家列表：每 20 秒刷新缓存
+        if (DateTime.Now >= _nextPlayerRefresh)
         {
-            ImGui.TextDisabled("无法获取 InfoModule");
-            return;
-        }
-        var commonList = (InfoProxyCommonList*)infoModule->GetInfoProxyById(InfoProxyId.PartyMember);
-        if (commonList == null)
-        {
-            ImGui.TextDisabled("无法获取 PartyMember");
-            return;
-        }
+            _nextPlayerRefresh = DateTime.Now.AddSeconds(20);
+            _cachedPlayers.Clear();
 
-        int count = commonList->CharDataSpan.Length;
-        if (count == 0)
-        {
-            ImGui.Text("(队伍为空)");
-        }
-        else
-        {
-            for (int i = 0; i < count; i++)
+            var infoModule = InfoModule.Instance();
+            if (infoModule != null)
             {
-                var data = commonList->CharDataSpan[i];
-                if (data.Name.Length == 0 || data.Name[0] == 0) continue;
-
-                string name = data.NameString;
-                ulong cid = data.ContentId;
-
-                ImGui.Text(name);
-                ImGui.SameLine();
-
-                // —— 复制 CID
-                if (ImGui.Button($"获取CID##{cid}"))
+                var proxy = (InfoProxy24*)infoModule->GetInfoProxyById((InfoProxyId)24);
+                if (proxy != null)
                 {
-                    ImGui.SetClipboardText(cid.ToString());
-                    LogHelper.Print($"已复制 {name} CID: {cid}");
-                }
-
-                ImGui.SameLine();
-                // —— 加入黑名单
-                if (ImGui.Button($"添加黑名单##{cid}"))
-                {
-                    _entries.Add(new Entry { Name = name, CID = cid });
-                    Save();
-                }
-
-                ImGui.SameLine();
-                // —— 移出小队
-                if (ImGui.Button($"移出小队##{cid}"))
-                {
-                    //ActionManager.Instance()->UseAction(ActionType.GeneralAction, 12);
-                    
-                    var agent = AgentPartyMember.Instance();
-                    if (!agent->IsAgentActive())
+                    var span = proxy->CharDataSpan;
+                    for (int i = 0; i < span.Length; i++)
                     {
-                        agent->Show();
-                    }
+                        ref readonly var d = ref span[i];
+                        if (d.Name.Length == 0 || d.Name[0] == 0) continue;
 
-                    if (agent != null && agent->IsAgentActive())
-                    {
-
-                        agent->Kick(name, (ushort)agent->GetAddonId(), cid);
-                        LogHelper.Print($"已移出小队成员：{name}");
-                    }
-                    else
-                    {
-                        LogHelper.PrintError("无法获取 AgentPartyMember");
-                    }
-                    
-                    if (agent->IsAgentActive())
-                    {
-                        agent->Hide();
+                        _cachedPlayers.Add((d.NameString, d.ContentId));
                     }
                 }
             }
         }
 
+        // 渲染玩家缓存
+        foreach (var (name, cid) in _cachedPlayers)
+        {
+            ImGui.TextUnformatted(name);
+            ImGui.SameLine();
+
+            if (ImGui.Button($"复制CID##{cid}"))
+                ImGui.SetClipboardText(cid.ToString());
+
+            ImGui.SameLine();
+
+            bool alreadyIn = cid != 0 && _entries.Any(e => e.CID == cid);
+            if (alreadyIn || cid == 0)
+            {
+                ImGui.BeginDisabled();
+                ImGui.Button(alreadyIn ? $"已在黑名单##{cid}" : $"CID无效##{cid}");
+                ImGui.EndDisabled();
+            }
+            else
+            {
+                if (ImGui.Button($"加入黑名单##{cid}"))
+                {
+                    _entries.Add(new Entry { Name = name, CID = cid });
+                    Save();
+                }
+            }
+        }
+
+        // 黑名单表格
         ImGui.Spacing();
         ImGui.Separator();
-        ImGui.TextColored(new System.Numerics.Vector4(1, 0.6f, 0.2f, 1), "黑名单列表");
+        ImGui.TextColored(new Vector4(1, 0.6f, 0.2f, 1), "黑名单列表");
+
         if (ImGui.Button("添加空条目"))
         {
             _entries.Add(new Entry());
@@ -204,10 +197,10 @@ public unsafe class BlackListTab
 
         if (ImGui.BeginTable("##BlackListTable", 5, ImGuiTableFlags.Resizable | ImGuiTableFlags.RowBg))
         {
-            ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthFixed, 100f * scale);
-            ImGui.TableSetupColumn("CID", ImGuiTableColumnFlags.WidthFixed, 150f * scale);
-            ImGui.TableSetupColumn("Comment", ImGuiTableColumnFlags.WidthFixed, 200f * scale);
-            ImGui.TableSetupColumn("RiskLv", ImGuiTableColumnFlags.WidthFixed, 50f * scale);
+            ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthFixed, 120f * scale);
+            ImGui.TableSetupColumn("CID", ImGuiTableColumnFlags.WidthFixed, 160f * scale);
+            ImGui.TableSetupColumn("Comment", ImGuiTableColumnFlags.WidthFixed, 240f * scale);
+            ImGui.TableSetupColumn("RiskLv", ImGuiTableColumnFlags.WidthFixed, 60f * scale);
             ImGui.TableSetupColumn("操作");
             ImGui.TableHeadersRow();
 
@@ -217,7 +210,6 @@ public unsafe class BlackListTab
                 ImGui.TableNextRow();
 
                 ImGui.TableNextColumn();
-                ImGui.SetNextItemWidth(100f * scale);
                 var nameBuf = e.Name;
                 if (ImGui.InputText($"##Name{i}", ref nameBuf, 64))
                 {
@@ -226,7 +218,6 @@ public unsafe class BlackListTab
                 }
 
                 ImGui.TableNextColumn();
-                ImGui.SetNextItemWidth(150f * scale);
                 var cidStr = e.CID.ToString();
                 if (ImGui.InputText($"##CID{i}", ref cidStr, 32) && ulong.TryParse(cidStr, out var val))
                 {
@@ -235,28 +226,26 @@ public unsafe class BlackListTab
                 }
 
                 ImGui.TableNextColumn();
-                ImGui.SetNextItemWidth(200f * scale);
                 var commentBuf = e.Comment;
                 if (ImGui.InputText($"##Comment{i}", ref commentBuf, 128))
                 {
-                    e.Comment = commentBuf; 
+                    e.Comment = commentBuf;
                     Save();
                 }
 
                 ImGui.TableNextColumn();
-                ImGui.SetNextItemWidth(50f * scale);
-                int sel = e.RiskLv - 1;
+                int sel = Math.Clamp(e.RiskLv - 1, 0, 4);
                 string[] levels = ["1", "2", "3", "4", "5"];
-                if (ImGui.Combo($"##Risk{i}", ref sel, levels, levels.Length)) 
-                { 
-                    e.RiskLv = sel + 1; 
-                    Save(); 
+                if (ImGui.Combo($"##Risk{i}", ref sel, levels, levels.Length))
+                {
+                    e.RiskLv = sel + 1;
+                    Save();
                 }
 
                 ImGui.TableNextColumn();
                 if (ImGui.Button($"移除##{i}"))
                 {
-                    _entries.RemoveAt(i); 
+                    _entries.RemoveAt(i);
                     Save();
                     break;
                 }

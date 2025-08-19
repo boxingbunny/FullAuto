@@ -660,16 +660,16 @@ namespace AutoRaidHelper.UI
             ImGui.Text("新月岛设置:");
             // 设置自动排本是否启用
             bool enterOccult = Settings.AutoEnterOccult;
-            if (ImGui.Checkbox("自动进岛/换岛", ref enterOccult))
+            if (ImGui.Checkbox("自动进岛/换岛 (满足以下任一条件)", ref enterOccult))
             {
                 // 不用Update，免得下次上线自动传送到新月岛
                 Settings.AutoEnterOccult = enterOccult;
             }
             bool switchNotMaxSupJob = Settings.AutoSwitchNotMaxSupJob;
             
-            ImGui.Text("设置剩余多少分钟时换岛:");
-            ImGui.SameLine();
             // 输入换岛时间
+            ImGui.Text("剩余时间:");
+            ImGui.SameLine();
             ImGui.SetNextItemWidth(80f * scale);
             int reEnterTimeThreshold = Settings.OccultReEnterThreshold;
             if (ImGui.InputInt("##OccultReEnterThreshold", ref reEnterTimeThreshold))
@@ -681,7 +681,7 @@ namespace AutoRaidHelper.UI
             ImGui.Text("分钟");
             
             // 锁岛人数判断设置
-            ImGui.Text("设置锁岛人数阈值:");
+            ImGui.Text("总人数:");
             ImGui.SameLine();
             ImGui.SetNextItemWidth(80f * scale);
             int lockThreshold = Settings.OccultLockThreshold;
@@ -691,7 +691,20 @@ namespace AutoRaidHelper.UI
                 Settings.UpdateOccultLockThreshold(lockThreshold);
             }
             ImGui.SameLine();
-            ImGui.Text("人(连续5次采样低于此值则视为锁岛)");
+            ImGui.Text("人 (连续5次采样低于此值)");
+            
+            // 小警察人数判断设置
+            ImGui.Text("命中黑名单玩家人数:");
+            ImGui.SameLine();
+            ImGui.SetNextItemWidth(80f * scale);
+            int blackListThreshold = Settings.OccultBlackListThreshold;
+            if (ImGui.InputInt("##OccultBlackListThreshold", ref blackListThreshold))
+            {
+                blackListThreshold = Math.Clamp(blackListThreshold, 0, 72);
+                Settings.UpdateOccultBlackListThreshold(blackListThreshold);
+            }
+            ImGui.SameLine();
+            ImGui.Text("人");
             
             if (ImGui.Checkbox("自动切换未满级辅助职业", ref switchNotMaxSupJob))
             {
@@ -775,9 +788,18 @@ namespace AutoRaidHelper.UI
                             PublicContentOccultCrescent.ChangeSupportJob(i);
                         }
                     }
-                    ImGui.Text($"现在岛内人数: {((InfoProxy24*)InfoModule.Instance()->GetInfoProxyById((InfoProxyId)24))->EntryCount}");
+                    var proxy = (InfoProxy24*)InfoModule.Instance()->GetInfoProxyById((InfoProxyId)24);
+                    ImGui.Text($"现在岛内人数: {proxy->EntryCount}");
                     // 打印最近检测到的区域人数
                     ImGui.Text("最近采样人数: " + string.Join(", ", _recentMaxCounts));
+                    int count = 0;
+                    foreach (var data in proxy->CharDataSpan)
+                    {
+                        if (data.State.HasFlag(SwordForHire))
+                            count++;
+                    }
+                    ImGui.Text($"塔内人数: {count}");
+                    ImGui.Text($"当前岛内黑名单玩家数量: {BlackListTab.LastHitCount}");
                 }
             }
         }
@@ -1051,14 +1073,19 @@ namespace AutoRaidHelper.UI
                         if (minutesLeft > 0 && minutesLeft < Settings.OccultReEnterThreshold)
                             needLeave = true;
                     
-                        // 判断锁岛：连续5次下降且都低于40
-                        if (_recentMaxCounts.Count == 5 && minutesLeft < 150)
+                        // 判断锁岛：连续5次下降且都低于设定阈值
+                        if (_recentMaxCounts.Count == 5 && minutesLeft < 160)
                         {
                             var arr = _recentMaxCounts.ToArray();
                             bool canLeaveByLock = arr.All(x => x < Settings.OccultLockThreshold) && arr[0] >= arr[1] && arr[1] >= arr[2] && arr[2] >= arr[3] && arr[3] >= arr[4];
                             if (canLeaveByLock)
                                 needLeave = true;
                         }
+                        
+                        // 命中黑名单的人数判断
+                        if (BlackListTab.LastHitCount >= Settings.OccultBlackListThreshold)
+                            needLeave = true;
+                        
                         // 最终退岛动作必须在大水晶边上
                         if (needLeave && Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() == 1252 && Vector3.Distance(Core.Me.Position, new Vector3(828, 73, -696)) < 8 && Svc.ClientState.LocalPlayer != null)
                         {
@@ -1261,7 +1288,7 @@ namespace AutoRaidHelper.UI
                 var proxy = (InfoProxy24*)InfoModule.Instance()->GetInfoProxyById((InfoProxyId)24);
                 if (proxy != null && proxy->EntryCount > 0)
                 {
-                    // 每10秒采样一次区间最大人数
+                    // 每10秒采样一次区间最大人数 
                     if ((DateTime.Now - _lastSampleTime).TotalSeconds < 10)
                     {
                         // 区间内持续更新最大人数

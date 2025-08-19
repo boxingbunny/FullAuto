@@ -264,6 +264,8 @@ namespace AutoRaidHelper.Settings
         public int OccultReEnterThreshold { get; set; } = 90;
         // 新月岛判断锁岛所需人数
         public int OccultLockThreshold { get; set; } = 40;
+        // 新月岛小警察判断退岛所需人数
+        public int OccultBlackListThreshold { get; set; } = 5;
         public int DSRCompletedCount { get; set; }
         public int TOPCompletedCount { get; set; }
         public int SpheneCompletedCount { get; set; }
@@ -447,6 +449,15 @@ namespace AutoRaidHelper.Settings
         public void UpdateOccultLockThreshold(int count)
         {
             OccultLockThreshold = count;
+            FullAutoSettings.Instance.Save();
+        }
+        
+        /// <summary>
+        /// 更新新月岛小警察判断退岛所需人数，并保存配置
+        /// </summary>
+        public void UpdateOccultBlackListThreshold(int count)
+        {
+            OccultBlackListThreshold = count;
             FullAutoSettings.Instance.Save();
         }
         
