@@ -16,7 +16,10 @@ using System.Runtime.Loader;
 using AEAssist.GUI;
 using FFXIVClientStructs.FFXIV.Client.Game.InstanceContent;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
+using FFXIVClientStructs.FFXIV.Component.GUI;
+using Lumina.Excel.Sheets;
 using static FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCommonList.CharacterData.OnlineStatus;
+using Action = System.Action;
 using DutyType = AutoRaidHelper.Settings.AutomationSettings.DutyType;
 using DutyCategory = AutoRaidHelper.Settings.AutomationSettings.DutyCategory;
 using KillTargetType = AutoRaidHelper.Settings.AutomationSettings.KillTargetType;
@@ -727,6 +730,20 @@ namespace AutoRaidHelper.UI
                     }
                 }
                 
+                /*
+                if (ImGui.Button("写功能测试用按钮"))
+                {
+                    try
+                    {
+
+                    }
+                    catch (Exception e)
+                    {
+                        LogHelper.PrintError(e.Message);
+                    }
+                }
+                */
+                
                 // 显示自动倒计时、战斗状态、副本状态和跨服小队状态等辅助调试信息
                 var autoCountdownStatus = Settings.AutoCountdownEnabled ? _isCountdownCompleted ? "已触发" : "待触发" : "未启用";
                 var inCombat = Core.Me.InCombat();
@@ -790,16 +807,8 @@ namespace AutoRaidHelper.UI
                     }
                     var proxy = (InfoProxy24*)InfoModule.Instance()->GetInfoProxyById((InfoProxyId)24);
                     ImGui.Text($"现在岛内人数: {proxy->EntryCount}");
-                    // 打印最近检测到的区域人数
-                    ImGui.Text("最近采样人数: " + string.Join(", ", _recentMaxCounts));
-                    int count = 0;
-                    foreach (var data in proxy->CharDataSpan)
-                    {
-                        if (data.State.HasFlag(SwordForHire))
-                            count++;
-                    }
-                    ImGui.Text($"塔内人数: {count}");
                     ImGui.Text($"当前岛内黑名单玩家数量: {BlackListTab.LastHitCount}");
+                    ImGui.Text($"当前是否处于CE范围内: {IsInsideCriticalEncounter(Core.Me.Position)}");
                 }
             }
         }
@@ -1421,6 +1430,26 @@ namespace AutoRaidHelper.UI
             {
                 LogHelper.PrintError($"执行击杀操作时发生异常: {ex}");
             }
+        }
+        
+        // 判断是否在新月岛CE内
+        private static unsafe bool IsInsideCriticalEncounter(Vector3 pos, bool includeRegister = false, float radius = 20f)
+        {
+            var instance = PublicContentOccultCrescent.GetInstance();
+            if (instance == null) 
+                return false;
+            foreach (ref var events in instance->DynamicEventContainer.Events)
+            {
+                if (events.DynamicEventId == 0)
+                    continue;
+                if (!(events.State is DynamicEventState.Battle or DynamicEventState.Warmup || (includeRegister && events.State is DynamicEventState.Register)))
+                    continue;
+                var center = events.MapMarker.Position;
+                float dx = pos.X - center.X, dz = pos.Z - center.Z;
+                if (dx * dx + dz * dz <= radius * radius)
+                    return true;
+            }
+            return false;
         }
     }
 }
