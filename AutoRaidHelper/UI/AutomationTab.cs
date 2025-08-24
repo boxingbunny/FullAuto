@@ -16,8 +16,6 @@ using System.Runtime.Loader;
 using AEAssist.GUI;
 using FFXIVClientStructs.FFXIV.Client.Game.InstanceContent;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
-using FFXIVClientStructs.FFXIV.Component.GUI;
-using Lumina.Excel.Sheets;
 using static FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCommonList.CharacterData.OnlineStatus;
 using Action = System.Action;
 using DutyType = AutoRaidHelper.Settings.AutomationSettings.DutyType;
@@ -1095,6 +1093,16 @@ namespace AutoRaidHelper.UI
                         if (BlackListTab.LastHitCount >= Settings.OccultBlackListThreshold)
                             needLeave = true;
                         
+                        // 力之塔
+                        foreach (ref readonly var events in instancePtr->DynamicEventContainer.Events)
+                        {
+                            if (events is { DynamicEventId: 48, State: DynamicEventState.Battle })
+                            {
+                                needLeave = true;
+                                break;
+                            }
+                        }
+                        
                         // 最终退岛动作必须在大水晶边上
                         if (needLeave && Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() == 1252 && Vector3.Distance(Core.Me.Position, new Vector3(828, 73, -696)) < 8 && Svc.ClientState.LocalPlayer != null)
                         {
@@ -1438,7 +1446,7 @@ namespace AutoRaidHelper.UI
             var instance = PublicContentOccultCrescent.GetInstance();
             if (instance == null) 
                 return false;
-            foreach (ref var events in instance->DynamicEventContainer.Events)
+            foreach (ref readonly var events in instance->DynamicEventContainer.Events)
             {
                 if (events.DynamicEventId == 0)
                     continue;
