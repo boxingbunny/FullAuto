@@ -14,6 +14,7 @@ using System.Numerics;
 using System.Reflection;
 using System.Runtime.Loader;
 using AEAssist.GUI;
+using Dalamud.Game.Text;
 using FFXIVClientStructs.FFXIV.Client.Game.InstanceContent;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using static FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCommonList.CharacterData.OnlineStatus;
@@ -474,6 +475,15 @@ namespace AutoRaidHelper.UI
                     string msg = "队伍中未找到小猪蟹";
                     LogHelper.Print(msg);
                 }
+            
+                var random = new Random().Next(10);
+                var message = "允许你顶蟹";
+                if (random > 5)
+                {
+                    message = "不许顶我！";
+                }
+                
+                Utilities.FakeMessage("歌无谢", "拉诺西亚", message, XivChatType.TellIncoming);
             }
             
             //【自动排本设置】
