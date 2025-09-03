@@ -980,8 +980,11 @@ namespace AutoRaidHelper.UI
                     : Settings.SelectedDutyName;
                 if (Settings.UnrestEnabled)
                     dutyName += " unrest";
-                Settings.UpdateFinalSendDutyName(dutyName);
-
+                if (Settings.FinalSendDutyName != dutyName)
+                {
+                    Settings.UpdateFinalSendDutyName(dutyName);
+                }
+                
                 // 如果到达指定次数则停止排本
                 if (Settings.RunTimeEnabled && _runtimes >= Settings.RunTimeLimit)
                 {
