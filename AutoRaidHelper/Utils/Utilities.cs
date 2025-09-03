@@ -5,6 +5,7 @@ using AutoRaidHelper.Settings;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
+using ECommons;
 using ECommons.DalamudServices;
 
 namespace AutoRaidHelper.Utils;
@@ -682,7 +683,7 @@ public static class Utilities
     }
 
     /// <summary>
-    /// 伪装消息
+    /// FakeNews!
     /// </summary>
     /// <param name="name">名字</param>
     /// <param name="server">服务器</param>
@@ -692,7 +693,7 @@ public static class Utilities
     {
         var nameBuilder = new SeStringBuilder().AddText(name);
         
-        if (server != null)
+        if (!string.IsNullOrEmpty(server))
         {
             nameBuilder.AddIcon(BitmapFontIcon.CrossWorld).AddText(server);
         }
