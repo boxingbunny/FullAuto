@@ -5,6 +5,8 @@ using AutoRaidHelper.Settings;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
+using Dalamud.Game.ClientState.Objects.SubKinds;
+using Dalamud.Plugin.Services;
 using ECommons;
 using ECommons.DalamudServices;
 
@@ -692,8 +694,10 @@ public static class Utilities
     public static void FakeMessage(string name, string? server, string message, XivChatType type)
     {
         var nameBuilder = new SeStringBuilder().AddText(name);
+
+        var homeWorldName = GetPlayerWorldInfo()?.HomeWorldName;
         
-        if (!string.IsNullOrEmpty(server))
+        if (!string.IsNullOrEmpty(server) && server != homeWorldName)
         {
             nameBuilder.AddIcon(BitmapFontIcon.CrossWorld).AddText(server);
         }
@@ -704,5 +708,18 @@ public static class Utilities
             Name = nameBuilder.Build(),
             Message = message
         });
+    }
+
+    private static (string HomeWorldName, string CurrentWorldName, uint HomeWorldId, uint CurrentWorldId)? GetPlayerWorldInfo()
+    {
+        var localPlayer = Svc.ClientState.LocalPlayer;
+        if (localPlayer == null) return null;
+
+        var homeWorldName = localPlayer.HomeWorld.Value.Name.ToString();
+        var currentWorldName = localPlayer.CurrentWorld.Value.Name.ToString();
+        var homeWorldId = localPlayer.HomeWorld.RowId;
+        var currentWorldId = localPlayer.CurrentWorld.RowId;
+
+        return (homeWorldName, currentWorldName, homeWorldId, currentWorldId);
     }
 }
