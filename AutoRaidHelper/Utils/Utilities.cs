@@ -5,9 +5,6 @@ using AutoRaidHelper.Settings;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
-using Dalamud.Game.ClientState.Objects.SubKinds;
-using Dalamud.Plugin.Services;
-using ECommons;
 using ECommons.DalamudServices;
 
 namespace AutoRaidHelper.Utils;

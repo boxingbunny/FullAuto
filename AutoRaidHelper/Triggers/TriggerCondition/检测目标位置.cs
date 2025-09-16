@@ -1,8 +1,6 @@
-﻿using AEAssist;
-using AEAssist.CombatRoutine.Trigger;
+﻿using AEAssist.CombatRoutine.Trigger;
 using AEAssist.GUI;
 using ECommons.DalamudServices;
-using ECommons.LanguageHelpers;
 using System.Numerics;
 
 namespace AutoRaidHelper.Triggers.TriggerCondition;
@@ -20,7 +18,7 @@ public class 检测目标位置 : ITriggerCond
     [LabelName("目标位置范围终止Z坐标")]
     public float point2z { get; set; }
 
-    public string DisplayName => "检测目标位置".Loc();
+    public string DisplayName => "检测目标位置";
 
     public string Remark { get; set; }
 

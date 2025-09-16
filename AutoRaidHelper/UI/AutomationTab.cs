@@ -9,7 +9,7 @@ using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Types;
 using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Client.UI.Info;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using System.Numerics;
 using System.Reflection;
 using System.Runtime.Loader;
@@ -561,8 +561,10 @@ namespace AutoRaidHelper.UI
 
                         ImGui.TableNextRow(ImGuiTableRowFlags.Headers);
                         ImGui.TableSetColumnIndex(0);  ImGui.Text("职能");
-                        ImGui.TableSetColumnIndex(1);  ImGui.TextColored(new(1,0.70f,0,1), "关游戏");
-                        ImGui.TableSetColumnIndex(2);  ImGui.TextColored(new(1,0.25f,0.25f,1), "关机");
+                        ImGui.TableSetColumnIndex(1);
+                        ImGui.TextColored(1, "关游戏");
+                        ImGui.TableSetColumnIndex(2);
+                        ImGui.TextColored(2, "关机");
 
                         var roles = new[]
                         {

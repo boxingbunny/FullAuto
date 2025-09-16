@@ -1,4 +1,4 @@
-﻿using ImGuiNET;
+﻿using Dalamud.Bindings.ImGui;
 using AutoRaidHelper.Settings;
 
 namespace AutoRaidHelper.UI

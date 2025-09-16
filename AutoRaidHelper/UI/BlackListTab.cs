@@ -3,7 +3,7 @@ using System.Text.Json;
 using AEAssist;
 using AEAssist.Helper;
 using AEAssist.MemoryApi;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using FFXIVClientStructs.FFXIV.Client.UI.Info;
 
 namespace AutoRaidHelper.UI;
