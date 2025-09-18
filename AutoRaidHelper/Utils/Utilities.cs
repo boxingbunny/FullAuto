@@ -3,6 +3,9 @@ using AEAssist;
 using AEAssist.Helper;
 using AutoRaidHelper.Settings;
 using Dalamud.Game.ClientState.Objects.Types;
+using Dalamud.Game.Text;
+using Dalamud.Game.Text.SeStringHandling;
+using ECommons.DalamudServices;
 
 namespace AutoRaidHelper.Utils;
 
@@ -676,5 +679,44 @@ public static class Utilities
         {
             SetPosAndDebugPoint(RemoteControlHelper.GetRoleByPlayerName(dude[i].Name.ToString()), RotateAndExpend(posCenter, RotateAndExpend(posCenter, posCenter with { Z = posCenter.Z - length }, offset), 360f / dude.Count * i));
         }
+    }
+
+    /// <summary>
+    /// FakeNews!
+    /// </summary>
+    /// <param name="name">名字</param>
+    /// <param name="server">服务器</param>
+    /// <param name="message">消息</param>
+    /// <param name="type">消息类别</param>
+    public static void FakeMessage(string name, string? server, string message, XivChatType type)
+    {
+        var nameBuilder = new SeStringBuilder().AddText(name);
+
+        var homeWorldName = GetPlayerWorldInfo()?.HomeWorldName;
+        
+        if (!string.IsNullOrEmpty(server) && server != homeWorldName)
+        {
+            nameBuilder.AddIcon(BitmapFontIcon.CrossWorld).AddText(server);
+        }
+        
+        Svc.Chat.Print(new XivChatEntry
+        {
+            Type = type,
+            Name = nameBuilder.Build(),
+            Message = message
+        });
+    }
+
+    private static (string HomeWorldName, string CurrentWorldName, uint HomeWorldId, uint CurrentWorldId)? GetPlayerWorldInfo()
+    {
+        var localPlayer = Svc.ClientState.LocalPlayer;
+        if (localPlayer == null) return null;
+
+        var homeWorldName = localPlayer.HomeWorld.Value.Name.ToString();
+        var currentWorldName = localPlayer.CurrentWorld.Value.Name.ToString();
+        var homeWorldId = localPlayer.HomeWorld.RowId;
+        var currentWorldId = localPlayer.CurrentWorld.RowId;
+
+        return (homeWorldName, currentWorldName, homeWorldId, currentWorldId);
     }
 }

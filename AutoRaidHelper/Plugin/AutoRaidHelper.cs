@@ -5,7 +5,7 @@ using AutoRaidHelper.Hooks;
 using AutoRaidHelper.Triggers.TriggerAction;
 using AutoRaidHelper.Triggers.TriggerCondition;
 using AutoRaidHelper.UI;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using System.Runtime.Loader;
 
 namespace AutoRaidHelper.Plugin

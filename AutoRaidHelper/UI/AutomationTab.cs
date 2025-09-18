@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-using System.Globalization;
-using AEAssist;
+﻿using AEAssist;
 using AEAssist.CombatRoutine.Module;
 using AEAssist.Extension;
 using AEAssist.Helper;
@@ -11,13 +9,12 @@ using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Types;
 using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Client.UI.Info;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using System.Numerics;
 using System.Reflection;
 using System.Runtime.Loader;
 using AEAssist.GUI;
-using ECommons;
-using ECommons.Throttlers;
+using Dalamud.Game.Text;
 using FFXIVClientStructs.FFXIV.Client.Game.InstanceContent;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using static FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCommonList.CharacterData.OnlineStatus;
@@ -117,15 +114,18 @@ namespace AutoRaidHelper.UI
 
         public static float scale => ImGui.GetFontSize() / 13.0f;
 
+        // 记录上次发送自动排本命令的时间，避免频繁发送
+        private DateTime _lastAutoQueueTime = DateTime.MinValue;
+
         /// <summary>
-        /// 新月岛专用
+        /// 记录新月岛区域人数：
         /// - _recentMaxCounts：保存最近若干个采样区间的最大人数，用于判定锁岛
         /// - _currentIntervalMax：当前区间的最大人数，每个区间结束后加入队列
-        /// - _lastPhaseTyped：上一次 Bocchi MobFarmer Phase
+        /// - _lastSampleTime：上一次区间结束时间，用于控制采样间隔
         /// </summary>
         private readonly Queue<uint> _recentMaxCounts = new();
         private uint _currentIntervalMax;
-        private FarmerPhaseMirror _lastPhaseTyped;
+        private DateTime _lastSampleTime = DateTime.MinValue;
         
         // 标记副本是否已经完成，通常在 DutyCompleted 事件中设置
         private bool _dutyCompleted;
@@ -205,11 +205,7 @@ namespace AutoRaidHelper.UI
                 await UpdateAutoQueue();
                 await UpdateAutoEnterOccult();
                 await UpdateAutoSwitchNotMaxSupJob();
-                if (Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() == 1252)
-                {
-                    UpdatePlayerCountInOccult();
-                    UpdateMobFarmer();
-                }
+                UpdatePlayerCountInOccult();
                 ResetDutyFlag();
             }
             catch (Exception e)
@@ -479,6 +475,15 @@ namespace AutoRaidHelper.UI
                     string msg = "队伍中未找到小猪蟹";
                     LogHelper.Print(msg);
                 }
+            
+                var random = new Random().Next(10);
+                var message = "允许你顶蟹";
+                if (random > 5)
+                {
+                    message = "不许顶我！";
+                }
+                
+                Utilities.FakeMessage("歌无谢", "拉诺西亚", message, XivChatType.TellIncoming);
             }
             
             //【自动排本设置】
@@ -556,8 +561,10 @@ namespace AutoRaidHelper.UI
 
                         ImGui.TableNextRow(ImGuiTableRowFlags.Headers);
                         ImGui.TableSetColumnIndex(0);  ImGui.Text("职能");
-                        ImGui.TableSetColumnIndex(1);  ImGui.TextColored(new(1,0.70f,0,1), "关游戏");
-                        ImGui.TableSetColumnIndex(2);  ImGui.TextColored(new(1,0.25f,0.25f,1), "关机");
+                        ImGui.TableSetColumnIndex(1);
+                        ImGui.TextColored(1, "关游戏");
+                        ImGui.TableSetColumnIndex(2);
+                        ImGui.TextColored(2, "关机");
 
                         var roles = new[]
                         {
@@ -671,6 +678,7 @@ namespace AutoRaidHelper.UI
                 // 不用Update，免得下次上线自动传送到新月岛
                 Settings.AutoEnterOccult = enterOccult;
             }
+            bool switchNotMaxSupJob = Settings.AutoSwitchNotMaxSupJob;
             
             // 输入换岛时间
             ImGui.Text("剩余时间:");
@@ -711,7 +719,6 @@ namespace AutoRaidHelper.UI
             ImGui.SameLine();
             ImGui.Text("人");
             
-            bool switchNotMaxSupJob = Settings.AutoSwitchNotMaxSupJob;
             if (ImGui.Checkbox("自动切换未满级辅助职业", ref switchNotMaxSupJob))
             {
                 Settings.UpdateAutoSwitchNotMaxSupJob(switchNotMaxSupJob);
@@ -732,6 +739,20 @@ namespace AutoRaidHelper.UI
                             $"敌对单位: {enemy.Name} (EntityId: {enemy.EntityId}, DataId: {enemy.DataId}, ObjId: {enemy.GameObjectId}), 位置: {enemy.Position}");
                     }
                 }
+                
+                /*
+                if (ImGui.Button("写功能测试用按钮"))
+                {
+                    try
+                    {
+
+                    }
+                    catch (Exception e)
+                    {
+                        LogHelper.PrintError(e.Message);
+                    }
+                }
+                */
                 
                 // 显示自动倒计时、战斗状态、副本状态和跨服小队状态等辅助调试信息
                 var autoCountdownStatus = Settings.AutoCountdownEnabled ? _isCountdownCompleted ? "已触发" : "待触发" : "未启用";
@@ -1000,7 +1021,7 @@ namespace AutoRaidHelper.UI
                 // 未启用自动排本或上次命令不足3秒则返回
                 if (!Settings.AutoQueueEnabled)
                     return;
-                if (!EzThrottler.Throttle("AutoQueue", 3000))
+                if (DateTime.Now - _lastAutoQueueTime < TimeSpan.FromSeconds(3))
                     return;
                 // 已经在排本队列中则返回
                 if (Svc.Condition[ConditionFlag.InDutyQueue])
@@ -1024,6 +1045,8 @@ namespace AutoRaidHelper.UI
                 }
 
                 await Task.Delay(Settings.AutoQueueDelay * 1000);
+
+                _lastAutoQueueTime = DateTime.Now;
             }
             catch (Exception e)
             {
@@ -1055,7 +1078,7 @@ namespace AutoRaidHelper.UI
                 // 未启用自动进岛或上次命令不足5秒则返回
                 if (!Settings.AutoEnterOccult)
                     return;
-                if (!EzThrottler.Throttle("AutoEnterOccult", 5000))
+                if (DateTime.Now - _lastAutoQueueTime < TimeSpan.FromSeconds(5))
                     return;
                 
                 // 剩余时间不足或锁岛
@@ -1099,6 +1122,7 @@ namespace AutoRaidHelper.UI
                         if (needLeave && Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() == 1252 && Vector3.Distance(Core.Me.Position, new Vector3(828, 73, -696)) < 8 && Svc.ClientState.LocalPlayer != null)
                         {
                             LeaveDuty();
+                            _lastAutoQueueTime = DateTime.Now;
                             _recentMaxCounts.Clear();
                             return;
                         }
@@ -1166,6 +1190,7 @@ namespace AutoRaidHelper.UI
                         RemoteControlHelper.Cmd("", "/bocchiillegal on");
                     }
                 }
+                _lastAutoQueueTime = DateTime.Now;
                 
                 // 退岛方法
                 async void LeaveDuty()
@@ -1296,7 +1321,7 @@ namespace AutoRaidHelper.UI
                 if (proxy != null && proxy->EntryCount > 0)
                 {
                     // 每10秒采样一次区间最大人数 
-                    if (EzThrottler.Throttle("PlayerCountInOccult", 10000))
+                    if ((DateTime.Now - _lastSampleTime).TotalSeconds < 10)
                     {
                         // 区间内持续更新最大人数
                         _currentIntervalMax = Math.Max(_currentIntervalMax, proxy->EntryCount);
@@ -1304,6 +1329,7 @@ namespace AutoRaidHelper.UI
                     else
                     {
                         // 区间结束，记录当前区间最大人数
+                        _lastSampleTime = DateTime.Now;
                         if (_currentIntervalMax > 0)
                         {
                             if (_recentMaxCounts.Count >= 5)
@@ -1317,64 +1343,6 @@ namespace AutoRaidHelper.UI
             catch (Exception e)
             {
                 LogHelper.Print(e.Message);
-            }
-        }
-        
-        /// <summary>
-        /// 定期判断波奇刷怪阶段。
-        /// </summary>
-        private CancellationTokenSource? _fightingCts;
-        private bool _fightingTaskRunning;
-        private async void UpdateMobFarmer()
-        {
-            try
-            {
-                if (RemoteControlHelper.RoomId.IsNullOrEmpty())
-                    return;
-                
-                if (!EzThrottler.Throttle("MobFarmerState", 250))
-                    return;
-
-                if (BocchiStateReaderEx.TryReadTyped(out var phase, out var running, out var why))
-                {
-                    var prevPhase = _lastPhaseTyped;
-                    bool phaseChanged = phase != prevPhase;
-
-                    if (phaseChanged)
-                        LogHelper.Print($"[MobFarmer] State = {phase}");
-
-                    if (running && phaseChanged && phase == FarmerPhaseMirror.Stacking)
-                    {
-                        RemoteControlHelper.Cmd("", "/occs 暗黑炮 off");
-                        RemoteControlHelper.Cmd("", "/occs 老化炮 off");
-                        RemoteControlHelper.Cmd("", "/occs 炮击 off");
-                    }
-
-                    // 只在进入 Fighting 瞬间触发一次，离开 Fighting 立刻打断
-                    if ((running && phaseChanged && phase == FarmerPhaseMirror.Fighting && !_fightingTaskRunning) 
-                        || (phaseChanged && prevPhase == FarmerPhaseMirror.Fighting && phase != FarmerPhaseMirror.Fighting))
-                    {
-                        var old = Interlocked.Exchange(ref _fightingCts, null);
-                        if (old != null)
-                        {
-                            await old.CancelAsync();
-                            old.Dispose();
-                        }
-
-                        _fightingCts = new CancellationTokenSource();
-                        _ = HandleFightingAsync(_fightingCts.Token);
-                    }
-
-                    _lastPhaseTyped = phase;
-                }
-                else
-                {
-                    LogHelper.Print($"[MobFarmer] 读取失败：{why}");
-                }
-            }
-            catch (Exception e)
-            {
-                LogHelper.PrintError(e.Message);
             }
         }
 
@@ -1500,69 +1468,11 @@ namespace AutoRaidHelper.UI
                 if (!(events.State is DynamicEventState.Battle or DynamicEventState.Warmup || (includeRegister && events.State is DynamicEventState.Register)))
                     continue;
                 var center = events.MapMarker.Position;
-                return Vector3.Distance(pos, center) < radius;
+                float dx = pos.X - center.X, dz = pos.Z - center.Z;
+                if (dx * dx + dz * dz <= radius * radius)
+                    return true;
             }
             return false;
-        }
-
-        // 独立处理 Fighting 的异步流程（避免在 Update 里 await 阻塞/并发）
-        private async Task HandleFightingAsync(CancellationToken token)
-        {
-            _fightingTaskRunning = true;
-            try
-            {
-                var target = new Vector3(-783, 4, -470);
-                RemoteControlHelper.Cmd("", "/occs off");
-                RemoteControlHelper.Cmd("", "/vnav stop");
-                RemoteControlHelper.MoveTo("", target);
-                
-                bool reached = await WaitUntilNearXZAsync(target, abort: () => token.IsCancellationRequested);
-
-                if (reached)
-                {
-                    RemoteControlHelper.MoveTo("MT", new Vector3(-782, 5, -476));
-                    RemoteControlHelper.MoveTo("ST", new Vector3(-785, 3, -463));
-                    RemoteControlHelper.Cmd("", "/occs 暗黑炮 on");
-                    RemoteControlHelper.Cmd("", "/occs 老化炮 on");
-                    RemoteControlHelper.Cmd("", "/occs 炮击 on");
-                    await Task.Delay(500, token);
-                    RemoteControlHelper.Cmd("", "/occs 开炮");
-                    await Task.Delay(500, token);
-                    RemoteControlHelper.Cmd("", "/occs on");
-                }
-                else if (!token.IsCancellationRequested)
-                {
-                    RemoteControlHelper.MoveStop("");
-                    RemoteControlHelper.Cmd("", "/occs 暗黑炮 on");
-                    RemoteControlHelper.Cmd("", "/occs 老化炮 on");
-                    RemoteControlHelper.Cmd("", "/occs 炮击 on");
-                    RemoteControlHelper.Cmd("", "/occs on");
-                    LogHelper.Print("未能在限定时间内到达目标点");
-                }
-            }
-            catch (Exception ex)
-            {
-                LogHelper.PrintError(ex.Message);
-            }
-            finally
-            {
-                _fightingTaskRunning = false;
-            }
-        }
-                
-        // 等待到达目标附近，或超时/被打断
-        private static async Task<bool> WaitUntilNearXZAsync(Vector3 target, float radius = 0.5f, int timeoutMs = 10000, Func<bool>? abort = null)
-        {
-            var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds < timeoutMs)
-            {
-                if (abort != null && abort()) 
-                    return false;
-                if (Vector3.Distance(Core.Me.Position, target) <= radius)
-                    return true;
-                await Task.Delay(150);
-            }
-            return false; // 超时
         }
     }
 }

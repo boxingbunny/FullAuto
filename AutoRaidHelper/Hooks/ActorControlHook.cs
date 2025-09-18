@@ -1,5 +1,4 @@
-﻿using System;
-using Dalamud.Hooking;
+﻿using Dalamud.Hooking;
 using ECommons.DalamudServices;
 using AEAssist.ACT;
 using AEAssist.Helper;

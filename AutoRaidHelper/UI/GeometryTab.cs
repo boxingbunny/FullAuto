@@ -1,5 +1,5 @@
 ﻿using System.Numerics;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using AutoRaidHelper.Utils;
 using AutoRaidHelper.Settings;
 using AEAssist;
