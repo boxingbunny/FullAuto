@@ -548,7 +548,7 @@ public static class Utilities
                 var offsetZ = offsetDistance * MathF.Cos(offsetAngle);
                 var offsetPos = new Vector3(targetPos.X + offsetX, targetPos.Y, targetPos.Z + offsetZ);
                 TPbyRole(roleName, offsetPos, "调整面向 - TP到偏移位置");
-                RemoteControlHelper.MoveTo(roleName, targetPos);
+                ARHRemoteControlHelper.MoveTo(roleName, targetPos);
             }
         }
         catch (Exception ex)
