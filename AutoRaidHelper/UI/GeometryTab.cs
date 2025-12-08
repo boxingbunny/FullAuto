@@ -103,8 +103,6 @@ namespace AutoRaidHelper.UI
         /// 用户输入的自定义面向角度（单位：弧度，范围 -π ~ π），用于预测落点。
         /// </summary>
         private float _customRotation;
-
-        
         /// <summary>
         /// 在每一帧调用，主要用于更新鼠标点击记录（点1、点2、点3）。
         /// </summary>
@@ -392,6 +390,8 @@ namespace AutoRaidHelper.UI
             
             // 预测玩家前方落点
             DrawForwardMoveSection();
+            //xunlu
+            DrawPathFindControls();
         }
 
         private void DrawForwardMoveSection()
@@ -591,12 +591,77 @@ namespace AutoRaidHelper.UI
         }
 
         /// <summary>
+        /// 封装寻路相关的 ImGui 控件和逻辑。
+        /// </summary>
+        /// 
+        // --- 寻路控制 UI 状态变量 ---
+        private string _roleInput = "MT"; // 默认测试角色
+        private Vector3 _targetPosInput = new Vector3(100f, 50f, 20f); // 默认目标坐标
+        private float _precisionInput = 0.2f; // 默认停止精度
+        /// <summary>
         /// 清理所有已经记录的调试点。
         /// </summary>
         private void ClearDebugPoints()
         {
             LogHelper.Print("清理Debug点");
             Share.TrustDebugPoint.Clear();
+        }
+        private void DrawPathFindControls()
+        {
+            ImGui.Text("PathFind Parameters:");
+
+            // 1. 角色/名称输入
+            ImGui.InputText("Role/Name (MT, H1, D1, etc.)", ref _roleInput, 32);
+
+            // 2. 目标坐标输入
+            ImGui.InputFloat3("Target Position (X, Y, Z)", ref _targetPosInput);
+
+            // 3. 精度输入
+            ImGui.InputFloat("Stop Precision", ref _precisionInput);
+
+            ImGui.Separator();
+
+            // 4. 触发 MoveTo 按钮
+            if (ImGui.Button("🚀 Start PathFind"))
+            {
+                // 确保精度有效
+                if (_precisionInput <= 0) _precisionInput = 0.1f;
+
+                // 调用您实现的 ARHRemoteControlHelper.MoveTo 方法
+                ARHRemoteControlHelper.MoveTo(
+                    _roleInput,
+                    _targetPosInput,
+                    _precisionInput
+                );
+                // LogHelper.Info($"Command sent: Move '{_roleInput}' to {_targetPosInput}");
+            }
+
+            // 5. 触发 Stop 按钮
+            ImGui.SameLine();
+            if (ImGui.Button("🛑 Stop Movement"))
+            {
+                // 获取当前玩家名称以停止自己的移动
+                string playerName = Core.Me.Name.ToString();
+                ARHRemoteControlHelper.StopMovementFor(playerName);
+                // LogHelper.Info($"Command sent: Stop '{playerName}' movement.");
+            }
+
+            // 6. 状态显示（可选：显示当前移动状态）
+            // 查找当前玩家的 PathFindHelper 状态
+            if (ARHRemoteControlHelper.PathFinders.TryGetValue(
+                Core.Me.Name.ToString(), out var helper))
+            {
+                ImGui.Text($"Status: {(helper.Enabled ? "**Moving**" : "Stopped")}");
+                if (helper.Enabled)
+                {
+                    var distance = Vector3.Distance(Core.Me.Position, helper.DesiredPosition);
+                    ImGui.Text($"Distance to Target: {distance:F2}");
+                }
+            }
+            else
+            {
+                ImGui.Text("Status: Initialized");
+            }
         }
     }
 }
