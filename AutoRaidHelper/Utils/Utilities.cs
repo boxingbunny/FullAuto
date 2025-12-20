@@ -709,7 +709,7 @@ public static class Utilities
 
     private static (string HomeWorldName, string CurrentWorldName, uint HomeWorldId, uint CurrentWorldId)? GetPlayerWorldInfo()
     {
-        var localPlayer = Svc.ClientState.LocalPlayer;
+        var localPlayer = Svc.PlayerState;
         if (localPlayer == null) return null;
 
         var homeWorldName = localPlayer.HomeWorld.Value.Name.ToString();

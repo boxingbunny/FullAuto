@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
@@ -41,14 +41,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="AEAssist">
-      <HintPath>$(AELibPath)AEAssist.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="ECommons">
-      <HintPath>$(AELibPath)ECommons.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="OmenTools">
       <HintPath>lib\OmenTools.dll</HintPath>
     </Reference>
@@ -59,7 +51,7 @@
     <EmbeddedResource Include="OmenTools.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <PackageReference Include="AEAssist.NET" Version="*" ExcludeAssets="runtime" />
+    <PackageReference Include="AEAssist.NET" Version="1.2.6" ExcludeAssets="runtime" />
     <PackageReference Include="Costura.Fody" Version="6.0.0">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>

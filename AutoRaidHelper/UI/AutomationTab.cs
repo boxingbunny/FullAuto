@@ -736,7 +736,7 @@ namespace AutoRaidHelper.UI
                     foreach (var enemy in enemies)
                     {
                         LogHelper.Print(
-                            $"敌对单位: {enemy.Name} (EntityId: {enemy.EntityId}, DataId: {enemy.DataId}, ObjId: {enemy.GameObjectId}), 位置: {enemy.Position}");
+                            $"敌对单位: {enemy.Name} (EntityId: {enemy.EntityId}, BaseId: {enemy.BaseId}, ObjId: {enemy.GameObjectId}), 位置: {enemy.Position}");
                     }
                 }
                 
@@ -1119,7 +1119,7 @@ namespace AutoRaidHelper.UI
                         }
                         
                         // 最终退岛动作必须在大水晶边上
-                        if (needLeave && Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() == 1252 && Vector3.Distance(Core.Me.Position, new Vector3(828, 73, -696)) < 8 && Svc.ClientState.LocalPlayer != null)
+                        if (needLeave && Core.Resolve<MemApiZoneInfo>().GetCurrTerrId() == 1252 && Vector3.Distance(Core.Me.Position, new Vector3(828, 73, -696)) < 8 && Svc.PlayerState != null)
                         {
                             LeaveDuty();
                             _lastAutoQueueTime = DateTime.Now;

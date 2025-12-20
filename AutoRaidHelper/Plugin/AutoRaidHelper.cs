@@ -1,7 +1,6 @@
 ﻿using AEAssist.AEPlugin;
 using AEAssist.CombatRoutine.Trigger;
 using AEAssist.Verify;
-using AutoRaidHelper.Hooks;
 using AutoRaidHelper.Triggers.TriggerAction;
 using AutoRaidHelper.Triggers.TriggerCondition;
 using AutoRaidHelper.UI;
@@ -19,14 +18,10 @@ namespace AutoRaidHelper.Plugin
         private readonly BlackListTab _blackListTab = new();
         #region IAEPlugin Implementation
 
-
-        private ActorControlHook actorControlHook;
-
         public PluginSetting BuildPlugin()
         {
             TriggerMgr.Instance.Add("全自动小助手", new 指定职能tp指定位置().GetType());
             TriggerMgr.Instance.Add("全自动小助手", new 检测目标位置().GetType());
-            actorControlHook = new ActorControlHook();
             return new PluginSetting
             {
                 Name = "全自动小助手",
@@ -44,7 +39,6 @@ namespace AutoRaidHelper.Plugin
         {
             _automationTab.Dispose();
             _debugPrintTab.Dispose();
-            actorControlHook?.Dispose();
         }
 
         public void Update()

@@ -7,8 +7,8 @@ namespace AutoRaidHelper.Triggers.TriggerCondition;
 
 public class 检测目标位置 : ITriggerCond
 {
-    [LabelName("目标DataID")]
-    public int targetDataID { get; set; }
+    [LabelName("目标BaseId")]
+    public int targetBaseId { get; set; }
     [LabelName("目标位置范围起始X坐标")]
     public float point1x { get; set; }
     [LabelName("目标位置范围起始Z坐标")]
@@ -29,10 +29,7 @@ public class 检测目标位置 : ITriggerCond
 
     public bool Handle(ITriggerCondParams triggerCondParams)
     {
-        var target = Svc.Objects.FirstOrDefault(o =>
-        {
-            return o.DataId == targetDataID;
-        });
+        var target = Svc.Objects.FirstOrDefault(o => o.BaseId == targetBaseId);
         if(target == null)
         {
             return false;

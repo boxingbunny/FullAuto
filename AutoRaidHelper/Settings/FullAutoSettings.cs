@@ -526,7 +526,10 @@ namespace AutoRaidHelper.Settings
             { 9, ("炮击士", 6) },
             { 10, ("药剂师", 4) },
             { 11, ("预言师", 5) },
-            { 12, ("盗贼", 6) }
+            { 12, ("盗贼", 6) },
+            { 13, ("魔法剑士", 4) },
+            { 14, ("剑斗士", 4) },
+            { 15, ("舞者", 4) }
         };
         
         public record DutyInfo(string Name, DutyCategory Category);
