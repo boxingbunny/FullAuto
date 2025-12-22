@@ -971,6 +971,15 @@ namespace AutoRaidHelper.UI
 
                 await Task.Delay(Settings.AutoQueueDelay * 1000);
 
+                var leaderName = GetPartyLeaderName();
+                if (!string.IsNullOrEmpty(leaderName))
+                {
+                    var leaderRole = RemoteControlHelper.GetRoleByPlayerName(leaderName);
+                    RemoteControlHelper.Cmd(leaderRole, "/pdr load ContentFinderCommand");
+                    RemoteControlHelper.Cmd(leaderRole, $"/pdrduty n {Settings.FinalSendDutyName}");
+                    LogHelper.Print($"为队长 {leaderName} 发送排本命令: /pdrduty n {Settings.FinalSendDutyName}");
+                }
+                
                 _lastAutoQueueTime = DateTime.Now;
             }
             catch (Exception e)
