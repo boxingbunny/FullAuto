@@ -18,8 +18,6 @@ using Dalamud.Game.Text;
 using FFXIVClientStructs.FFXIV.Client.Game.InstanceContent;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using static FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCommonList.CharacterData.OnlineStatus;
-using Action = System.Action;
-using DutyType = AutoRaidHelper.Settings.AutomationSettings.DutyType;
 using DutyCategory = AutoRaidHelper.Settings.AutomationSettings.DutyCategory;
 using KillTargetType = AutoRaidHelper.Settings.AutomationSettings.KillTargetType;
 using PartyRole = AutoRaidHelper.Settings.AutomationSettings.PartyRole;
@@ -32,8 +30,6 @@ namespace AutoRaidHelper.UI
     /// </summary>
     public class AutomationTab
     {
-        // 声明一个字典，用于将副本 ID (ushort) 映射到对应的更新操作
-        private readonly Dictionary<DutyType, Action> _dutyUpdateActions;
         private int _runtimes;
 
         private readonly Dictionary<string, bool> _roleSelection = new()
@@ -61,50 +57,8 @@ namespace AutoRaidHelper.UI
         
         public AutomationTab()
         {
-            _dutyUpdateActions = new Dictionary<DutyType, Action>
-            {
-                { DutyType.UCOB, () => UpdateDuty(DutyType.UCOB, ref _ucobCompletedCount, 1, "巴哈") },
-                { DutyType.UWU, () => UpdateDuty(DutyType.UWU, ref _uwuCompletedCount, 1, "神兵") },
-                { DutyType.TEA, () => UpdateDuty(DutyType.TEA, ref _teaCompletedCount, 1, "绝亚") },
-                { DutyType.DSR, () => UpdateDuty(DutyType.DSR, ref _dsrCompletedCount, 1, "龙诗") },
-                { DutyType.TOP, () => UpdateDuty(DutyType.TOP, ref _topCompletedCount, 1, "绝欧") },
-                { DutyType.FRU, () => UpdateDuty(DutyType.FRU, ref _fruCompletedCount, 1, "伊甸") },
-                { DutyType.Aloalo, () => UpdateDuty(DutyType.Aloalo, ref _aloaloCompletedCount, 1, "阿罗阿罗") },
-                { DutyType.Worqor, () => UpdateDuty(DutyType.Worqor, ref _worqorCompletedCount, 1, "蛇鸟") },
-                { DutyType.Everkeep, () => UpdateDuty(DutyType.Everkeep, ref _everkeepCompletedCount, 1, "佐拉加") },
-                { DutyType.Sphene, () => UpdateDuty(DutyType.Sphene, ref _spheneCompletedCount, 2, "女王") },
-                { DutyType.Recollection, () => UpdateDuty(DutyType.Recollection, ref _recollectionCompletedCount, 1, "泽莲尼娅") },
-            };
             Settings.AutoEnterOccult = false;
         }
-
-        private void UpdateDuty(DutyType duty, ref int localCount, int increment, string dutyName)
-        {
-            // 取出当前全局累计值
-            int globalBefore = GetGlobalCount(duty);
-            localCount += increment;
-            int globalNew = globalBefore + increment;
-            // 计算全局累计值更新配置
-            Settings.UpdateDutyCount(duty, globalNew);
-            LogHelper.Print($"{dutyName}低保 + {increment}, 本次已加低保数: {localCount}, 共计加低保数 {GetGlobalCount(duty)}");
-        }
-
-        private int GetGlobalCount(DutyType duty) =>
-            duty switch
-            {
-                DutyType.UCOB => Settings.UCOBCompletedCount,
-                DutyType.UWU => Settings.UWUCompletedCount,
-                DutyType.TEA => Settings.TEACompletedCount,
-                DutyType.DSR => Settings.DSRCompletedCount,
-                DutyType.TOP => Settings.TOPCompletedCount,
-                DutyType.FRU => Settings.FRUCompletedCount,
-                DutyType.Aloalo => Settings.AloaloCompletedCount,
-                DutyType.Worqor => Settings.WorqorCompletedCount,
-                DutyType.Everkeep => Settings.EverkeepCompletedCount,
-                DutyType.Sphene => Settings.SpheneCompletedCount,
-                DutyType.Recollection => Settings.RecollectionCompletedCount,
-                _ => 0
-            };
 
         /// <summary>
         /// 通过全局配置单例获取 AutomationSettings 配置，
@@ -130,28 +84,6 @@ namespace AutoRaidHelper.UI
         // 标记副本是否已经完成，通常在 DutyCompleted 事件中设置
         private bool _dutyCompleted;
 
-        // 记录龙诗低保数
-        private int _dsrCompletedCount;
-        // 记录欧米茄低保数
-        private int _topCompletedCount;
-        // 记录女王低保数
-        private int _spheneCompletedCount;
-        // 记录蛇鸟低保数
-        private int _worqorCompletedCount;
-        // 记录泽莲尼娅低保数
-        private int _recollectionCompletedCount;
-        // 记录伊甸低保数
-        private int _fruCompletedCount;
-        // 记录神兵低保数
-        private int _uwuCompletedCount;
-        // 记录巴哈低保数
-        private int _ucobCompletedCount;
-        // 记录绝亚低保数
-        private int _teaCompletedCount;
-        // 记录佐拉加低保数
-        private int _everkeepCompletedCount;
-        // 记录零式阿罗阿罗岛低保数
-        private int _aloaloCompletedCount;
 
         private bool _isCountdownRunning;
         private bool _isLeaveRunning;
@@ -215,8 +147,7 @@ namespace AutoRaidHelper.UI
         }
 
         /// <summary>
-        /// 当副本完成时触发 DutyCompleted 事件，对应更新副本完成状态，
-        /// 并根据传入的副本ID更新不同的低保数统计。
+        /// 当副本完成时触发 DutyCompleted 事件，对应更新副本完成状态。
         /// </summary>
         /// <param name="sender">事件发送者</param>
         /// <param name="e">副本任务ID</param>
@@ -226,12 +157,6 @@ namespace AutoRaidHelper.UI
             LogHelper.Print($"副本任务完成（DutyCompleted 事件，ID: {e}）");
             _dutyCompleted = true; // 标记副本已完成
             _runtimes++;
-
-            // 查找字典中是否存在与当前副本 ID 对应的更新操作
-            if (_dutyUpdateActions.TryGetValue((DutyType)e, out var updateAction))
-            {
-                updateAction();
-            }
         }
 
         /// <summary>

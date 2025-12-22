@@ -229,8 +229,7 @@ namespace AutoRaidHelper.Settings
 
     /// <summary>
     /// AutomationSettings 存储了 AutomationTab 模块相关配置，
-    /// 包括地图ID、自动倒计时、自动退本与自动排本等各项功能的开关与延迟设置，
-    /// 以及副本名称和低保计数等统计数据。
+    /// 包括地图ID、自动倒计时、自动退本与自动排本等各项功能的开关与延迟设置。
     /// </summary>
     public class AutomationSettings
     {
@@ -266,17 +265,6 @@ namespace AutoRaidHelper.Settings
         public int OccultLockThreshold { get; set; } = 40;
         // 新月岛小警察判断退岛所需人数
         public int OccultBlackListThreshold { get; set; } = 5;
-        public int DSRCompletedCount { get; set; }
-        public int TOPCompletedCount { get; set; }
-        public int SpheneCompletedCount { get; set; }
-        public int FRUCompletedCount { get; set; }
-        public int AloaloCompletedCount { get; set; }
-        public int WorqorCompletedCount { get; set; }
-        public int UCOBCompletedCount { get; set; }
-        public int UWUCompletedCount { get; set; }
-        public int TEACompletedCount { get; set; }
-        public int RecollectionCompletedCount { get; set; }
-        public int EverkeepCompletedCount { get; set; }
 
         /// <summary>
         /// 更新当前地图 ID，并保存配置
@@ -461,22 +449,6 @@ namespace AutoRaidHelper.Settings
             FullAutoSettings.Instance.Save();
         }
         
-        // 定义一个枚举类型
-        public enum DutyType : ushort
-        {
-            UCOB = 733,
-            UWU = 777,
-            TEA = 887,
-            DSR = 968,
-            TOP = 1122,
-            FRU = 1238,
-            Aloalo = 1180,
-            Zodiark = 993,
-            Worqor = 1196,
-            Everkeep = 1201,
-            Sphene = 1243,
-            Recollection = 1271,
-        }
         
         public enum DutyCategory
         {
@@ -549,57 +521,15 @@ namespace AutoRaidHelper.Settings
             new("佐拉加歼殛战", DutyCategory.Extreme),
             new("永恒女王忆想歼灭战", DutyCategory.Extreme),
             new("泽莲尼娅歼殛战", DutyCategory.Extreme),
+            new("永远之暗悲惶歼灭战", DutyCategory.Extreme),
+            new("护锁刃龙上位狩猎战", DutyCategory.Extreme),
+            new("格莱杨拉波尔歼殛战", DutyCategory.Extreme),
             // 异闻
             new("异闻阿罗阿罗岛", DutyCategory.Variant),
             new("零式异闻阿罗阿罗岛", DutyCategory.Variant),
             // 自定义
             new("自定义", DutyCategory.Custom)
         ];
-        
-
-        public void UpdateDutyCount(DutyType duty, int count)
-        {
-            switch (duty)
-            {
-                case DutyType.DSR:
-                    DSRCompletedCount = count;
-                    break;
-                case DutyType.TOP:
-                    TOPCompletedCount = count;
-                    break;
-                case DutyType.Sphene:
-                    SpheneCompletedCount = count;
-                    break;
-                case DutyType.FRU:
-                    FRUCompletedCount = count;
-                    break;
-                case DutyType.Aloalo:
-                    AloaloCompletedCount = count;
-                    break;
-                case DutyType.Worqor:
-                    WorqorCompletedCount = count;
-                    break;
-                case DutyType.UWU:
-                    UWUCompletedCount = count;
-                    break;
-                case DutyType.UCOB:
-                    UCOBCompletedCount = count;
-                    break;
-                case DutyType.TEA:
-                    TEACompletedCount = count;
-                    break;
-                case DutyType.Recollection:
-                    RecollectionCompletedCount = count;
-                    break;
-                case DutyType.Everkeep:
-                    EverkeepCompletedCount = count;
-                    break;
-                default:
-                    LogHelper.PrintError("未知的副本类型");
-                    return;
-            }
-            FullAutoSettings.Instance.Save();
-        }
     }
 
     /// <summary>
