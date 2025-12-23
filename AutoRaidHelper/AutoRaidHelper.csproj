@@ -41,12 +41,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="OmenTools">
-      <HintPath>lib\OmenTools.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Remove="DalamudPackager" />
     <PackageReference Include="AEAssist.NET" Version="*" ExcludeAssets="runtime" />
     <PackageReference Include="Costura.Fody" Version="6.0.0">
