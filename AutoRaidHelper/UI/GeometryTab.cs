@@ -127,7 +127,7 @@ namespace AutoRaidHelper.UI
             var mousePos = ImGui.GetMousePos();
             if (ScreenToWorld(mousePos, out var wPos3D))
             {
-                ImGui.Text($"鼠标屏幕: <{mousePos.X:F2}, {mousePos.Y:F2}>\n鼠标世界: <{wPos3D.X:F2}, {wPos3D.Z:F2}>");
+                ImGui.Text($"鼠标屏幕: <{mousePos.X:F2}, {mousePos.Y:F2}>\n鼠标世界: <{wPos3D.X:F2}, {wPos3D.Y:F2}, {wPos3D.Z:F2}>");
                 // 计算鼠标与当前选定场地中心的距离，以及参考方向与鼠标之间的角度
                 float distMouseCenter = GeometryUtilsXZ.DistanceXZ(wPos3D, _centerPositions[Settings.SelectedCenterIndex]);
                 float angleMouseCenter = GeometryUtilsXZ.AngleXZ(_directionPositions[Settings.SelectedDirectionIndex], wPos3D, _centerPositions[Settings.SelectedCenterIndex]);
@@ -158,9 +158,9 @@ namespace AutoRaidHelper.UI
 
             ImGui.Spacing();
             // 显示记录的三个点坐标
-            ImGui.Text($"点1: {FormatPointXZ(Point1World)}");
-            ImGui.Text($"点2: {FormatPointXZ(Point2World)}");
-            ImGui.Text($"点3: {FormatPointXZ(Point3World)}");
+            ImGui.Text($"点1: {FormatPoint(Point1World)}");
+            ImGui.Text($"点2: {FormatPoint(Point2World)}");
+            ImGui.Text($"点3: {FormatPoint(Point3World)}");
 
             // 当记录了点1和点2后，计算并显示两点间的XZ平面距离，同时允许选择夹角顶点模式进行角度计算
             if (Point1World.HasValue && Point2World.HasValue)
@@ -539,18 +539,17 @@ namespace AutoRaidHelper.UI
             var mousePos = ImGui.GetMousePos();
             if (ScreenToWorld(mousePos, out var wPos3D))
             {
-                // 仅保留XZ分量，Y置0，适应2D平面计算
-                var pointXZ = new Vector3(wPos3D.X, 0, wPos3D.Z);
+                // 保留完整的XYZ坐标
                 if (ctrl)
-                    Point1World = pointXZ;
+                    Point1World = wPos3D;
                 else if (shift)
-                    Point2World = pointXZ;
+                    Point2World = wPos3D;
                 else if (alt)
-                    Point3World = pointXZ;
+                    Point3World = wPos3D;
 
                 // 如果启用了Debug点模式，则将记录的点添加到Debug点集合中
                 if (Settings.AddDebugPoints && (ctrl || shift || alt))
-                    AddDebugPoint(pointXZ);
+                    AddDebugPoint(wPos3D);
             }
 
             // 当记录了点1和点2后，计算并更新这两点在XZ平面的距离
@@ -561,12 +560,12 @@ namespace AutoRaidHelper.UI
         }
 
         /// <summary>
-        /// 格式化输出点的XZ坐标（如果点存在），否则返回"未记录"提示。
+        /// 格式化输出点的XYZ坐标（如果点存在），否则返回"未记录"提示。
         /// </summary>
         /// <param name="p">需要格式化的点坐标</param>
         /// <returns>格式化后的字符串</returns>
-        private string FormatPointXZ(Vector3? p) =>
-            p.HasValue ? $"<{p.Value.X:F2}, 0, {p.Value.Z:F2}>" : "未记录";
+        private string FormatPoint(Vector3? p) =>
+            p.HasValue ? $"<{p.Value.X:F2}, {p.Value.Y:F2}, {p.Value.Z:F2}>" : "未记录";
 
         /// <summary>
         /// 将屏幕坐标转换为3D世界坐标。

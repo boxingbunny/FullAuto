@@ -112,6 +112,7 @@ namespace AutoRaidHelper.UI
         {
             Svc.DutyState.DutyCompleted += OnDutyCompleted;
             Svc.DutyState.DutyWiped += OnDutyWiped;
+            LootTracker.Initialize();
         }
 
         /// <summary>
@@ -122,6 +123,7 @@ namespace AutoRaidHelper.UI
         {
             Svc.DutyState.DutyCompleted -= OnDutyCompleted;
             Svc.DutyState.DutyWiped -= OnDutyWiped;
+            LootTracker.Dispose();
         }
 
         /// <summary>
@@ -241,6 +243,13 @@ namespace AutoRaidHelper.UI
             if (ImGui.Checkbox("等待R点完成后再退本", ref waitRCompleted))
             {
                 Settings.UpdateAutoLeaveAfterLootEnabled(waitRCompleted);
+            }
+            
+            ImGui.SameLine();
+            // Roll点统计按钮
+            if (ImGui.Button("打印Roll点记录"))
+            {
+                LootTracker.PrintAllRecords();
             }
 
             //【遥控按钮】
@@ -487,9 +496,9 @@ namespace AutoRaidHelper.UI
                         ImGui.TableNextRow(ImGuiTableRowFlags.Headers);
                         ImGui.TableSetColumnIndex(0);  ImGui.Text("职能");
                         ImGui.TableSetColumnIndex(1);
-                        ImGui.TextColored(1, "关游戏");
+                        ImGui.TextColored(new Vector4(1.0f, 0.7f, 0.2f, 1.0f), "关游戏");
                         ImGui.TableSetColumnIndex(2);
-                        ImGui.TextColored(2, "关机");
+                        ImGui.TextColored(new Vector4(1.0f, 0.3f, 0.3f, 1.0f), "关机");
 
                         var roles = new[]
                         {
