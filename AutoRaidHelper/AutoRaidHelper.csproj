@@ -48,9 +48,6 @@
 
   <ItemGroup>
     <PackageReference Remove="DalamudPackager" />
-    <EmbeddedResource Include="OmenTools.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
     <PackageReference Include="AEAssist.NET" Version="1.2.6" ExcludeAssets="runtime" />
     <PackageReference Include="Costura.Fody" Version="6.0.0">
       <PrivateAssets>all</PrivateAssets>
