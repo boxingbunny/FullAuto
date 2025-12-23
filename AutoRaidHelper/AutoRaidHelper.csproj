@@ -48,11 +48,11 @@
 
   <ItemGroup>
     <PackageReference Remove="DalamudPackager" />
-    <PackageReference Include="AEAssist.NET" Version="1.2.6" ExcludeAssets="runtime" />
+    <PackageReference Include="AEAssist.NET" Version="*" ExcludeAssets="runtime" />
     <PackageReference Include="Costura.Fody" Version="6.0.0">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="GitInfo" Version="3.5.0">
+    <PackageReference Include="GitInfo" Version="*">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
