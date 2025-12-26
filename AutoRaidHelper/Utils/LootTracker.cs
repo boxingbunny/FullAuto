@@ -1,4 +1,5 @@
 using AEAssist.Helper;
+using Dalamud.Game.ClientState.Conditions;
 using ECommons.DalamudServices;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
@@ -11,8 +12,7 @@ namespace AutoRaidHelper.Utils
     /// </summary>
     public static class LootTracker
     {
-        private static readonly Dictionary<uint, LootRecord> LootRecords = new();
-        private static readonly HashSet<uint> ProcessedItems = new();
+        private static readonly List<LootRecord> LootRecords = new();
         private static bool _initialized;
 
         private class LootRecord
@@ -46,7 +46,6 @@ namespace AutoRaidHelper.Utils
                 Svc.Chat.ChatMessage -= OnChatMessage;
                 _initialized = false;
                 LootRecords.Clear();
-                ProcessedItems.Clear();
             }
             catch (Exception ex)
             {
@@ -58,29 +57,46 @@ namespace AutoRaidHelper.Utils
         {
             try
             {
-                // 检查 Payload 结构：PlayerPayload + "获得了" + ItemPayload
+                // 必须在副本内
+                if (!Svc.Condition[ConditionFlag.BoundByDuty])
+                    return;
+                
+                // 消息必须包含"获得了"
                 if (!message.TextValue.Contains("获得了"))
                     return;
                 
-                var playerPayload = message.Payloads.OfType<PlayerPayload>().FirstOrDefault();
-                var itemPayload = message.Payloads.OfType<ItemPayload>().FirstOrDefault();
+                // 必须有且只有一个 PlayerPayload 和一个 ItemPayload
+                var playerPayloads = message.Payloads.OfType<PlayerPayload>().ToList();
+                var itemPayloads = message.Payloads.OfType<ItemPayload>().ToList();
                 
-                if (playerPayload == null || itemPayload == null || itemPayload.ItemId == 0)
+                if (playerPayloads.Count != 1 || itemPayloads.Count != 1)
                     return;
                 
-                // 防止重复记录
-                if (!ProcessedItems.Add(itemPayload.ItemId))
+                var playerPayload = playerPayloads[0];
+                var itemPayload = itemPayloads[0];
+                
+                if (itemPayload.ItemId == 0)
                     return;
-
-                // 获取物品信息
+                
+                // PlayerPayload 必须在 ItemPayload 之前
+                var payloads = message.Payloads;
+                var pIndex = payloads.IndexOf(playerPayload);
+                var iIndex = payloads.IndexOf(itemPayload);
+                
+                if (pIndex < 0 || iIndex < 0 || pIndex >= iIndex)
+                    return;
+                
+                // 记录战利品
                 var itemName = GetItemName(itemPayload.ItemId);
                 
-                LootRecords[itemPayload.ItemId] = new LootRecord
+                var record = new LootRecord
                 {
                     ItemName = itemName,
                     WinnerName = playerPayload.PlayerName,
                     Time = DateTime.Now
                 };
+                
+                LootRecords.Add(record);
                 
                 LogHelper.Print($"[Roll点] {playerPayload.PlayerName} 获得 {itemName} (ID: {itemPayload.ItemId})");
             }
@@ -106,7 +122,7 @@ namespace AutoRaidHelper.Utils
 
         public static void PrintAllRecords()
         {
-            var records = LootRecords.Values.OrderBy(x => x.Time).ToList();
+            var records = LootRecords.OrderBy(x => x.Time).ToList();
             
             if (records.Count == 0)
             {
@@ -123,12 +139,6 @@ namespace AutoRaidHelper.Utils
             }
             
             LogHelper.Print("================================");
-        }
-
-        public static void Clear()
-        {
-            LootRecords.Clear();
-            ProcessedItems.Clear();
         }
     }
 }
