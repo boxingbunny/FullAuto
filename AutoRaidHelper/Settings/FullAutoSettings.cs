@@ -1,6 +1,7 @@
 using AEAssist.Helper;
 using AEAssist;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace AutoRaidHelper.Settings
 {
@@ -245,6 +246,21 @@ namespace AutoRaidHelper.Settings
         public int RunTimeLimit { get; set; } = 5;
         // 是否宝箱R点完成后再退本
         public bool AutoLeaveAfterLootEnabled { get; set; }
+        // 是否启用Roll点追踪
+        public bool LootTrackEnabled { get; set; } = true;
+
+        // 兼容旧配置字段 RollTrackingEnabled（仅用于读取，不会写回）
+        [JsonPropertyName("RollTrackingEnabled")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? RollTrackingEnabledLegacy
+        {
+            get => null;
+            set
+            {
+                if (value.HasValue)
+                    LootTrackEnabled = value.Value;
+            }
+        }
         // 自动排本开启状态及延迟（单位：秒）
         public bool AutoQueueEnabled { get; set; }
         public int AutoQueueDelay { get; set; } = 3;
@@ -334,6 +350,15 @@ namespace AutoRaidHelper.Settings
         public void UpdateAutoLeaveAfterLootEnabled(bool enabled)
         {
             AutoLeaveAfterLootEnabled = enabled;
+            FullAutoSettings.Instance.Save();
+        }
+
+        /// <summary>
+        /// 更新 Roll 点追踪开关，并保存配置
+        /// </summary>
+        public void UpdateLootTrackEnabled(bool enabled)
+        {
+            LootTrackEnabled = enabled;
             FullAutoSettings.Instance.Save();
         }
 

@@ -112,7 +112,10 @@ namespace AutoRaidHelper.UI
         {
             Svc.DutyState.DutyCompleted += OnDutyCompleted;
             Svc.DutyState.DutyWiped += OnDutyWiped;
-            LootTracker.Initialize();
+            if (Settings.LootTrackEnabled)
+            {
+                LootTracker.Initialize();
+            }
         }
 
         /// <summary>
@@ -245,11 +248,31 @@ namespace AutoRaidHelper.UI
                 Settings.UpdateAutoLeaveAfterLootEnabled(waitRCompleted);
             }
             
+            // Roll点追踪开关
+            bool lootTrackEnabled = Settings.LootTrackEnabled;
+            if (ImGui.Checkbox("开启Roll点追踪", ref lootTrackEnabled))
+            {
+                Settings.UpdateLootTrackEnabled(lootTrackEnabled);
+                if (lootTrackEnabled)
+                    LootTracker.Initialize();
+                else
+                    LootTracker.Dispose();
+            }
+
             ImGui.SameLine();
+            
             // Roll点统计按钮
+            if (!Settings.LootTrackEnabled)
+            {
+                ImGui.BeginDisabled();
+            }
             if (ImGui.Button("打印Roll点记录"))
             {
                 LootTracker.PrintAllRecords();
+            }
+            if (!Settings.LootTrackEnabled)
+            {
+                ImGui.EndDisabled();
             }
 
             //【遥控按钮】
