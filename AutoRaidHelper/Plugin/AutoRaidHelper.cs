@@ -6,6 +6,7 @@ using AutoRaidHelper.Triggers.TriggerCondition;
 using AutoRaidHelper.UI;
 using Dalamud.Bindings.ImGui;
 using System.Runtime.Loader;
+using AutoRaidHelper.Utils;
 
 namespace AutoRaidHelper.Plugin
 {
@@ -39,6 +40,7 @@ namespace AutoRaidHelper.Plugin
         {
             _automationTab.Dispose();
             _debugPrintTab.Dispose();
+            DebugPoint.Clear();
         }
 
         public void Update()
@@ -83,6 +85,8 @@ namespace AutoRaidHelper.Plugin
                 
                 ImGui.EndTabBar();
             }
+            
+            DebugPoint.Render();
         }
 
         #endregion

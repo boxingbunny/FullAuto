@@ -541,6 +541,7 @@ namespace AutoRaidHelper.Settings
             new("欧米茄绝境验证战", DutyCategory.Ultimate),
             new("光暗未来绝境战", DutyCategory.Ultimate),
             // 极神
+            new("高贝扎歼殛战", DutyCategory.Extreme),
             new("佐迪亚克暝暗歼灭战", DutyCategory.Extreme),
             new("艳翼蛇鸟歼殛战", DutyCategory.Extreme),
             new("佐拉加歼殛战", DutyCategory.Extreme),

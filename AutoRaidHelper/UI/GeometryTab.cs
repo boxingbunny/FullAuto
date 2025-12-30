@@ -608,7 +608,7 @@ namespace AutoRaidHelper.UI
         private void AddDebugPoint(Vector3 point)
         {
             LogHelper.Print($"添加Debug点: {point}");
-            Share.TrustDebugPoint.Add(point);
+            DebugPoint.Add(point);
         }
 
         /// <summary>
@@ -617,7 +617,7 @@ namespace AutoRaidHelper.UI
         private void ClearDebugPoints()
         {
             LogHelper.Print("清理Debug点");
-            Share.TrustDebugPoint.Clear();
+            DebugPoint.Clear();
         }
     }
 }
