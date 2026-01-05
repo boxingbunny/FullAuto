@@ -195,6 +195,7 @@ namespace AutoRaidHelper.UI
             if (ImGui.Button("记录当前地图ID"))
             {
                 Settings.UpdateAutoFuncZoneId(Core.Resolve<MemApiZoneInfo>().GetCurrTerrId());
+                
             }
             ImGuiHelper.SetHoverTooltip("设置本部分内容先记录地图。");
             ImGui.SameLine();
@@ -349,6 +350,7 @@ namespace AutoRaidHelper.UI
             // 角色选择（两行布局：文字 + 圆点，多选）
             if (ImGui.BeginTable("##RoleSelectTable_Auto", _roleOrder.Length + 1, ImGuiTableFlags.SizingFixedFit))
             {
+                var roleNameMap = BuildRoleNameMap();
                 float colWidth = 38f;
                 for (int i = 0; i < _roleOrder.Length; i++)
                 {
@@ -366,6 +368,8 @@ namespace AutoRaidHelper.UI
                     float centerX = cellX + colWidth * 0.5f;
                     ImGui.SetCursorPosX(centerX - textWidth * 0.5f);
                     ImGui.TextColored(GetRoleColor(text), text);
+                    if (ImGui.IsItemHovered() && roleNameMap.TryGetValue(text, out var name) && !string.IsNullOrEmpty(name))
+                        ImGui.SetTooltip(name);
                 }
                 ImGui.TableSetColumnIndex(_roleOrder.Length);
                 ImGui.Dummy(new Vector2(1f, ImGui.GetTextLineHeight()));
@@ -1478,6 +1482,21 @@ namespace AutoRaidHelper.UI
             drawList.AddCircle(center, radius, outline, 16, 1.0f);
 
             return clicked;
+        }
+
+        private static Dictionary<string, string> BuildRoleNameMap()
+        {
+            var map = new Dictionary<string, string>();
+            foreach (var member in PartyHelper.Party)
+            {
+                if (member == null)
+                    continue;
+                var role = RemoteControlHelper.GetRoleByPlayerName(member.Name.ToString());
+                if (string.IsNullOrEmpty(role))
+                    continue;
+                map[role] = member.Name.ToString();
+            }
+            return map;
         }
         
         // 判断是否在新月岛CE内

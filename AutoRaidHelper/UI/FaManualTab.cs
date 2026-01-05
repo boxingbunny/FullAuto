@@ -44,6 +44,7 @@ namespace AutoRaidHelper.UI
             // 两行：第一行文字，第二行圆点（对齐）
             if (ImGui.BeginTable("##RoleSelectTable", _roles.Length, ImGuiTableFlags.SizingFixedFit))
             {
+                var roleNameMap = BuildRoleNameMap();
                 float colWidth = 38f;
                 for (int i = 0; i < _roles.Length; i++)
                 {
@@ -60,6 +61,8 @@ namespace AutoRaidHelper.UI
                     float centerX = cellX + colWidth * 0.5f;
                     ImGui.SetCursorPosX(centerX - textWidth * 0.5f);
                     ImGui.TextColored(GetRoleColor(text), text);
+                    if (ImGui.IsItemHovered() && roleNameMap.TryGetValue(text, out var name) && !string.IsNullOrEmpty(name))
+                        ImGui.SetTooltip(name);
                 }
 
                 ImGui.TableNextRow();
@@ -211,6 +214,21 @@ namespace AutoRaidHelper.UI
                 if (string.IsNullOrEmpty(role))
                     continue;
                 map[role] = member;
+            }
+            return map;
+        }
+
+        private static Dictionary<string, string> BuildRoleNameMap()
+        {
+            var map = new Dictionary<string, string>();
+            foreach (var member in PartyHelper.Party)
+            {
+                if (member == null)
+                    continue;
+                var role = RemoteControlHelper.GetRoleByPlayerName(member.Name.ToString());
+                if (string.IsNullOrEmpty(role))
+                    continue;
+                map[role] = member.Name.ToString();
             }
             return map;
         }
