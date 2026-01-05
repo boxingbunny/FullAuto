@@ -15,6 +15,7 @@ namespace AutoRaidHelper.Plugin
         private readonly GeometryTab _geometryTab = new();
         private readonly AutomationTab _automationTab = new();
         private readonly FaGeneralSettingTab _faGeneralSettingTab = new();
+        private readonly FaManualTab _faManualTab = new();
         private readonly DebugPrintTab _debugPrintTab = new();
         private readonly BlackListTab _blackListTab = new();
         #region IAEPlugin Implementation
@@ -47,6 +48,7 @@ namespace AutoRaidHelper.Plugin
         {
             _geometryTab.Update();
             _automationTab.Update();
+            _faManualTab.Update();
             _blackListTab.Update();
         }
 
@@ -69,6 +71,12 @@ namespace AutoRaidHelper.Plugin
                 if (ImGui.BeginTabItem("FA全局设置"))
                 {
                     _faGeneralSettingTab.Draw();
+                    ImGui.EndTabItem();
+                }
+
+                if (ImGui.BeginTabItem("FA手动操作"))
+                {
+                    _faManualTab.Draw();
                     ImGui.EndTabItem();
                 }
 

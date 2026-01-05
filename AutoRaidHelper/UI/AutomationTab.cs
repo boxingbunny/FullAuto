@@ -45,9 +45,8 @@ namespace AutoRaidHelper.UI
         };
 
         private string _selectedRoles = "";
-        private bool _customRoleEnabled;
-        private string _customRoleInput = "";
         private string _customCmd = "";
+        private readonly string[] _roleOrder = { "MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4" };
 
         // 添加击杀目标选择相关的状态变量
         private string _selectedKillTarget = "请选择目标";
@@ -196,6 +195,7 @@ namespace AutoRaidHelper.UI
             if (ImGui.Button("记录当前地图ID"))
             {
                 Settings.UpdateAutoFuncZoneId(Core.Resolve<MemApiZoneInfo>().GetCurrTerrId());
+                
             }
             ImGuiHelper.SetHoverTooltip("设置本部分内容先记录地图。");
             ImGui.SameLine();
@@ -347,46 +347,56 @@ namespace AutoRaidHelper.UI
                 ExecuteSelectedKillAction();
             }
             
-            ImGui.Text("选择队员职能：");
-
-            foreach (var role in _roleSelection.Keys.ToList())
+            // 角色选择（两行布局：文字 + 圆点，多选）
+            if (ImGui.BeginTable("##RoleSelectTable_Auto", _roleOrder.Length + 1, ImGuiTableFlags.SizingFixedFit))
             {
-                ImGui.SameLine();
-
-                bool value = _roleSelection[role];
-                if (ImGui.Checkbox(role, ref value))
+                var roleNameMap = BuildRoleNameMap();
+                float colWidth = 38f;
+                for (int i = 0; i < _roleOrder.Length; i++)
                 {
-                    _roleSelection[role] = value;
-
-                    var selected = _roleSelection
-                        .Where(pair => pair.Value)
-                        .Select(pair => pair.Key);
-                    _selectedRoles = string.Join("|", selected);
+                    ImGui.TableSetupColumn($"##RoleColAuto{i}", ImGuiTableColumnFlags.WidthFixed, colWidth);
                 }
+                ImGui.TableSetupColumn("##RoleColAutoAll", ImGuiTableColumnFlags.WidthFixed, 52f);
+
+                ImGui.TableNextRow();
+                for (int i = 0; i < _roleOrder.Length; i++)
+                {
+                    ImGui.TableSetColumnIndex(i);
+                    var text = _roleOrder[i];
+                    float textWidth = ImGui.CalcTextSize(text).X;
+                    float cellX = ImGui.GetCursorPosX();
+                    float centerX = cellX + colWidth * 0.5f;
+                    ImGui.SetCursorPosX(centerX - textWidth * 0.5f);
+                    ImGui.TextColored(GetRoleColor(text), text);
+                    if (ImGui.IsItemHovered() && roleNameMap.TryGetValue(text, out var name) && !string.IsNullOrEmpty(name))
+                        ImGui.SetTooltip(name);
+                }
+                ImGui.TableSetColumnIndex(_roleOrder.Length);
+                ImGui.Dummy(new Vector2(1f, ImGui.GetTextLineHeight()));
+
+                ImGui.TableNextRow();
+                for (int i = 0; i < _roleOrder.Length; i++)
+                {
+                    ImGui.TableSetColumnIndex(i);
+                    float cellX = ImGui.GetCursorPosX();
+                    float centerX = cellX + colWidth * 0.5f;
+                    ImGui.SetCursorPosX(centerX - 32f * 0.5f);
+
+                    var role = _roleOrder[i];
+                    bool value = _roleSelection[role];
+                    if (DrawRoleDot(role, ref value))
+                        _roleSelection[role] = value;
+                }
+
+                ImGui.TableSetColumnIndex(_roleOrder.Length);
+                ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 6f);
+                if (ImGui.Button("全选"))
+                    ToggleAllRoles();
+
+                ImGui.EndTable();
             }
 
-            ImGui.SameLine();
-            ImGui.Checkbox("自定义", ref _customRoleEnabled);
-
-            if (_customRoleEnabled)
-            {
-                ImGui.SameLine();
-                ImGui.SetNextItemWidth(100f * scale); // 可选：设定宽度
-                ImGui.InputText("##_customRoleInput", ref _customRoleInput, 20);
-
-                // 更新字符串拼接逻辑
-                var selected = _roleSelection
-                    .Where(pair => pair.Value)
-                    .Select(pair => pair.Key)
-                    .ToList();
-
-                if (!string.IsNullOrWhiteSpace(_customRoleInput))
-                {
-                    selected.Add(_customRoleInput.Trim());
-                }
-
-                _selectedRoles = string.Join("|", selected);
-            }
+            UpdateSelectedRoles();
 
             ImGui.InputTextWithHint("##_customCmd", "请输入需要发送的指令", ref _customCmd, 256);
 
@@ -1419,6 +1429,74 @@ namespace AutoRaidHelper.UI
             {
                 LogHelper.PrintError($"执行击杀操作时发生异常: {ex}");
             }
+        }
+
+        private void ToggleAllRoles()
+        {
+            bool allSelected = _roleOrder.All(role => _roleSelection[role]);
+            foreach (var role in _roleOrder)
+                _roleSelection[role] = !allSelected;
+        }
+
+        private void UpdateSelectedRoles()
+        {
+            var selected = _roleSelection
+                .Where(pair => pair.Value)
+                .Select(pair => pair.Key);
+            _selectedRoles = string.Join("|", selected);
+        }
+
+        private static readonly Vector4 TankColor = new(0.35f, 0.65f, 1f, 1f);
+        private static readonly Vector4 HealerColor = new(0.35f, 0.85f, 0.45f, 1f);
+        private static readonly Vector4 DpsColor = new(0.95f, 0.3f, 0.3f, 1f);
+
+        private static Vector4 GetRoleColor(string role)
+        {
+            return role switch
+            {
+                "MT" or "ST" => TankColor,
+                "H1" or "H2" => HealerColor,
+                _ => DpsColor
+            };
+        }
+
+        private static bool DrawRoleDot(string role, ref bool value)
+        {
+            var drawList = ImGui.GetWindowDrawList();
+            var color = GetRoleColor(role);
+            var pos = ImGui.GetCursorScreenPos();
+            float hitSize = 32f;
+            float size = 18f;
+            float radius = size * 0.5f;
+            var center = new Vector2(pos.X + hitSize * 0.5f, pos.Y + hitSize * 0.5f);
+
+            ImGui.InvisibleButton($"##roleDotAuto_{role}", new Vector2(hitSize, hitSize));
+            bool clicked = ImGui.IsItemClicked();
+            if (clicked)
+                value = !value;
+
+            uint fill = ImGui.ColorConvertFloat4ToU32(value ? color : new Vector4(0.12f, 0.12f, 0.12f, 1f));
+            uint outline = ImGui.ColorConvertFloat4ToU32(new Vector4(0.25f, 0.25f, 0.25f, 1f));
+
+            drawList.AddCircleFilled(center, radius, fill);
+            drawList.AddCircle(center, radius, outline, 16, 1.0f);
+
+            return clicked;
+        }
+
+        private static Dictionary<string, string> BuildRoleNameMap()
+        {
+            var map = new Dictionary<string, string>();
+            foreach (var member in PartyHelper.Party)
+            {
+                if (member == null)
+                    continue;
+                var role = RemoteControlHelper.GetRoleByPlayerName(member.Name.ToString());
+                if (string.IsNullOrEmpty(role))
+                    continue;
+                map[role] = member.Name.ToString();
+            }
+            return map;
         }
         
         // 判断是否在新月岛CE内
