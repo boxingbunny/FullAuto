@@ -757,4 +757,21 @@ public static class Utilities
             LogHelper.Print(e.Message);
         } 
     }
+
+    /// <summary>
+    /// 黏桑Debounce
+    /// </summary>
+    public static bool Debounce(ref long lastTick, int delayMs = 1000)
+    {
+        var now = Environment.TickCount64; 
+        
+        if (now - lastTick < delayMs)
+        {
+            return false;
+        }
+        
+        lastTick = now;
+        return true;
+    }
+    
 }
