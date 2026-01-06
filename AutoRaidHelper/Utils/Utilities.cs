@@ -737,4 +737,24 @@ public static class Utilities
 
         return (homeWorldName, currentWorldName, homeWorldId, currentWorldId);
     }
+
+    /// <summary>
+    /// 延迟TP
+    /// </summary>
+    /// <param name="ms">时间</param>
+    /// <param name="role">职能</param>
+    /// <param name="pos">位置</param>
+    public static async void DelaySetPos(int ms, string role, Vector3 pos)
+    {
+        try
+        {
+            await Coroutine.Instance.WaitAsync(ms);
+            SetPosAndDebugPoint(role,pos);
+        }
+        catch (Exception e)
+        {
+            LogHelper.Error("寄辣");
+            LogHelper.Print(e.Message);
+        } 
+    }
 }
