@@ -18,6 +18,7 @@ namespace AutoRaidHelper.Plugin
         private readonly FaManualTab _faManualTab = new();
         private readonly DebugPrintTab _debugPrintTab = new();
         private readonly BlackListTab _blackListTab = new();
+        private readonly FoodBuffTab _foodBuffTab = new();
         #region IAEPlugin Implementation
 
         public PluginSetting BuildPlugin()
@@ -90,7 +91,13 @@ namespace AutoRaidHelper.Plugin
                     _blackListTab.Draw();
                     ImGui.EndTabItem();
                 }
-                
+
+                if (ImGui.BeginTabItem("食物警察"))
+                {
+                    _foodBuffTab.Draw();
+                    ImGui.EndTabItem();
+                }
+
                 ImGui.EndTabBar();
             }
             
