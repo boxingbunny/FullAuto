@@ -773,5 +773,328 @@ public static class Utilities
         lastTick = now;
         return true;
     }
-    
+
+    /// <summary>
+    /// 根据职能获取角色
+    /// </summary>
+    /// <param name="roleName">职能</param>
+    /// <returns>角色对</returns>
+    public static IBattleChara? GetCharacterByRole(string roleName)
+    {
+        var party = PartyHelper.Party;
+        var charaRole = party.Select(dude => RemoteControlHelper.GetRoleByPlayerName(dude.Name.ToString())).ToList();
+        return party.FirstOrDefault(dude => charaRole.Contains(RemoteControlHelper.GetRoleByPlayerName(dude.Name.ToString())));
+    }
+
+    /// <summary>
+    /// 沿闭合圆形路径移动角色（完整圆周）
+    /// </summary>
+    /// <param name="name">职能</param>
+    /// <param name="centerPoint">圆心位置</param>
+    /// <param name="radius">圆的半径</param>
+    /// <param name="startAngle">起始角度（度），默认0度（正北方向）</param>
+    /// <param name="clockwise">是否顺时针移动，默认true</param>
+    /// <param name="precision">圆形路径精度（生成的点数，默认36）</param>
+    /// <param name="arrivalThreshold">到达判定距离（默认0.5）</param>
+    /// <param name="maxWaitTime">每个点最大等待时间（毫秒），默认5000ms</param>
+    /// <param name="dev">调试信息或调用描述</param>
+    public static async void MoveAlongCircularPath(
+        string name,
+        Vector3 centerPoint,
+        float radius,
+        float startAngle = 0f,
+        bool clockwise = true,
+        float precision = 36f,
+        float arrivalThreshold = 0.5f,
+        int maxWaitTime = 5000,
+        string dev = "闭合圆形移动")
+    {
+        try
+        {
+            var roleSet = new HashSet<string> { "D1", "D2", "D3", "D4", "H1", "H2", "MT", "ST" };
+            var names = name.Contains('|')
+                ? name.Split('|')
+                : [name];
+
+            foreach (var n in names)
+            {
+                var roleName = !roleSet.Contains(n) ? RemoteControlHelper.GetRoleByPlayerName(n) : n;
+
+                // 生成完整圆形路径
+                var path = new List<Vector3>();
+                var angleStep = 360f / precision;
+                var direction = clockwise ? 1 : -1;
+
+                for (var i = 0; i <= precision; i++) // 包含起点和终点，形成闭合
+                {
+                    var currentAngle = startAngle + (angleStep * i * direction);
+                    var radian = currentAngle * MathF.PI / 180f;
+                    var x = MathF.Sin(radian) * radius;
+                    var z = -MathF.Cos(radian) * radius; // 负号使0度对应正北方向
+                    path.Add(new Vector3(centerPoint.X + x, centerPoint.Y, centerPoint.Z + z));
+                }
+
+                // 沿路径逐点移动
+                for (var i = 0; i < path.Count; i++)
+                {
+                    var point = path[i];
+                    RemoteControlHelper.MoveTo(roleName, point);
+
+                    if (FullAutoSettings.Instance.FaGeneralSetting.PrintDebugInfo)
+                    {
+                        DebugPoint.Add(point);
+                    }
+
+                    // 等待角色到达当前点（最后一个点不等待）
+                    if (i < path.Count - 1)
+                    {
+                        var startTime = Environment.TickCount64;
+                        while (true)
+                        {
+                            // 每次循环重新获取角色对象以获取最新位置
+                            var currentChar = GetCharacterByRole(roleName);
+                            
+                            if (currentChar == null )
+                            {
+                                LogHelper.Print("人没了");
+                                break;
+                            }
+                            if (Vector3.Distance(currentChar.Position, point) <= arrivalThreshold)
+                            {
+                                LogHelper.Print("到点了");
+                                break;
+                            }
+
+                            if (Environment.TickCount64 - startTime > maxWaitTime)
+                            {
+                                LogHelper.Print("超时了");
+                                break;
+                            }
+
+                            await Coroutine.Instance.WaitAsync(50); // 每50ms检查一次
+                        }
+                    }
+                }
+
+                if (FullAutoSettings.Instance.FaGeneralSetting.PrintDebugInfo)
+                {
+                    LogHelper.Print($"{dev}: {n} 沿闭合圆形路径移动，共 {path.Count} 个点，半径 {radius}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LogHelper.PrintError($"闭合圆形移动失败 ({dev}): {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 沿圆形路径移动角色
+    /// </summary>
+    /// <param name="name">职能</param>
+    /// <param name="centerPoint">圆心位置</param>
+    /// <param name="initialPoint">起始位置</param>
+    /// <param name="exitPoint">目标位置</param>
+    /// <param name="precision">圆形路径精度（生成的点数，默认36）</param>
+    /// <param name="exitPointTolerance">终点容差（默认1）</param>
+    /// <param name="clampRadius">半径限制（最小值，最大值）</param>
+    /// <param name="arrivalThreshold">到达判定距离（默认0.5）</param>
+    /// <param name="maxWaitTime">每个点最大等待时间（毫秒），默认5000ms</param>
+    /// <param name="dev">调试信息或调用描述</param>
+    public static async void MoveAlongCircularPath(
+        string name,
+        Vector3 centerPoint,
+        Vector3 initialPoint,
+        Vector3 exitPoint,
+        float precision = 36f,
+        int exitPointTolerance = 1,
+        (float Min, float Max)? clampRadius = null,
+        float arrivalThreshold = 0.5f,
+        int maxWaitTime = 5000,
+        string dev = "圆形移动")
+    {
+        try
+        {
+            // 计算圆形路径
+            var path = CalculateCircularMovement(
+                centerPoint,
+                initialPoint,
+                exitPoint,
+                precision,
+                exitPointTolerance,
+                clampRadius);
+
+            if (path.Count == 0)
+            {
+                LogHelper.PrintError($"{dev}: 无法计算圆形路径");
+                return;
+            }
+
+            var roleSet = new HashSet<string> { "D1", "D2", "D3", "D4", "H1", "H2", "MT", "ST" };
+            var names = name.Contains('|')
+                ? name.Split('|')
+                : [name];
+
+            foreach (var n in names)
+            {
+                var roleName = !roleSet.Contains(n) ? RemoteControlHelper.GetRoleByPlayerName(n) : n;
+
+                // 沿路径逐点移动
+                for (var i = 0; i < path.Count; i++)
+                {
+                    var point = path[i];
+                    RemoteControlHelper.MoveTo(roleName, point);
+
+                    if (FullAutoSettings.Instance.FaGeneralSetting.PrintDebugInfo)
+                    {
+                        DebugPoint.Add(point);
+                    }
+
+                    // 等待角色到达当前点（最后一个点不等待）
+                    if (i < path.Count - 1)
+                    {
+                        var startTime = Environment.TickCount64;
+                        while (true)
+                        {
+                            var currentChar = GetCharacterByRole(roleName);
+                            if (currentChar == null || Vector3.Distance(currentChar.Position, point) <= arrivalThreshold)
+                            {
+                                break; // 到达目标点或角色不存在
+                            }
+
+                            if (Environment.TickCount64 - startTime > maxWaitTime)
+                            {
+                                break; // 超时
+                            }
+
+                            await Coroutine.Instance.WaitAsync(50); // 每50ms检查一次
+                        }
+                    }
+                }
+
+                if (FullAutoSettings.Instance.FaGeneralSetting.PrintDebugInfo)
+                {
+                    LogHelper.Print($"{dev}: {n} 沿圆形路径移动，共 {path.Count} 个点");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LogHelper.PrintError($"圆形移动失败 ({dev}): {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 计算圆形移动路径
+    /// </summary>
+    /// <param name="centerPoint">圆心位置</param>
+    /// <param name="initialPoint">起始位置</param>
+    /// <param name="exitPoint">目标位置</param>
+    /// <param name="precision">圆形路径精度（生成的点数，默认36）</param>
+    /// <param name="exitPointTolerance">终点容差（默认1）</param>
+    /// <param name="clampRadius">可选的半径限制（最小值，最大值）</param>
+    /// <returns>计算出的圆形路径点列表</returns>
+    public static List<Vector3> CalculateCircularMovement(
+        Vector3 centerPoint,
+        Vector3 initialPoint,
+        Vector3 exitPoint,
+        float precision = 36f,
+        int exitPointTolerance = 1,
+        (float Min, float Max)? clampRadius = null)
+    {
+        // 计算半径（从中心点到起始点的距离）
+        var radius = Vector3.Distance(centerPoint, initialPoint);
+
+        // 生成圆形路径上的点
+        var points = new List<Vector3>();
+        for (var i = 0; i < precision; i++)
+        {
+            var angle = (i / precision) * 2f * MathF.PI;
+            var x = MathF.Sin(angle) * radius;
+            var z = MathF.Cos(angle) * radius;
+            points.Add(new Vector3(centerPoint.X + x, centerPoint.Y, centerPoint.Z + z));
+        }
+
+        // 找到离起始点最近的两个点
+        var closestToInitial = points
+            .OrderBy(p => Vector3.Distance(initialPoint, p))
+            .Take(2)
+            .ToList();
+
+        // 找到离终点最近的点
+        var closestToExit = points
+            .OrderBy(p => Vector3.Distance(exitPoint, p))
+            .Take(exitPointTolerance)
+            .ToList();
+
+        // 构建候选路径
+        var candidates = new List<List<Vector3>>();
+
+        foreach (var startPoint in closestToInitial)
+        {
+            foreach (var endPoint in closestToExit)
+            {
+                var startIndex = points.IndexOf(startPoint);
+                var endIndex = points.IndexOf(endPoint);
+
+                // 顺时针路径
+                var pathCW = new List<Vector3>();
+                var currentIndex = startIndex;
+                while (currentIndex != endIndex)
+                {
+                    pathCW.Add(points[currentIndex]);
+                    currentIndex = (currentIndex + 1) % points.Count;
+                }
+                pathCW.Add(points[endIndex]);
+                candidates.Add(pathCW);
+
+                // 逆时针路径
+                var pathCCW = new List<Vector3>();
+                currentIndex = startIndex;
+                while (currentIndex != endIndex)
+                {
+                    pathCCW.Add(points[currentIndex]);
+                    currentIndex = (currentIndex - 1 + points.Count) % points.Count;
+                }
+                pathCCW.Add(points[endIndex]);
+                candidates.Add(pathCCW);
+            }
+        }
+
+        // 选择最短路径
+        var bestPath = candidates
+            .OrderBy(CalculatePathDistance)
+            .FirstOrDefault() ?? [];
+
+        // 应用半径限制（如果指定）
+        if (clampRadius.HasValue)
+        {
+            for (var i = 0; i < bestPath.Count; i++)
+            {
+                var distance = Vector3.Distance(centerPoint, bestPath[i]);
+                if (distance < clampRadius.Value.Min || distance > clampRadius.Value.Max)
+                {
+                    var direction = Vector3.Normalize(bestPath[i] - centerPoint);
+                    var clampedDistance = Math.Clamp(distance, clampRadius.Value.Min, clampRadius.Value.Max);
+                    bestPath[i] = centerPoint + direction * clampedDistance;
+                }
+            }
+        }
+
+        return bestPath;
+    }
+
+    /// <summary>
+    /// 计算路径的总距离
+    /// </summary>
+    private static float CalculatePathDistance(List<Vector3> path)
+    {
+        var totalDistance = 0f;
+        for (var i = 0; i < path.Count - 1; i++)
+        {
+            totalDistance += Vector3.Distance(path[i], path[i + 1]);
+        }
+        return totalDistance;
+    }
+
 }

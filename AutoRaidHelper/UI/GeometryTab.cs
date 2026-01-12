@@ -185,6 +185,18 @@ namespace AutoRaidHelper.UI
             {
                 RemoteControlHelper.MoveTo(_moveTargetValues[_selectedMoveTargetIndex], Point1World ?? default);
             }
+            ImGui.SameLine();
+            if (ImGui.Button("停止移动"))
+            {
+                RemoteControlHelper.MoveStop("");
+            }
+            ImGui.SameLine();
+            if (ImGui.Button("圆形测试"))
+            {
+                Utilities.MoveAlongCircularPath("MT", Point1World ?? default, 3, 0, true, 3, 0.1f);
+            }
+            ImGui.Text(Utilities.GetCharacterByRole("MT")?.Name.ToString());
+            
 
             // 当记录了点1和点2后，计算并显示两点间的XZ平面距离，同时允许选择夹角顶点模式进行角度计算
             if (Point1World.HasValue && Point2World.HasValue)
