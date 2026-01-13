@@ -19,13 +19,8 @@ public class FoodBuffTab
 
         try
         {
-            // 获取队伍成员列表
-            var battleCharaMembers = Svc.Party
-                .Select(p => p.GameObject as IBattleChara)
-                .Where(bc => bc != null);
-
             // 获取包含状态信息的队伍成员
-            var partyInfo = battleCharaMembers.ToPartyMemberInfo().ToList();
+            var partyInfo = PartyHelper.Party.ToPartyMemberInfo().ToList();
 
             if (!partyInfo.Any())
             {
