@@ -1,10 +1,13 @@
 using AEAssist;
+using AEAssist.Extension;
 using AEAssist.Helper;
 using AutoRaidHelper.Utils;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Interface;
+using Dalamud.Interface.Utility.Raii;
+using ECommons.DalamudServices;
 using System.Numerics;
-using AEAssist.Extension;
 
 namespace AutoRaidHelper.UI
 {
@@ -15,6 +18,7 @@ namespace AutoRaidHelper.UI
         private bool _lbTriggered;
         private DateTime _lastCmdTime = DateTime.MinValue;
         private string? _pendingLbRole;
+        private string _transferLeaderTarget = "";
 
         public void Update()
         {
@@ -61,7 +65,7 @@ namespace AutoRaidHelper.UI
                     float centerX = cellX + colWidth * 0.5f;
                     ImGui.SetCursorPosX(centerX - textWidth * 0.5f);
                     ImGui.TextColored(GetRoleColor(text), text);
-                    if (ImGui.IsItemHovered() && roleNameMap.TryGetValue(text, out var name) && !string.IsNullOrEmpty(name))
+                    if (ImGui.IsItemHovered() && roleNameMap.TryGetValue(text, out var name) && name is not null)
                         ImGui.SetTooltip(name);
                 }
 
@@ -179,6 +183,11 @@ namespace AutoRaidHelper.UI
                     RemoteControlHelper.Cmd(selected, "/pdr invulnerable");
             }
 
+            SectionSpacing();
+
+            DrawSectionTitle(FontAwesomeIcon.Crown, "队长转移");
+            DrawPartyLeaderTransferSection();
+
             ImGui.PopStyleVar();
         }
 
@@ -205,9 +214,9 @@ namespace AutoRaidHelper.UI
             }
         }
 
-        private static Dictionary<string, Dalamud.Game.ClientState.Objects.Types.IBattleChara> BuildRoleMap()
+        private static Dictionary<string, IBattleChara> BuildRoleMap()
         {
-            var map = new Dictionary<string, Dalamud.Game.ClientState.Objects.Types.IBattleChara>();
+            var map = new Dictionary<string, IBattleChara>();
             foreach (var member in PartyHelper.Party)
             {
                 var role = RemoteControlHelper.GetRoleByPlayerName(member.Name.ToString());
@@ -223,7 +232,7 @@ namespace AutoRaidHelper.UI
             var map = new Dictionary<string, string>();
             foreach (var member in PartyHelper.Party)
             {
-                if (member == null)
+                if (member is null)
                     continue;
                 var role = RemoteControlHelper.GetRoleByPlayerName(member.Name.ToString());
                 if (string.IsNullOrEmpty(role))
@@ -244,7 +253,7 @@ namespace AutoRaidHelper.UI
             return string.Join("|", selected);
         }
 
-        private static bool IsAlive(Dalamud.Game.ClientState.Objects.Types.IBattleChara member)
+        private static bool IsAlive(IBattleChara member)
         {
             return member.CurrentHp > 0;
         }
@@ -356,6 +365,78 @@ namespace AutoRaidHelper.UI
 
             drawList.AddCircleFilled(center, radius, fill);
             drawList.AddCircle(center, radius, outline, 16, 1.0f);
+        }
+
+        private void DrawPartyLeaderTransferSection()
+        {
+            const float comboWidth = 150f;
+
+            // 显示当前队长状态
+            var currentLeader = PartyLeaderHelper.GetPartyLeaderName();
+            var isLeader = PartyLeaderHelper.IsLocalPlayerPartyLeader();
+
+            if (!string.IsNullOrEmpty(currentLeader))
+            {
+                ImGui.SameLine(0, 6f);
+                var leaderColor = isLeader ? HealerColor : DpsColor;
+                ImGui.TextColored(leaderColor, $"当前队长: {currentLeader}");
+            }
+
+            ImGui.Spacing();
+
+            // 获取所有在线成员（除了队长）
+            var partyStatus = PartyLeaderHelper.GetCrossRealmPartyStatus();
+            var validTargets = partyStatus
+                .Where(m => m.IsOnline)
+                .Where(m => !string.Equals(m.Name, currentLeader, StringComparison.OrdinalIgnoreCase))
+                .Select(m => m.Name)
+                .ToList();
+
+            // 检查是否有可转移目标
+            if (validTargets.Count == 0)
+            {
+                ImGui.TextColored(WarningColor, "没有可转移的目标");
+                return;
+            }
+
+            // 目标选择下拉框
+            ImGui.SetNextItemWidth(comboWidth);
+            if (ImGui.BeginCombo("##TransferLeader", string.IsNullOrEmpty(_transferLeaderTarget) ? "选择玩家..." : _transferLeaderTarget))
+            {
+                foreach (var target in validTargets)
+                {
+                    bool isSelected = _transferLeaderTarget == target;
+                    if (ImGui.Selectable(target, isSelected))
+                    {
+                        _transferLeaderTarget = target;
+                    }
+                    if (isSelected)
+                    {
+                        ImGui.SetItemDefaultFocus();
+                    }
+                }
+                ImGui.EndCombo();
+            }
+
+            ImGui.SameLine();
+
+            // 转移队长按钮
+            if (ImGui.Button("转移队长"))
+            {
+                ExecuteTransfer();
+            }
+        }
+
+        private void ExecuteTransfer()
+        {
+            if (string.IsNullOrEmpty(_transferLeaderTarget))
+            {
+                LogHelper.Print("请先选择目标玩家");
+                return;
+            }
+
+            PartyLeaderHelper.TransferPartyLeader(_transferLeaderTarget);
+            _transferLeaderTarget = "";
         }
 
     }

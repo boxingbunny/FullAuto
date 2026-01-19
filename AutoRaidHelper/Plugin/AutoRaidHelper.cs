@@ -1,10 +1,11 @@
-﻿using AEAssist.AEPlugin;
+using AEAssist.AEPlugin;
 using AEAssist.CombatRoutine.Trigger;
 using AEAssist.Verify;
 using AutoRaidHelper.Triggers.TriggerAction;
 using AutoRaidHelper.Triggers.TriggerCondition;
 using AutoRaidHelper.UI;
 using Dalamud.Bindings.ImGui;
+using ECommons.DalamudServices;
 using System.Runtime.Loader;
 using AutoRaidHelper.Utils;
 
@@ -12,6 +13,7 @@ namespace AutoRaidHelper.Plugin
 {
     public class AutoRaidHelper : IAEPlugin
     {
+        private const string CommandName = "/arh";
         private readonly GeometryTab _geometryTab = new();
         private readonly AutomationTab _automationTab = new();
         private readonly FaGeneralSettingTab _faGeneralSettingTab = new();
@@ -19,6 +21,7 @@ namespace AutoRaidHelper.Plugin
         private readonly DebugPrintTab _debugPrintTab = new();
         private readonly BlackListTab _blackListTab = new();
         private readonly FoodBuffTab _foodBuffTab = new();
+
         #region IAEPlugin Implementation
 
         public PluginSetting BuildPlugin()
@@ -36,10 +39,20 @@ namespace AutoRaidHelper.Plugin
         {
             _automationTab.OnLoad(loadContext);
             _debugPrintTab.OnLoad(loadContext);
+
+            // 注册命令
+            Svc.Commands.AddHandler(CommandName, new Dalamud.Game.Command.CommandInfo(OnCommand)
+            {
+                HelpMessage = "全自动小助手命令\n"
+                           + "/arh transferleader <玩家名> - 转移队长给指定玩家"
+            });
         }
 
         public void Dispose()
         {
+            // 注销命令
+            Svc.Commands.RemoveHandler(CommandName);
+
             _automationTab.Dispose();
             _debugPrintTab.Dispose();
             DebugPoint.Clear();
@@ -100,12 +113,38 @@ namespace AutoRaidHelper.Plugin
 
                 ImGui.EndTabBar();
             }
-            
+
             DebugPoint.Render();
         }
 
+        private static void OnCommand(string command, string args)
+        {
+            var parts = args.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (parts.Length == 0)
+                return;
+
+            var subCommand = parts[0].ToLower();
+
+            switch (subCommand)
+            {
+                case "transferleader":
+                    if (parts.Length < 2)
+                    {
+                        Svc.Chat.Print($"[ARH] 用法: {CommandName} transferleader <玩家名>");
+                        return;
+                    }
+                    var targetPlayer = parts[1];
+                    PartyLeaderHelper.TransferPartyLeader(targetPlayer);
+                    break;
+
+                default:
+                    Svc.Chat.Print($"[ARH] 未知子命令: {subCommand}");
+                    Svc.Chat.Print($"可用命令:");
+                    Svc.Chat.Print($"  {CommandName} transferleader <玩家名> - 转移队长");
+                    break;
+            }
+        }
+
         #endregion
-
-
     }
 }

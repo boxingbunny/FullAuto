@@ -616,7 +616,7 @@ namespace AutoRaidHelper.UI
             // 为队长发送排本命令按钮，通过获取队长名称后发送命令
             if (ImGui.Button("为队长发送排本命令"))
             {
-                var leaderName = GetPartyLeaderName();
+                var leaderName = PartyLeaderHelper.GetPartyLeaderName();
                 if (!string.IsNullOrEmpty(leaderName))
                 {
                     var leaderRole = RemoteControlHelper.GetRoleByPlayerName(leaderName);
@@ -743,7 +743,7 @@ namespace AutoRaidHelper.UI
                 if (isCrossRealmParty)
                 {
                     ImGui.Text("跨服小队成员及状态:");
-                    var partyStatus = GetCrossRealmPartyStatus();
+                    var partyStatus = PartyLeaderHelper.GetCrossRealmPartyStatus();
                     for (int i = 0; i < partyStatus.Count; i++)
                     {
                         var status = partyStatus[i];
@@ -1000,7 +1000,7 @@ namespace AutoRaidHelper.UI
                     return;
 
                 // 检查跨服队伍中是否所有成员均在线且未在副本中，否则退出
-                var partyStatus = GetCrossRealmPartyStatus();
+                var partyStatus = PartyLeaderHelper.GetCrossRealmPartyStatus();
                 var invalidNames = partyStatus.Where(s => !s.IsOnline || s.IsInDuty)
                     .Select(s => s.Name)
                     .ToList();
@@ -1013,7 +1013,7 @@ namespace AutoRaidHelper.UI
 
                 await Task.Delay(Settings.AutoQueueDelay * 1000);
 
-                var leaderName = GetPartyLeaderName();
+                var leaderName = PartyLeaderHelper.GetPartyLeaderName();
                 if (!string.IsNullOrEmpty(leaderName))
                 {
                     var leaderRole = RemoteControlHelper.GetRoleByPlayerName(leaderName);
@@ -1112,7 +1112,7 @@ namespace AutoRaidHelper.UI
                     return;
 
                 // 检查跨服队伍中是否所有成员均在线且未在副本中，否则退出
-                var partyStatus = GetCrossRealmPartyStatus();
+                var partyStatus = PartyLeaderHelper.GetCrossRealmPartyStatus();
                 var invalidNames = partyStatus.Where(s => !s.IsOnline || s.IsInDuty)
                     .Select(s => s.Name)
                     .ToList();
@@ -1144,7 +1144,7 @@ namespace AutoRaidHelper.UI
                     }
                 }
                 
-                var leaderName = GetPartyLeaderName();
+                var leaderName = PartyLeaderHelper.GetPartyLeaderName();
                 if (!string.IsNullOrEmpty(leaderName))
                 {
 
@@ -1320,63 +1320,6 @@ namespace AutoRaidHelper.UI
             {
                 LogHelper.Print(e.Message);
             }
-        }
-
-        /// <summary>
-        /// 获取跨服小队中每个成员的状态信息，
-        /// 返回每个成员的姓名、是否在线以及是否处于副本中的状态。
-        /// </summary>
-        /// <returns>包含队员状态的列表</returns>
-        private static unsafe List<(string Name, bool IsOnline, bool IsInDuty)> GetCrossRealmPartyStatus()
-        {
-            var result = new List<(string, bool, bool)>();
-            var crossRealmProxy = InfoProxyCrossRealm.Instance();
-            if (crossRealmProxy == null)
-                return result;
-            var infoModulePtr = InfoModule.Instance();
-            if (infoModulePtr == null)
-                return result;
-            var commonListPtr = (InfoProxyCommonList*)infoModulePtr->GetInfoProxyById(InfoProxyId.PartyMember);
-            if (commonListPtr == null)
-                return result;
-            var groups = crossRealmProxy->CrossRealmGroups;
-            foreach (var group in groups)
-            {
-                int count = group.GroupMemberCount;
-                if (commonListPtr->CharDataSpan.Length < count)
-                    continue;
-                for (int i = 0; i < count; i++)
-                {
-                    var member = group.GroupMembers[i];
-                    var data = commonListPtr->CharDataSpan[i];
-                    bool isOnline = data.State.HasFlag(Online);
-                    bool isInDuty = data.State.HasFlag(InDuty);
-                    result.Add((member.NameString, isOnline, isInDuty));
-                }
-            }
-
-            return result;
-        }
-
-        /// <summary>
-        /// 遍历队伍成员信息，获取队长的名称。队长由 PartyLeader 或 PartyLeaderCrossWorld 标记确定。
-        /// </summary>
-        /// <returns>队长名称或 null（若未找到）</returns>
-        private static unsafe string? GetPartyLeaderName()
-        {
-            var infoModulePtr = InfoModule.Instance();
-            if (infoModulePtr == null)
-                return null;
-            var commonListPtr = (InfoProxyCommonList*)infoModulePtr->GetInfoProxyById(InfoProxyId.PartyMember);
-            if (commonListPtr == null)
-                return null;
-            foreach (var data in commonListPtr->CharDataSpan)
-            {
-                if (data.State.HasFlag(PartyLeader) || data.State.HasFlag(PartyLeaderCrossWorld))
-                    return data.NameString;
-            }
-
-            return null;
         }
 
         /// <summary>
