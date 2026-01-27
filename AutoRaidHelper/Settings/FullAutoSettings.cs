@@ -1,7 +1,10 @@
 using AEAssist.Helper;
 using AEAssist;
+using ECommons.DalamudServices;
+using Lumina.Excel.Sheets;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ECommons.GameHelpers;
 
 namespace AutoRaidHelper.Settings
 {
@@ -481,6 +484,7 @@ namespace AutoRaidHelper.Settings
             Extreme,    // 极神
             Savage,     // 零式
             Variant,    // 异闻
+            Criterion,  // 零式异闻
             Custom      // 自定义
         }
         
@@ -530,32 +534,80 @@ namespace AutoRaidHelper.Settings
         };
         
         public record DutyInfo(string Name, DutyCategory Category);
-        // 副本预设
-        public static readonly List<DutyInfo> DutyPresets =
-        [
-            // 绝本
-            new("巴哈姆特绝境战", DutyCategory.Ultimate),
-            new("究极神兵绝境战", DutyCategory.Ultimate),
-            new("亚历山大绝境战", DutyCategory.Ultimate),
-            new("幻想龙诗绝境战", DutyCategory.Ultimate),
-            new("欧米茄绝境验证战", DutyCategory.Ultimate),
-            new("光暗未来绝境战", DutyCategory.Ultimate),
-            // 极神
-            new("高贝扎歼殛战", DutyCategory.Extreme),
-            new("佐迪亚克暝暗歼灭战", DutyCategory.Extreme),
-            new("艳翼蛇鸟歼殛战", DutyCategory.Extreme),
-            new("佐拉加歼殛战", DutyCategory.Extreme),
-            new("永恒女王忆想歼灭战", DutyCategory.Extreme),
-            new("泽莲尼娅歼殛战", DutyCategory.Extreme),
-            new("永远之暗悲惶歼灭战", DutyCategory.Extreme),
-            new("护锁刃龙上位狩猎战", DutyCategory.Extreme),
-            new("格莱杨拉波尔歼殛战", DutyCategory.Extreme),
-            // 异闻
-            new("异闻阿罗阿罗岛", DutyCategory.Variant),
-            new("零式异闻阿罗阿罗岛", DutyCategory.Variant),
-            // 自定义
-            new("自定义", DutyCategory.Custom)
-        ];
+        // 副本预设（从表自动生成，避免手动维护）
+        private static List<DutyInfo>? _dutyPresets;
+        public static List<DutyInfo> DutyPresets => _dutyPresets ??= BuildDutyPresets();
+
+        private static List<DutyInfo> BuildDutyPresets()
+        {
+            var list = new List<DutyInfo>();
+            try
+            {
+                var sheet = Svc.Data.GetExcelSheet<ContentFinderCondition>();
+
+                var added = new HashSet<uint>();
+                foreach (var row in sheet)
+                {
+                    if (row.RowId == 0)
+                        continue;
+
+                    var category = GetDutyCategory(row);
+                    if (category is null)
+                        continue;
+
+                    var name = row.Name.ToString();
+                    if (string.IsNullOrWhiteSpace(name))
+                        continue;
+
+                    if (added.Add(row.RowId))
+                        list.Add(new DutyInfo(name, category.Value));
+                }
+
+                list.Sort(static (a, b) =>
+                {
+                    var cat = a.Category.CompareTo(b.Category);
+                    return cat != 0 ? cat : string.Compare(a.Name, b.Name, StringComparison.Ordinal);
+                });
+
+                list.Add(new DutyInfo("自定义", DutyCategory.Custom));
+                return list;
+            }
+            catch (Exception ex)
+            {
+                LogHelper.PrintError($"{ex.Message}");
+                list.Clear();
+                list.Add(new DutyInfo("自定义", DutyCategory.Custom));
+                return list;
+            }
+        }
+
+        private static DutyCategory? GetDutyCategory(ContentFinderCondition row)
+        {
+            var contentTypeId = row.ContentType.RowId;
+            var highEndDuty = row.HighEndDuty;
+
+            if (contentTypeId == 28)
+            {
+                return DutyCategory.Ultimate;
+            }
+
+            if (contentTypeId == 30)
+            {
+                return highEndDuty ? DutyCategory.Criterion : DutyCategory.Variant;
+            }
+
+            if (contentTypeId == 4 && highEndDuty && !row.Name.ToString().Contains("幻巧"))
+            {
+                return DutyCategory.Extreme;
+            }
+
+            if (contentTypeId == 5 && highEndDuty)
+            {
+                return DutyCategory.Savage;
+            }
+
+            return null;
+        }
     }
 
     /// <summary>

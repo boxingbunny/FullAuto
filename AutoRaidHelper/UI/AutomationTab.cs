@@ -17,7 +17,7 @@ using AEAssist.GUI;
 using Dalamud.Game.Text;
 using FFXIVClientStructs.FFXIV.Client.Game.InstanceContent;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
-using static FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCommonList.CharacterData.OnlineStatus;
+using Lumina.Excel.Sheets;
 using DutyCategory = AutoRaidHelper.Settings.AutomationSettings.DutyCategory;
 using KillTargetType = AutoRaidHelper.Settings.AutomationSettings.KillTargetType;
 using PartyRole = AutoRaidHelper.Settings.AutomationSettings.PartyRole;
@@ -589,6 +589,7 @@ namespace AutoRaidHelper.UI
                         DutyCategory.Extreme => "极神",
                         DutyCategory.Savage => "零式",
                         DutyCategory.Variant => "异闻",
+                        DutyCategory.Criterion => "零式异闻",
                         DutyCategory.Custom => "自定义",
                         _ => "其它"
                     };
@@ -706,20 +707,6 @@ namespace AutoRaidHelper.UI
                             $"敌对单位: {enemy.Name} (EntityId: {enemy.EntityId}, BaseId: {enemy.BaseId}, ObjId: {enemy.GameObjectId}), 位置: {enemy.Position}");
                     }
                 }
-                
-                /*
-                if (ImGui.Button("写功能测试用按钮"))
-                {
-                    try
-                    {
-
-                    }
-                    catch (Exception e)
-                    {
-                        LogHelper.PrintError(e.Message);
-                    }
-                }
-                */
                 
                 // 显示自动倒计时、战斗状态、副本状态和跨服小队状态等辅助调试信息
                 var autoCountdownStatus = Settings.AutoCountdownEnabled ? _isCountdownCompleted ? "已触发" : "待触发" : "未启用";
@@ -862,11 +849,11 @@ namespace AutoRaidHelper.UI
 
                 if (Core.Resolve<MemApiDuty>().IsBoundByDuty() && _dutyCompleted)
                 {
-                    // 获取当前副本信息
-                    var info = AutomationSettings.DutyPresets.FirstOrDefault(d => d.Name == Settings.SelectedDutyName || d.Name == Settings.CustomDutyName);
-                    // 判断是否极神
-                    bool hasChest = info is { Category: DutyCategory.Extreme };
-                    
+                    bool hasChest = false;
+                    // 判断是否有箱子
+                    if (TryGetCurrentContentFinderCondition(out var content))
+                        hasChest = content is { LootModeType.RowId: 1, ContentType.RowId: 4 or 5 };
+
                     if (Settings.AutoLeaveAfterLootEnabled && hasChest)
                     {
                         unsafe
@@ -1441,12 +1428,12 @@ namespace AutoRaidHelper.UI
             }
             return map;
         }
-        
+
         // 判断是否在新月岛CE内
         private static unsafe bool IsInsideCriticalEncounter(Vector3 pos, bool includeRegister = false, float radius = 20f)
         {
             var instance = PublicContentOccultCrescent.GetInstance();
-            if (instance == null) 
+            if (instance == null)
                 return false;
             foreach (ref readonly var events in instance->DynamicEventContainer.Events)
             {
@@ -1459,6 +1446,25 @@ namespace AutoRaidHelper.UI
                 if (dx * dx + dz * dz <= radius * radius)
                     return true;
             }
+            return false;
+        }
+        
+        private static bool TryGetCurrentContentFinderCondition(out ContentFinderCondition content)
+        {
+            content = default;
+            var sheet = Svc.Data.GetExcelSheet<ContentFinderCondition>();
+
+            // 用当前副本名匹配
+            var dutyName = Core.Resolve<MemApiDuty>().DutyName();
+            if (string.IsNullOrWhiteSpace(dutyName)) 
+                return false;
+            
+            foreach (var row in sheet.Where(row => row.Name.ToString() == dutyName))
+            {
+                content = row;
+                return true;
+            }
+
             return false;
         }
     }

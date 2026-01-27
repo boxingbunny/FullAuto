@@ -4,7 +4,10 @@ using AutoRaidHelper.Utils;
 using AutoRaidHelper.Settings;
 using AEAssist;
 using AEAssist.Helper;
+using Dalamud.Game.ClientState.Objects.Types;
+using Dalamud.Game.ClientState.Objects.Enums;
 using ECommons.DalamudServices;
+using ECommons.GameFunctions;
 
 namespace AutoRaidHelper.UI
 {
@@ -59,6 +62,9 @@ namespace AutoRaidHelper.UI
         private readonly string[] _moveTargetLabels = ["全体", "MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4"];
         private readonly string[] _moveTargetValues = ["", "MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4"];
         private int _selectedMoveTargetIndex = 0;
+        
+        // 目标下拉框选中的索引（-1表示未选中）
+        private int _selectedTargetIndex = -1;
 
         // 固定数据：场地中心标签与对应的实际坐标值
         private readonly string[] _centerLabels = ["旧(0,0,0)", "新(100,0,100)"];
@@ -166,6 +172,10 @@ namespace AutoRaidHelper.UI
             ImGui.Text($"点1: {FormatPoint(Point1World)}");
             ImGui.Text($"点2: {FormatPoint(Point2World)}");
             ImGui.Text($"点3: {FormatPoint(Point3World)}");
+            
+            ImGui.Spacing();
+            // 目标选择功能：将当前目标坐标设为点1或点2
+            DrawTargetSelectionSection();
 
             // 移动到点1：下拉框 + 按钮
             ImGui.SetNextItemWidth(100f * scale);
@@ -591,6 +601,113 @@ namespace AutoRaidHelper.UI
             {
                 TwoPointDistanceXZ = GeometryUtilsXZ.DistanceXZ(Point1World.Value, Point2World.Value);
             }
+        }
+
+        /// <summary>
+        /// 绘制目标选择区域：下拉框显示所有当前可见目标，提供按钮将下拉框选中的目标设为点1/点2/点3。
+        /// </summary>
+        private void DrawTargetSelectionSection()
+        {
+            ImGui.Separator();
+            ImGui.TextColored(new Vector4(0.8f, 0.9f, 1f, 1f), "目标选择：");
+
+            // 获取所有当前可见的游戏对象
+            var visibleObjects = Svc.Objects
+                .Where(obj => obj is ICharacter chr && chr.IsCharacterVisible())
+                .OrderBy(obj => obj.Name.ToString())
+                .ToList();
+
+            // 当前下拉框选中的目标
+            IGameObject? selectedObj = _selectedTargetIndex >= 0 && _selectedTargetIndex < visibleObjects.Count
+                ? visibleObjects[_selectedTargetIndex]
+                : null;
+
+            // 生成当前显示的标签
+            string currentLabel = selectedObj != null
+                ? selectedObj.Name.ToString()
+                : "-- 选择目标 --";
+
+            // 绘制下拉框
+            ImGui.SetNextItemWidth(180f * scale);
+            if (ImGui.BeginCombo("##TargetSelection", currentLabel))
+            {
+                for (int i = 0; i < visibleObjects.Count; i++)
+                {
+                    var obj = visibleObjects[i];
+                    bool isTargetable = obj.IsTargetable;
+                    bool isSelected = (_selectedTargetIndex == i);
+
+                    string label = obj.Name.ToString();
+                    ImGui.Selectable(label, isSelected);
+                    if (ImGui.IsItemClicked())
+                    {
+                        _selectedTargetIndex = i;
+                    }
+
+                    // 在同一行右侧显示状态标签
+                    ImGui.SameLine(0, 0);
+                    if (isTargetable)
+                        ImGui.TextColored(new Vector4(0.2f, 1f, 0.2f, 1f), "[可选中]");
+                    else
+                        ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), "[不可选中]");
+                }
+                ImGui.EndCombo();
+            }
+
+            ImGui.SameLine();
+
+            // 显示下拉框选中目标的信息
+            if (selectedObj != null)
+            {
+                Vector3 targetPos = selectedObj.Position;
+                ImGui.Text($"坐标: <{targetPos.X:F2}, {targetPos.Y:F2}, {targetPos.Z:F2}>");
+            }
+            else
+            {
+                ImGui.TextColored(new Vector4(0.6f, 0.6f, 0.6f, 1f), "请选择目标");
+            }
+
+            ImGui.Spacing();
+
+            // 按钮行 - 基于下拉框选中的目标
+            if (ImGui.Button("设为点1##SetTargetAsPoint1"))
+            {
+                if (selectedObj != null)
+                {
+                    Point1World = selectedObj.Position;
+                    if (Settings.AddDebugPoints)
+                    {
+                        AddDebugPoint(selectedObj.Position);
+                    }
+                }
+            }
+            ImGui.SameLine();
+            if (ImGui.Button("设为点2##SetTargetAsPoint2"))
+            {
+                if (selectedObj != null)
+                {
+                    Point2World = selectedObj.Position;
+                    if (Settings.AddDebugPoints)
+                    {
+                        AddDebugPoint(selectedObj.Position);
+                    }
+                }
+            }
+            ImGui.SameLine();
+            if (ImGui.Button("设为点3##SetTargetAsPoint3"))
+            {
+                if (selectedObj != null)
+                {
+                    Point3World = selectedObj.Position;
+                    if (Settings.AddDebugPoints)
+                    {
+                        AddDebugPoint(selectedObj.Position);
+                    }
+                }
+            }
+
+            ImGui.Separator();
+            ImGui.Spacing();
         }
 
         /// <summary>
