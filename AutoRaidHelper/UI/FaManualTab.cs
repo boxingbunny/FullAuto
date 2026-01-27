@@ -5,8 +5,6 @@ using AutoRaidHelper.Utils;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility.Raii;
-using ECommons.DalamudServices;
 using System.Numerics;
 
 namespace AutoRaidHelper.UI
@@ -166,13 +164,9 @@ namespace AutoRaidHelper.UI
 
             DrawSectionTitle(FontAwesomeIcon.ShieldAlt, "DR相关");
 
-            if (ImGui.Button("全员开启无敌模式"))
-            {
-                RemoteControlHelper.Cmd("","/pdr load InvulnerableMode");
-            }
-            ImGui.SameLine();
             if (ImGui.Button("全员无敌"))
             {
+                RemoteControlHelper.Cmd("","/pdr load InvulnerableMode");
                 RemoteControlHelper.Cmd("","/pdr invulnerable");
             }
             ImGui.SameLine();
@@ -180,7 +174,20 @@ namespace AutoRaidHelper.UI
             {
                 var selected = BuildSelectedRoleRegex();
                 if (!string.IsNullOrEmpty(selected))
+                {
+                    RemoteControlHelper.Cmd(selected,"/pdr load InvulnerableMode");
                     RemoteControlHelper.Cmd(selected, "/pdr invulnerable");
+                }
+            }
+            ImGui.SameLine();
+            if (ImGui.Button("选中队员退本"))
+            {
+                var selected = BuildSelectedRoleRegex();
+                if (!string.IsNullOrEmpty(selected))
+                {
+                    RemoteControlHelper.Cmd(selected, "/pdr load InstantLeaveDuty");
+                    RemoteControlHelper.Cmd(selected, "/pdr leaveduty");
+                }
             }
 
             SectionSpacing();

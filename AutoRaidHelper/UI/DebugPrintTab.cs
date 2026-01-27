@@ -28,7 +28,7 @@ namespace AutoRaidHelper.UI
         public void OnLoad(AssemblyLoadContext loadContext)
         {
             // 注册条件参数创建的事件回调，便于调试输出
-            TriggerlineData.OnCondParamsCreate += OnCondParamsCreateEvent;
+            TriggerlineData.OnCondParamsCreate += OnCondParamsCreateEvent!;
         }
 
         /// <summary>
@@ -37,7 +37,7 @@ namespace AutoRaidHelper.UI
         public void Dispose()
         {
             // 取消条件参数创建事件回调的注册
-            TriggerlineData.OnCondParamsCreate -= OnCondParamsCreateEvent;
+            TriggerlineData.OnCondParamsCreate -= OnCondParamsCreateEvent!;
         }
 
         /// <summary>
@@ -146,10 +146,10 @@ namespace AutoRaidHelper.UI
         /// 根据具体的条件参数类型和对应的配置开关，决定是否将其打印到日志中。
         /// </summary>
         /// <param name="condParams">触发条件参数对象，根据其类型可判断是哪种事件</param>
-        public void OnCondParamsCreateEvent(ITriggerCondParams condParams)
+        public void OnCondParamsCreateEvent(ITriggerCondParams? condParams)
         {
-            // 如果调试总开关未启用，则直接返回，不执行任何打印操作
-            if (!Settings.DebugPrintEnabled)
+            // 如果参数为 null 或调试总开关未启用，则直接返回，不执行任何打印操作
+            if (condParams == null || !Settings.DebugPrintEnabled)
                 return;
 
             // 根据条件参数类型判断，并结合对应配置选项，选择性输出日志

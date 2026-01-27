@@ -284,7 +284,7 @@ namespace AutoRaidHelper.UI
             if (ImGui.Button("全队TP撞电网"))
             {
                 if (Core.Resolve<MemApiDuty>().InMission)
-                    RemoteControlHelper.SetPos("", new Vector3(100, 0, 125));
+                    RemoteControlHelper.SetPos("", new Vector3(0, 0, 0));
             }
             ImGui.SameLine();
             // 全队即刻退本按钮（需在副本内才可执行命令）

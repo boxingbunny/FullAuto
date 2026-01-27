@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Numerics;
 using AEAssist.Helper;
 using AutoRaidHelper.Utils;
@@ -63,11 +64,13 @@ public class FoodBuffTab
             ImGui.Spacing();
 
             // 显示详细列表
-            if (ImGui.BeginTable("##FoodBuffTable", 3, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            if (ImGui.BeginTable("##FoodBuffTable", 5, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
             {
-                ImGui.TableSetupColumn("职能", ImGuiTableColumnFlags.WidthFixed, 60f);
+                ImGui.TableSetupColumn("职能", ImGuiTableColumnFlags.WidthStretch);
                 ImGui.TableSetupColumn("角色名", ImGuiTableColumnFlags.WidthStretch);
-                ImGui.TableSetupColumn("食物状态", ImGuiTableColumnFlags.WidthFixed, 100f);
+                ImGui.TableSetupColumn("食物状态", ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableSetupColumn("剩余时间", ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableSetupColumn("控制列", ImGuiTableColumnFlags.WidthStretch);
                 ImGui.TableHeadersRow();
 
                 foreach (var member in partyInfo.OrderBy(m => m.Role))
@@ -93,6 +96,27 @@ public class FoodBuffTab
                     else
                     {
                         ImGui.TextColored(new Vector4(1f, 0.2f, 0.2f, 1f), "✗ 未吃");
+                    }
+                    
+                    // 剩余时间
+                    ImGui.TableNextColumn();
+                    if (hasFood)
+                    {
+                        var time = member.Member.StatusList.First(e => e.StatusId == FoodBuffId).RemainingTime;
+                        var round = MathF.Round(time);
+                        ImGui.TextColored(new Vector4(0.2f, 1f, 0.2f, 1f), round.ToString(CultureInfo.CurrentCulture));
+                    }
+                    else
+                    {
+                        ImGui.TextColored(new Vector4(1f, 0.2f, 0.2f, 1f), "0");
+                    }
+
+                    // 控制列
+                    ImGui.TableNextColumn();
+                    if (ImGui.Button($"踢出##{member.Name}"))
+                    {
+                        RemoteControlHelper.Cmd(member.Role, "/pdr load InstantLeaveDuty");
+                        RemoteControlHelper.Cmd(member.Role, "/pdr leaveduty");
                     }
                 }
 

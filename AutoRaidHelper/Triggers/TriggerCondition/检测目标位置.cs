@@ -20,7 +20,7 @@ public class 检测目标位置 : ITriggerCond
 
     public string DisplayName => "检测目标位置";
 
-    public string Remark { get; set; }
+    public string Remark { get; set; } = string.Empty;
 
     public bool Draw()
     {
