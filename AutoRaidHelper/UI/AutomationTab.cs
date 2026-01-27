@@ -1456,7 +1456,7 @@ namespace AutoRaidHelper.UI
 
             // 用当前副本名匹配
             var dutyName = Core.Resolve<MemApiDuty>().DutyName();
-            if (string.IsNullOrWhiteSpace(dutyName)) 
+            if (string.IsNullOrEmpty(dutyName)) 
                 return false;
             
             foreach (var row in sheet.Where(row => row.Name.ToString() == dutyName))
