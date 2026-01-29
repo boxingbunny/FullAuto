@@ -17,6 +17,7 @@ namespace AutoRaidHelper.Plugin
         private const string CommandName = "/arh";
         private WindowSystem? _windowSystem;
         private MainWindow? _mainWindow;
+        private FloatingIconWindow? _floatingIconWindow;
 
         // 无参构造函数，供AEAssist的PluginLoader使用
         public AutoRaidHelper()
@@ -42,6 +43,10 @@ namespace AutoRaidHelper.Plugin
             _windowSystem = new WindowSystem("AutoRaidHelper");
             _mainWindow = new MainWindow();
             _windowSystem.AddWindow(_mainWindow);
+
+            // 初始化悬浮图标窗口
+            _floatingIconWindow = new FloatingIconWindow(_mainWindow);
+            _windowSystem.AddWindow(_floatingIconWindow);
 
             // 注册窗口绘制
             Svc.PluginInterface.UiBuilder.Draw += _windowSystem.Draw;
@@ -72,6 +77,7 @@ namespace AutoRaidHelper.Plugin
             {
                 Svc.PluginInterface.UiBuilder.Draw -= _windowSystem.Draw;
                 _mainWindow.Dispose();
+                _floatingIconWindow?.Dispose();
                 _windowSystem.RemoveAllWindows();
             }
 

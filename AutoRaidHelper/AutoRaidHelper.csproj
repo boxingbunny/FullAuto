@@ -45,6 +45,7 @@
     <EmbeddedResource Include="Shaders\AlphaFix.cso" />
     <EmbeddedResource Include="Shaders\HBlur.cso" />
     <EmbeddedResource Include="Shaders\VBlur.cso" />
+    <EmbeddedResource Include="Resources\FA.png" />
   </ItemGroup>
 
   <ItemGroup>
