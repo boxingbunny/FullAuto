@@ -205,8 +205,6 @@ namespace AutoRaidHelper.UI
             {
                 Utilities.MoveAlongCircularPath("MT", Point1World ?? default, 3, 0, true, 3, 0.1f);
             }
-            ImGui.Text(Utilities.GetCharacterByRole("MT")?.Name.ToString());
-            
 
             // 当记录了点1和点2后，计算并显示两点间的XZ平面距离，同时允许选择夹角顶点模式进行角度计算
             if (Point1World.HasValue && Point2World.HasValue)
@@ -436,6 +434,9 @@ namespace AutoRaidHelper.UI
             
             // 预测玩家前方落点
             DrawForwardMoveSection();
+            ImGui.Spacing();
+            ImGui.Separator();
+            ImGui.Spacing();
         }
 
         private void DrawForwardMoveSection()
@@ -565,6 +566,9 @@ namespace AutoRaidHelper.UI
 
                 ImGui.TextColored(new Vector4(0.2f, 1f, 0.2f, 1f), "已绘制预测落点位置");
             }
+            ImGui.Spacing();
+            ImGui.Separator();
+            ImGui.Spacing();
         }
 
         

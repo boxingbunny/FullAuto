@@ -61,6 +61,28 @@ namespace AutoRaidHelper.Settings
         // DebugPrintSettings：调试打印相关设置，控制输出各类触发事件的调试信息
         public DebugPrintSettings DebugPrintSettings { get; set; } = new();
 
+        // UI相关设置：磨砂玻璃背景和窗口不透明度
+        public bool UseFrostedGlass { get; set; } = true;
+        public float WindowOpacity { get; set; } = 0.5f;
+
+        /// <summary>
+        /// 更新磨砂玻璃启用状态，并保存配置
+        /// </summary>
+        public void UpdateUseFrostedGlass(bool enabled)
+        {
+            UseFrostedGlass = enabled;
+            Save();
+        }
+
+        /// <summary>
+        /// 更新窗口不透明度，并保存配置
+        /// </summary>
+        public void UpdateWindowOpacity(float opacity)
+        {
+            WindowOpacity = Math.Clamp(opacity, 0.1f, 1.0f);
+            Save();
+        }
+
         /// <summary>
         /// 保存当前配置到配置文件
         /// 若文件被占用，将进入只读模式，不再尝试写入

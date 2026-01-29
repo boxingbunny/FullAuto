@@ -3,24 +3,25 @@ using AEAssist.CombatRoutine.Trigger;
 using AEAssist.Verify;
 using AutoRaidHelper.Triggers.TriggerAction;
 using AutoRaidHelper.Triggers.TriggerCondition;
-using AutoRaidHelper.UI;
+using AutoRaidHelper.Windows;
+using AutoRaidHelper.Utils;
+using Dalamud.Interface.Windowing;
 using Dalamud.Bindings.ImGui;
 using ECommons.DalamudServices;
 using System.Runtime.Loader;
-using AutoRaidHelper.Utils;
 
 namespace AutoRaidHelper.Plugin
 {
     public class AutoRaidHelper : IAEPlugin
     {
         private const string CommandName = "/arh";
-        private readonly GeometryTab _geometryTab = new();
-        private readonly AutomationTab _automationTab = new();
-        private readonly FaGeneralSettingTab _faGeneralSettingTab = new();
-        private readonly FaManualTab _faManualTab = new();
-        private readonly DebugPrintTab _debugPrintTab = new();
-        private readonly BlackListTab _blackListTab = new();
-        private readonly FoodBuffTab _foodBuffTab = new();
+        private WindowSystem? _windowSystem;
+        private MainWindow? _mainWindow;
+
+        // 无参构造函数，供AEAssist的PluginLoader使用
+        public AutoRaidHelper()
+        {
+        }
 
         #region IAEPlugin Implementation
 
@@ -37,13 +38,27 @@ namespace AutoRaidHelper.Plugin
 
         public void OnLoad(AssemblyLoadContext loadContext)
         {
-            _automationTab.OnLoad(loadContext);
-            _debugPrintTab.OnLoad(loadContext);
+            // 初始化窗口系统
+            _windowSystem = new WindowSystem("AutoRaidHelper");
+            _mainWindow = new MainWindow();
+            _windowSystem.AddWindow(_mainWindow);
+
+            // 注册窗口绘制
+            Svc.PluginInterface.UiBuilder.Draw += _windowSystem.Draw;
+            Svc.PluginInterface.UiBuilder.OpenConfigUi += () =>
+            {
+                if (_mainWindow != null)
+                    _mainWindow.IsOpen = true;
+            };
+
+            // 初始化MainWindow
+            _mainWindow.OnLoad(loadContext);
 
             // 注册命令
             Svc.Commands.AddHandler(CommandName, new Dalamud.Game.Command.CommandInfo(OnCommand)
             {
                 HelpMessage = "全自动小助手命令\n"
+                           + "/arh - 打开/关闭主窗口\n"
                            + "/arh transferleader <玩家名> - 转移队长给指定玩家"
             });
         }
@@ -53,72 +68,69 @@ namespace AutoRaidHelper.Plugin
             // 注销命令
             Svc.Commands.RemoveHandler(CommandName);
 
-            _automationTab.Dispose();
-            _debugPrintTab.Dispose();
+            // 清理窗口
+            if (_windowSystem != null && _mainWindow != null)
+            {
+                Svc.PluginInterface.UiBuilder.Draw -= _windowSystem.Draw;
+                _mainWindow.Dispose();
+                _windowSystem.RemoveAllWindows();
+            }
+
             DebugPoint.Clear();
         }
 
         public void Update()
         {
-            _geometryTab.Update();
-            _automationTab.Update();
-            _faManualTab.Update();
-            _blackListTab.Update();
+            _mainWindow?.OnUpdate();
         }
 
         public void OnPluginUI()
         {
-            if (ImGui.BeginTabBar("MainTabBar"))
+            // 在AEAssist UI中显示一个按钮来打开独立窗口
+            if (_mainWindow != null)
             {
-                if (ImGui.BeginTabItem("几何计算"))
+                ImGui.PushStyleColor(ImGuiCol.Button, new System.Numerics.Vector4(0.2f, 0.5f, 0.8f, 1.0f));
+                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new System.Numerics.Vector4(0.3f, 0.6f, 0.9f, 1.0f));
+                ImGui.PushStyleColor(ImGuiCol.ButtonActive, new System.Numerics.Vector4(0.1f, 0.4f, 0.7f, 1.0f));
+
+                if (ImGui.Button("打开全自动小助手独立窗口", new System.Numerics.Vector2(300, 40)))
                 {
-                    _geometryTab.Draw();
-                    ImGui.EndTabItem();
+                    _mainWindow.IsOpen = true;
                 }
 
-                if (ImGui.BeginTabItem("自动化"))
-                {
-                    _automationTab.Draw();
-                    ImGui.EndTabItem();
-                }
+                ImGui.PopStyleColor(3);
 
-                if (ImGui.BeginTabItem("FA全局设置"))
-                {
-                    _faGeneralSettingTab.Draw();
-                    ImGui.EndTabItem();
-                }
+                ImGui.SameLine();
+                ImGui.TextDisabled("(或使用命令: /arh)");
 
-                if (ImGui.BeginTabItem("FA手动操作"))
-                {
-                    _faManualTab.Draw();
-                    ImGui.EndTabItem();
-                }
+                ImGui.Spacing();
+                ImGui.Separator();
+                ImGui.Spacing();
 
-                if (ImGui.BeginTabItem("日志监听"))
-                {
-                    _debugPrintTab.Draw();
-                    ImGui.EndTabItem();
-                }
-                if (ImGui.BeginTabItem("黑名单管理"))
-                {
-                    _blackListTab.Draw();
-                    ImGui.EndTabItem();
-                }
+                // 显示窗口状态
+                var statusText = _mainWindow.IsOpen ? "窗口状态: 已打开" : "窗口状态: 已关闭";
+                var statusColor = _mainWindow.IsOpen
+                    ? new System.Numerics.Vector4(0.4f, 0.8f, 0.4f, 1.0f)
+                    : new System.Numerics.Vector4(0.6f, 0.6f, 0.6f, 1.0f);
 
-                if (ImGui.BeginTabItem("食物警察"))
-                {
-                    _foodBuffTab.Draw();
-                    ImGui.EndTabItem();
-                }
-
-                ImGui.EndTabBar();
+                ImGui.TextColored(statusColor, statusText);
             }
-
-            DebugPoint.Render();
         }
 
-        private static void OnCommand(string command, string args)
+        #endregion
+
+        private void OnCommand(string command, string args)
         {
+            if (_mainWindow == null)
+                return;
+
+            if (string.IsNullOrWhiteSpace(args))
+            {
+                // 切换主窗口显示状态
+                _mainWindow.IsOpen = !_mainWindow.IsOpen;
+                return;
+            }
+
             var parts = args.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             if (parts.Length == 0)
                 return;
@@ -140,11 +152,10 @@ namespace AutoRaidHelper.Plugin
                 default:
                     Svc.Chat.Print($"[ARH] 未知子命令: {subCommand}");
                     Svc.Chat.Print($"可用命令:");
+                    Svc.Chat.Print($"  {CommandName} - 打开/关闭主窗口");
                     Svc.Chat.Print($"  {CommandName} transferleader <玩家名> - 转移队长");
                     break;
             }
         }
-
-        #endregion
     }
 }

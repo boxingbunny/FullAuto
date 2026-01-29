@@ -42,6 +42,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Shaders\AlphaFix.cso" />
+    <EmbeddedResource Include="Shaders\HBlur.cso" />
+    <EmbeddedResource Include="Shaders\VBlur.cso" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Remove="DalamudPackager" />
     <PackageReference Include="AEAssist.NET" Version="*" ExcludeAssets="runtime" />
     <PackageReference Include="Costura.Fody" Version="6.0.0">
@@ -51,6 +57,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="TerraFX.Interop.Windows" Version="10.0.26100.6" />
   </ItemGroup>
 
 </Project>
