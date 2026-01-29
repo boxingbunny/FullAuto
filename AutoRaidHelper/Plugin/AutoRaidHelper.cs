@@ -47,8 +47,7 @@ namespace AutoRaidHelper.Plugin
             Svc.PluginInterface.UiBuilder.Draw += _windowSystem.Draw;
             Svc.PluginInterface.UiBuilder.OpenConfigUi += () =>
             {
-                if (_mainWindow != null)
-                    _mainWindow.IsOpen = true;
+                _mainWindow?.IsOpen = true;
             };
 
             // 初始化MainWindow
@@ -93,9 +92,9 @@ namespace AutoRaidHelper.Plugin
                 ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new System.Numerics.Vector4(0.3f, 0.6f, 0.9f, 1.0f));
                 ImGui.PushStyleColor(ImGuiCol.ButtonActive, new System.Numerics.Vector4(0.1f, 0.4f, 0.7f, 1.0f));
 
-                if (ImGui.Button("打开全自动小助手独立窗口", new System.Numerics.Vector2(300, 40)))
+                if (ImGui.Button("全自动小助手独立窗口", new System.Numerics.Vector2(300, 40)))
                 {
-                    _mainWindow.IsOpen = true;
+                    _mainWindow.IsOpen = !_mainWindow.IsOpen;
                 }
 
                 ImGui.PopStyleColor(3);
