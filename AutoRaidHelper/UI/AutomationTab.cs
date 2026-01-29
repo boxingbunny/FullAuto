@@ -181,14 +181,6 @@ namespace AutoRaidHelper.UI
         /// </summary>
         public unsafe void Draw()
         {
-            var assembly = Assembly.GetExecutingAssembly();
-            var infoAttr = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-            if (!string.IsNullOrEmpty(infoAttr))
-            {
-                var parts = infoAttr.Split('+', '.');
-                ImGui.Text($"Version: {parts[0]}.{parts[1]}.{parts[2]}+{parts[4]}");
-            }
-            ImGui.Separator();
             //【地图记录与倒计时设置】
             ImGui.Text("本内自动化设置:");
             // 按钮用于记录当前地图ID，并更新相应设置

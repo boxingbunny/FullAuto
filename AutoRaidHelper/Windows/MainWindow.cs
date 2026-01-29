@@ -1,4 +1,3 @@
-using System;
 using System.Numerics;
 using Dalamud.Interface.Windowing;
 using Dalamud.Bindings.ImGui;
@@ -21,6 +20,7 @@ public class MainWindow : Window, IDisposable
     private readonly BlackListTab _blackListTab;
     private readonly FoodBuffTab _foodBuffTab;
     private readonly UISettingsTab _uiSettingsTab;
+    private readonly aboutTab _aboutTab;
 
     public MainWindow() : base(
         "全自动小助手###AutoRaidHelperMain",
@@ -43,6 +43,7 @@ public class MainWindow : Window, IDisposable
         _blackListTab = new BlackListTab();
         _foodBuffTab = new FoodBuffTab();
         _uiSettingsTab = new UISettingsTab();
+        _aboutTab = new aboutTab();
 
         // 初始化磨砂玻璃背景管理器
         try
@@ -298,6 +299,15 @@ public class MainWindow : Window, IDisposable
                 ImGui.BeginChild("UISettingsContent", new Vector2(0, contentHeight), false,
                     ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoScrollbar);
                 _uiSettingsTab.Draw();
+                ImGui.EndChild();
+                ImGui.EndTabItem();
+            }
+            
+            if (ImGui.BeginTabItem("关于"))
+            {
+                ImGui.BeginChild("About", new Vector2(0, contentHeight), false,
+                    ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoScrollbar);
+                _aboutTab.Draw();
                 ImGui.EndChild();
                 ImGui.EndTabItem();
             }
