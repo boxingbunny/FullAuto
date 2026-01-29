@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0-windows7.0": {
+      "AEAssist.NET": {
+        "type": "Direct",
+        "requested": "[*, )",
+        "resolved": "1.2.8",
+        "contentHash": "I+3SLId4OBG1WFhzLms8XwIXFjpfEusUwQ67CDIwwkmKJ/IWmmKyXstYyNjhjmYCPLCsWu27QuZYjofSvE/AKQ=="
+      }
+    },
+    "net10.0-windows7.0/win-x64": {}
+  }
+}
