@@ -3,7 +3,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace AutoRaidHelper.UI;
 
-public class aboutTab
+public class AboutTab
 {
     public void Draw()
     {
@@ -15,6 +15,6 @@ public class aboutTab
             ImGui.Text($"Version: {parts[0]}.{parts[1]}.{parts[2]}+{parts[4]}");
         }
         ImGui.Separator();
-        ImGui.Text("Authors:JiaXX, BoxingBunny, FrostBlade, Sinclair, Cindy-Master, MisaUo, 小猪蟹, Uncle Ken, Fragile");
+        ImGui.Text("Authors:JiaXX, BoxingBunny, FrostBlade, Sinclair, Cindy-Master, MisaUo, 小猪蟹, Uncle Ken, Fragile, HSS");
     }
 }
