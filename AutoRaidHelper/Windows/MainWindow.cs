@@ -21,7 +21,8 @@ public class MainWindow : Window, IDisposable
     private readonly BlackListTab _blackListTab;
     private readonly FoodBuffTab _foodBuffTab;
     private readonly UISettingsTab _uiSettingsTab;
-    private readonly aboutTab _aboutTab;
+    private readonly LootRollingTab _lootRollingTab;
+    private readonly AboutTab _aboutTab;
     private readonly RoomClientTab _roomClientTab;
 
     public MainWindow() : base(
@@ -32,7 +33,7 @@ public class MainWindow : Window, IDisposable
         SizeCondition = ImGuiCond.FirstUseEver;
         SizeConstraints = new WindowSizeConstraints
         {
-            MinimumSize = new Vector2(600, 400),
+            MinimumSize = new Vector2(688, 400),
             MaximumSize = new Vector2(2000, 1500)
         };
 
@@ -45,7 +46,8 @@ public class MainWindow : Window, IDisposable
         _blackListTab = new BlackListTab();
         _foodBuffTab = new FoodBuffTab();
         _uiSettingsTab = new UISettingsTab();
-        _aboutTab = new aboutTab();
+        _lootRollingTab = new LootRollingTab();
+        _aboutTab = new AboutTab();
         _roomClientTab = new RoomClientTab();
 
         // 初始化磨砂玻璃背景管理器
@@ -304,6 +306,15 @@ public class MainWindow : Window, IDisposable
                 ImGui.BeginChild("UISettingsContent", new Vector2(0, contentHeight), false,
                     ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoScrollbar);
                 _uiSettingsTab.Draw();
+                ImGui.EndChild();
+                ImGui.EndTabItem();
+            }
+            
+            if (ImGui.BeginTabItem("Roll点设置"))
+            {
+                ImGui.BeginChild("LootRollingContent", new Vector2(0, contentHeight), false,
+                    ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoScrollbar);
+                _lootRollingTab.Draw();
                 ImGui.EndChild();
                 ImGui.EndTabItem();
             }

@@ -18,6 +18,7 @@ namespace AutoRaidHelper.Plugin
         private WindowSystem? _windowSystem;
         private MainWindow? _mainWindow;
         private FloatingIconWindow? _floatingIconWindow;
+        private LootRollingManager? _lootRollingManager;
 
         // 无参构造函数，供AEAssist的PluginLoader使用
         public AutoRaidHelper()
@@ -55,12 +56,19 @@ namespace AutoRaidHelper.Plugin
             // 初始化MainWindow
             _mainWindow.OnLoad(loadContext);
 
+            // 初始化 LootRollingManager
+            _lootRollingManager = new LootRollingManager();
+
             // 注册命令
             Svc.Commands.AddHandler(CommandName, new Dalamud.Game.Command.CommandInfo(OnCommand)
             {
                 HelpMessage = "全自动小助手命令\n"
-                              + "/arh - 打开/关闭主窗口\n"
-                              + "/arh transferleader <玩家名> - 转移队长给指定玩家"
+                           + "/arh - 打开/关闭主窗口\n"
+                           + "/arh transferleader <玩家名> - 转移队长给指定玩家\n"
+                           + "/arh need - 一键 Need 所有物品\n"
+                           + "/arh greed - 一键 Greed 所有物品\n"
+                           + "/arh pass - 一键 Pass 所有物品\n"
+                           + "/arh autoroll [on|off|need|greed|pass] - 自动 Roll 设置"
             });
         }
 
@@ -72,6 +80,9 @@ namespace AutoRaidHelper.Plugin
         {
             // 注销命令
             Svc.Commands.RemoveHandler(CommandName);
+
+            // 清理 LootRollingManager
+            _lootRollingManager?.Dispose();
 
             // 清理窗口
             if (_windowSystem != null && _mainWindow != null)
@@ -156,11 +167,24 @@ namespace AutoRaidHelper.Plugin
                     PartyLeaderHelper.TransferPartyLeader(targetPlayer);
                     break;
 
+                case "need":
+                case "greed":
+                case "pass":
+                    _lootRollingManager?.HandleRollCommand(subCommand);
+                    break;
+
+                case "autoroll":
+                    var autoRollArgs = parts.Skip(1).ToArray();
+                    _lootRollingManager?.HandleAutoRollCommand(autoRollArgs);
+                    break;
+
                 default:
                     Svc.Chat.Print($"[ARH] 未知子命令: {subCommand}");
                     Svc.Chat.Print($"可用命令:");
                     Svc.Chat.Print($"  {CommandName} - 打开/关闭主窗口");
                     Svc.Chat.Print($"  {CommandName} transferleader <玩家名> - 转移队长");
+                    Svc.Chat.Print($"  {CommandName} need/greed/pass - 批量 Roll");
+                    Svc.Chat.Print($"  {CommandName} autoroll [on|off|need|greed|pass] - 自动 Roll");
                     break;
             }
         }
