@@ -25,7 +25,7 @@ namespace AutoRaidHelper.Settings
         private static readonly object _lock = new();
 
         // 是否为只读模式（文件写入失败后将设置为 true，防止后续反复尝试）
-        private static bool _readOnlyMode = false;
+        private static bool _readOnlyMode;
 
         /// <summary>
         /// 获取全局唯一的 FullAutoSettings 实例
@@ -63,6 +63,9 @@ namespace AutoRaidHelper.Settings
 
         // RoomClientSetting：房间客户端相关设置
         public RoomClientSetting RoomClientSetting { get; set; } = new();
+
+        // LootRollingSettings：战利品 Roll 点相关设置
+        public LootRollingSettings LootRollingSettings { get; set; } = new();
 
         // UI相关设置：磨砂玻璃背景和窗口不透明度
         public bool UseFrostedGlass { get; set; } = true;
@@ -644,7 +647,7 @@ namespace AutoRaidHelper.Settings
         public bool PrintDebugInfo { get; set; } = true;
 
         //控制是否打印所有ActorControl信息
-        public bool PrintActorControl { get; set; } = false;
+        public bool PrintActorControl { get; set; }
         /// <summary>
         /// 更新 PrintDebugInfo 并保存配置
         /// </summary>
@@ -849,5 +852,89 @@ namespace AutoRaidHelper.Settings
             ReconnectInterval = Math.Clamp(interval, 1, 60);
             FullAutoSettings.Instance.Save();
         }
+    }
+
+    /// <summary>
+    /// RestrictionGroup 包含物品和副本的自定义限制规则
+    /// </summary>
+    public class RestrictionGroup
+    {
+        public List<CustomRestriction> Items { get; set; } = [];
+        public List<CustomRestriction> Duties { get; set; } = [];
+    }
+
+    /// <summary>
+    /// CustomRestriction 表示单个物品或副本的自定义 Roll 规则
+    /// </summary>
+    public class CustomRestriction
+    {
+        public uint Id { get; set; }
+        public bool Enabled { get; set; }
+        public FFXIVClientStructs.FFXIV.Client.Game.UI.RollResult RollRule { get; set; }
+    }
+
+    /// <summary>
+    /// LootRollingSettings 存储战利品 Roll 点相关配置
+    /// 移植自 LazyLoot 插件，包含自动 Roll、智能过滤等功能的配置
+    /// </summary>
+    public class LootRollingSettings
+    {
+        // 自动 Roll 功能开关
+        public bool AutoRollEnabled { get; set; }
+
+        // 输出设置
+        public bool EnableChatLogMessage { get; set; }
+        public bool EnableErrorToast { get; set; }
+        public bool EnableNormalToast { get; set; }
+        public bool EnableQuestToast { get; set; } = true;
+
+        // 自动 Roll 模式：0=Need, 1=Greed, 2=Pass
+        public int AutoRollMode { get; set; }
+
+        // Roll 延迟设置（秒）
+        public float MinRollDelayInSeconds { get; set; } = 0.5f;
+        public float MaxRollDelayInSeconds { get; set; } = 1f;
+        public float AutoRollMinDelayInSeconds { get; set; } = 1.5f;
+        public float AutoRollMaxDelayInSeconds { get; set; } = 3f;
+
+        // 限制规则 - 装等
+        public bool RestrictionIgnoreItemLevelBelow { get; set; }
+        public int RestrictionIgnoreItemLevelBelowValue { get; set; }
+
+        // 限制规则 - 已解锁物品
+        public bool RestrictionIgnoreItemUnlocked { get; set; } = true;
+        public bool RestrictionIgnoreMounts { get; set; } = true;
+        public bool RestrictionIgnoreMinions { get; set; } = true;
+        public bool RestrictionIgnoreBardings { get; set; } = true;
+        public bool RestrictionIgnoreTripleTriadCards { get; set; } = true;
+        public bool RestrictionIgnoreEmoteHairstyle { get; set; } = true;
+        public bool RestrictionIgnoreOrchestrionRolls { get; set; } = true;
+        public bool RestrictionIgnoreFadedCopy { get; set; } = true;
+
+        // 限制规则 - 职业相关
+        public bool RestrictionOtherJobItems { get; set; }
+
+        // 限制规则 - 周常限制物品
+        public bool RestrictionWeeklyLockoutItems { get; set; }
+
+        // 限制规则 - 低于职业装等
+        public bool RestrictionLootLowerThanJobIlvl { get; set; }
+        public int RestrictionLootLowerThanJobIlvlTreshold { get; set; } = 30;
+        public int RestrictionLootLowerThanJobIlvlRollState { get; set; } = 1;
+
+        // 限制规则 - 是否为升级装备
+        public bool RestrictionLootIsJobUpgrade { get; set; }
+        public int RestrictionLootIsJobUpgradeRollState { get; set; } = 1;
+
+        // 限制规则 - 军票价值
+        public bool RestrictionSeals { get; set; }
+        public int RestrictionSealsAmnt { get; set; } = 1;
+
+        // 诊断模式
+        public bool DiagnosticsMode { get; set; }
+        public bool NoPassEmergency { get; set; }
+
+        // 自定义限制规则
+        public RestrictionGroup Restrictions { get; set; } = new();
     }
 }
