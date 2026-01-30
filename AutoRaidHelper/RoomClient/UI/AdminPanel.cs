@@ -45,7 +45,7 @@ public class AdminPanel
             ImGui.BeginDisabled();
         }
 
-        if (ImGui.Button("刷新用户列表"))
+        if (ImGui.Button("刷新用户列表##RCT_RefreshUserList"))
         {
             _ = RefreshUserListAsync();
         }
@@ -140,12 +140,10 @@ public class AdminPanel
             return;
         }
 
-        ImGui.PushID($"admin_kick_{user.Id}");
-        if (ImGui.SmallButton("踢出"))
+        if (ImGui.SmallButton($"踢出##RCT_AdminKick_{user.Id}"))
         {
             _ = KickUserAsync(user.Id, user.Name);
         }
-        ImGui.PopID();
     }
 
     #region 操作方法

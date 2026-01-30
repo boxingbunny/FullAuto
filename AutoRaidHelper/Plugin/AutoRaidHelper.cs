@@ -50,10 +50,7 @@ namespace AutoRaidHelper.Plugin
 
             // 注册窗口绘制
             Svc.PluginInterface.UiBuilder.Draw += _windowSystem.Draw;
-            Svc.PluginInterface.UiBuilder.OpenConfigUi += () =>
-            {
-                _mainWindow?.IsOpen = true;
-            };
+            Svc.PluginInterface.UiBuilder.OpenConfigUi += () => { _mainWindow?.IsOpen = true; };
 
             // 初始化MainWindow
             _mainWindow.OnLoad(loadContext);
@@ -62,9 +59,13 @@ namespace AutoRaidHelper.Plugin
             Svc.Commands.AddHandler(CommandName, new Dalamud.Game.Command.CommandInfo(OnCommand)
             {
                 HelpMessage = "全自动小助手命令\n"
-                           + "/arh - 打开/关闭主窗口\n"
-                           + "/arh transferleader <玩家名> - 转移队长给指定玩家"
+                              + "/arh - 打开/关闭主窗口\n"
+                              + "/arh transferleader <玩家名> - 转移队长给指定玩家"
             });
+        }
+
+        public void AfterVerified()
+        {
         }
 
         public void Dispose()
@@ -150,6 +151,7 @@ namespace AutoRaidHelper.Plugin
                         Svc.Chat.Print($"[ARH] 用法: {CommandName} transferleader <玩家名>");
                         return;
                     }
+
                     var targetPlayer = parts[1];
                     PartyLeaderHelper.TransferPartyLeader(targetPlayer);
                     break;

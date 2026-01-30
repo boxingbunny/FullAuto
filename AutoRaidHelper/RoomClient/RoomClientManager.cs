@@ -33,6 +33,10 @@ public class RoomClientManager : IDisposable
     private DateTime _lastUpdateCheck = DateTime.MinValue;
     private const int UpdateCheckIntervalMs = 1000; // 每秒检查一次
 
+    // 自动连接状态追踪
+    private DateTime _lastAutoConnectAttempt = DateTime.MinValue;
+    private bool _isAutoConnecting = false;  // 标记是否正在进行自动连接尝试
+
     private RoomClientManager()
     {
     }
@@ -53,8 +57,10 @@ public class RoomClientManager : IDisposable
             Client.OnStateChanged += OnConnectionStateChanged;
             Client.OnError += OnWebSocketError;
 
+            // 初始化聊天邀请处理器
+            ChatInviteHandler.Instance.Initialize();
+
             _initialized = true;
-            LogHelper.Info("[RoomClient] 客户端管理器初始化完成");
         }
         catch (Exception ex)
         {
@@ -74,6 +80,9 @@ public class RoomClientManager : IDisposable
 
         // 检测玩家状态变化并上报
         CheckAndReportPlayerInfoChanges();
+
+        // 检查自动连接
+        CheckAutoConnect();
     }
 
     /// <summary>
@@ -104,8 +113,6 @@ public class RoomClientManager : IDisposable
 
             if (hasChange)
             {
-                LogHelper.Info($"[RoomClient] 检测到玩家信息变化: Job={currentJob}, ACR={currentAcrName}, TriggerLine={currentTriggerLineName}");
-
                 // 更新本地缓存
                 _lastJob = currentJob;
                 _lastAcrName = currentAcrName;
@@ -115,9 +122,9 @@ public class RoomClientManager : IDisposable
                 _ = ReportPlayerInfoChangeAsync(currentJob, currentAcrName, currentTriggerLineName);
             }
         }
-        catch (Exception ex)
+        catch
         {
-            LogHelper.Error($"[RoomClient] 检测玩家信息变化时出错: {ex.Message}");
+            // 忽略检测错误
         }
     }
 
@@ -131,26 +138,86 @@ public class RoomClientManager : IDisposable
             var ack = await Client.UpdatePlayerInfoAsync(job, acrName, triggerLineName);
             if (ack?.Success == true)
             {
-                LogHelper.Info("[RoomClient] 玩家信息已更新到服务端");
-
                 // 如果在房间中，刷新房间信息以更新自己的显示
                 if (RoomClientState.Instance.IsInRoom)
                 {
                     await Client.GetRoomInfoAsync(RoomClientState.Instance.CurrentRoomId!);
                 }
             }
-            else
-            {
-                LogHelper.Error($"[RoomClient] 更新玩家信息失败: {ack?.Error ?? "未知错误"}");
-            }
         }
-        catch (Exception ex)
+        catch
         {
-            LogHelper.Error($"[RoomClient] 上报玩家信息时出错: {ex.Message}");
+            // 忽略上报错误
         }
     }
 
     #region 连接管理
+
+    /// <summary>
+    /// 检查是否需要自动连接
+    /// 条件：启用自动连接、AE已认证（有AECode）、当前未连接
+    /// </summary>
+    private void CheckAutoConnect()
+    {
+        // 如果正在进行自动连接，跳过
+        if (_isAutoConnecting)
+            return;
+
+        var setting = FullAutoSettings.Instance.RoomClientSetting;
+
+        // 如果未启用自动连接，跳过
+        if (!setting.AutoConnect)
+            return;
+
+        // 如果已经连接或正在连接/认证中，跳过
+        var state = Client.State;
+        if (state == ConnectionState.Connected ||
+            state == ConnectionState.Authenticated ||
+            state == ConnectionState.Connecting ||
+            state == ConnectionState.Authenticating)
+            return;
+
+        // 检查 AE 是否已认证（有 AECode）
+        var aeCode = GetAECode();
+        if (string.IsNullOrEmpty(aeCode))
+            return;
+
+        // 检查重连间隔
+        var now = DateTime.Now;
+        var intervalSeconds = setting.ReconnectInterval;
+        if ((now - _lastAutoConnectAttempt).TotalSeconds < intervalSeconds)
+            return;
+
+        // 更新上次尝试时间并开始连接
+        _lastAutoConnectAttempt = now;
+        _isAutoConnecting = true;
+
+        // 显示状态消息
+        RoomClientState.Instance.StatusMessage = "自动连接中...";
+
+        // 异步连接
+        _ = AutoConnectAsync();
+    }
+
+    /// <summary>
+    /// 执行自动连接
+    /// </summary>
+    private async Task AutoConnectAsync()
+    {
+        try
+        {
+            await ConnectAsync();
+        }
+        catch (Exception ex)
+        {
+            LogHelper.Error($"[RoomClient] 自动连接失败: {ex.Message}");
+            RoomClientState.Instance.StatusMessage = $"自动连接失败: {ex.Message}";
+        }
+        finally
+        {
+            _isAutoConnecting = false;
+        }
+    }
 
     public async Task ConnectAsync()
     {
@@ -160,6 +227,8 @@ public class RoomClientManager : IDisposable
 
         if (await Client.ConnectAsync(setting.ServerUrl))
         {
+            RoomClientState.Instance.StatusMessage = "正在认证...";
+
             // 收集玩家信息并认证
             var playerInfo = CollectPlayerInfo();
             var aeCode = GetAECode();
@@ -183,6 +252,14 @@ public class RoomClientManager : IDisposable
                 // 获取房间列表
                 await Client.GetRoomListAsync();
             }
+            else
+            {
+                RoomClientState.Instance.StatusMessage = Client.ErrorMessage ?? "认证失败";
+            }
+        }
+        else
+        {
+            RoomClientState.Instance.StatusMessage = Client.ErrorMessage ?? "连接失败";
         }
     }
 
@@ -214,7 +291,6 @@ public class RoomClientManager : IDisposable
         {
             var me = Core.Me;
             if (me == null) return "";
-            // 使用 JobHelper.GetTranslation 获取中文职业名称
             return JobHelper.GetTranslation(me.CurrentJob());
         }
         catch
@@ -225,7 +301,6 @@ public class RoomClientManager : IDisposable
 
     private string GetAECode()
     {
-        // 从 AEAssist 验证系统获取激活码
         try
         {
             return Share.VIP?.Key ?? "";
@@ -240,7 +315,6 @@ public class RoomClientManager : IDisposable
     {
         try
         {
-            // 获取当前使用的 ACR 名称
             return Data.currRotation?.RotationEntry?.AuthorName ?? "";
         }
         catch
@@ -253,7 +327,6 @@ public class RoomClientManager : IDisposable
     {
         try
         {
-            // 获取当前时间轴名称
             return AI.Instance.TriggerlineData.CurrTriggerLine?.Name ?? "";
         }
         catch
@@ -319,9 +392,9 @@ public class RoomClientManager : IDisposable
                     break;
             }
         }
-        catch (Exception ex)
+        catch
         {
-            LogHelper.Error($"[RoomClient] 处理消息失败: {ex.Message}");
+            // 忽略消息处理错误
         }
     }
 
@@ -412,7 +485,7 @@ public class RoomClientManager : IDisposable
         var error = JsonSerializer.Deserialize<WSError>(payload.ToString()!);
         if (error != null)
         {
-            RoomClientState.Instance.StatusMessage = $"错误: {error.Message}";
+            RoomClientState.Instance.StatusMessage = error.Message;
         }
     }
 
@@ -429,19 +502,47 @@ public class RoomClientManager : IDisposable
 
     private void OnConnectionStateChanged(ConnectionState state)
     {
-        LogHelper.Info($"[RoomClient] 连接状态变更: {state}, IsManualDisconnect={Client.IsManualDisconnect}");
-
-        if (state == ConnectionState.Disconnected)
+        // 更新友好的状态消息
+        switch (state)
         {
-            RoomClientState.Instance.Reset();
+            case ConnectionState.Connecting:
+                RoomClientState.Instance.StatusMessage = "正在连接...";
+                break;
+            case ConnectionState.Authenticating:
+                RoomClientState.Instance.StatusMessage = "正在认证...";
+                break;
+            case ConnectionState.Disconnected:
+                if (!Client.IsManualDisconnect)
+                {
+                    RoomClientState.Instance.StatusMessage = "连接已断开";
+                }
+                RoomClientState.Instance.Reset();
 
-            // 只有非主动断开时才自动重连，且插件未被销毁
-            var setting = FullAutoSettings.Instance.RoomClientSetting;
-            if (setting.AutoReconnect && !Client.IsManualDisconnect && !IsDisposed)
-            {
-                LogHelper.Info($"[RoomClient] 将在 {setting.ReconnectInterval} 秒后自动重连");
-                _ = AutoReconnectAsync();
-            }
+                // 只有非主动断开时才自动重连
+                // 注意：如果启用了 AutoConnect，由 CheckAutoConnect 处理重连，避免重复
+                var setting = FullAutoSettings.Instance.RoomClientSetting;
+                if (setting.AutoReconnect && !setting.AutoConnect && !Client.IsManualDisconnect && !IsDisposed)
+                {
+                    RoomClientState.Instance.StatusMessage = $"连接已断开，{setting.ReconnectInterval}秒后重连...";
+                    _ = AutoReconnectAsync();
+                }
+                else if (setting.AutoConnect && !Client.IsManualDisconnect && !IsDisposed)
+                {
+                    // AutoConnect 启用时，由 CheckAutoConnect 处理
+                    RoomClientState.Instance.StatusMessage = $"连接已断开，{setting.ReconnectInterval}秒后自动重连...";
+                }
+                break;
+            case ConnectionState.Error:
+                RoomClientState.Instance.StatusMessage = Client.ErrorMessage ?? "连接错误";
+
+                // 连接错误时也尝试自动重连
+                // 注意：如果启用了 AutoConnect，由 CheckAutoConnect 处理重连，避免重复
+                var errorSetting = FullAutoSettings.Instance.RoomClientSetting;
+                if (errorSetting.AutoReconnect && !errorSetting.AutoConnect && !Client.IsManualDisconnect && !IsDisposed)
+                {
+                    _ = AutoReconnectAsync();
+                }
+                break;
         }
     }
 
@@ -452,7 +553,6 @@ public class RoomClientManager : IDisposable
             var setting = FullAutoSettings.Instance.RoomClientSetting;
             await Task.Delay(setting.ReconnectInterval * 1000, _pluginCts?.Token ?? CancellationToken.None);
 
-            // 再次检查插件是否已销毁
             if (!IsDisposed)
             {
                 await ConnectAsync();
@@ -460,11 +560,11 @@ public class RoomClientManager : IDisposable
         }
         catch (OperationCanceledException)
         {
-            LogHelper.Info("[RoomClient] 自动重连任务已取消");
+            // 正常取消
         }
-        catch (Exception ex)
+        catch
         {
-            LogHelper.Error($"[RoomClient] 自动重连失败: {ex.Message}");
+            // 忽略重连错误
         }
     }
 
@@ -475,29 +575,30 @@ public class RoomClientManager : IDisposable
 
     private void OnWebSocketError(string error)
     {
-        RoomClientState.Instance.StatusMessage = $"连接错误: {error}";
+        RoomClientState.Instance.StatusMessage = error;
     }
 
     #endregion
 
     public void Dispose()
     {
-        LogHelper.Info("[RoomClient] 客户端管理器正在销毁...");
-
         // 取消所有异步任务
         try
         {
             _pluginCts?.Cancel();
         }
-        catch (Exception ex)
+        catch
         {
-            LogHelper.Error($"[RoomClient] 取消任务时出错: {ex.Message}");
+            // 忽略
         }
 
         // 取消事件订阅
         Client.OnMessage -= OnWebSocketMessage;
         Client.OnStateChanged -= OnConnectionStateChanged;
         Client.OnError -= OnWebSocketError;
+
+        // 清理聊天邀请处理器
+        ChatInviteHandler.Instance.Dispose();
 
         // 断开连接并清理
         Client.Dispose();
@@ -508,7 +609,5 @@ public class RoomClientManager : IDisposable
 
         _initialized = false;
         _instance = null;
-
-        LogHelper.Info("[RoomClient] 客户端管理器已销毁");
     }
 }

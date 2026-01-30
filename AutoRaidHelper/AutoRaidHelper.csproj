@@ -15,21 +15,21 @@
 
   <PropertyGroup>
     <!-- 如果AEPath环境变量存在，则使用，否则使用默认值 -->
-    <AELibPath Condition="'$(AEPath)' != ''">$(AEPath)AEAssistCNVersion\AEAssist\</AELibPath>
+    <AELibPath Condition="'$(AEPath)' != ''">$(AEPath)\AEAssistCNVersion\AEAssist\</AELibPath>
     <AELibPath Condition="'$(AEPath)' == ''">..\..\..\AE\AEAssistCNVersion\AEAssist\</AELibPath>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- 如果OutputPath环境变量存在，则使用，否则使用默认值 -->
-    <OutputPath Condition="'$(AEPath)' != ''">$(AEPath)Plugins\AutoRaidHelper</OutputPath>
+    <OutputPath Condition="'$(AEPath)' != ''">$(AEPath)\Plugins\AutoRaidHelper</OutputPath>
     <OutputPath Condition="'$(AEPath)' == ''">.\Output\</OutputPath>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- 如果OutputPath环境变量存在，则使用，否则使用默认值 -->
-    <OutputPath Condition="'$(AEPath)' != ''">$(AEPath)Plugins\AutoRaidHelper</OutputPath>
+    <OutputPath Condition="'$(AEPath)' != ''">$(AEPath)\Plugins\AutoRaidHelper</OutputPath>
     <OutputPath Condition="'$(AEPath)' == ''">.\Output\</OutputPath>
   </PropertyGroup>
 

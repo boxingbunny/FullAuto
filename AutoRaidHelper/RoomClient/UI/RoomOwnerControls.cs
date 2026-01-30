@@ -143,12 +143,10 @@ public class RoomOwnerControls
             return;
         }
 
-        ImGui.PushID($"kick_{player.Id}");
-        if (ImGui.SmallButton("踢出"))
+        if (ImGui.SmallButton($"踢出##RCT_KickPlayer_{player.Id}"))
         {
             _ = KickPlayerAsync(room.Id, player.Id);
         }
-        ImGui.PopID();
     }
 
     #endregion

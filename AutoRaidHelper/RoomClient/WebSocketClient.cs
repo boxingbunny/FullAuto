@@ -5,7 +5,6 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using AEAssist.Helper;
 
 namespace AutoRaidHelper.RoomClient;
 
@@ -20,6 +19,7 @@ public class WebSocketClient : IDisposable
     private Task? _heartbeatTask;
 
     private readonly ConcurrentDictionary<string, TaskCompletionSource<WSAck>> _pendingAcks = new();
+    private readonly ConcurrentDictionary<string, TaskCompletionSource<string>> _pendingRawResponses = new();
     private readonly ConcurrentQueue<WSMessage> _messageQueue = new();
 
     // 使用 volatile 确保线程安全的状态读写
@@ -46,42 +46,39 @@ public class WebSocketClient : IDisposable
     /// </summary>
     public async Task<bool> ConnectAsync(string url)
     {
-        LogHelper.Info($"[RoomClient] ConnectAsync 开始, 当前状态: {State}");
-
-        // 如果已经连接或认证成功，直接返回（避免后台自动重连任务干扰）
+        // 如果已经连接或认证成功，直接返回
         if (State == ConnectionState.Connected || State == ConnectionState.Authenticated)
         {
-            LogHelper.Info($"[RoomClient] 已经连接，跳过此次连接请求");
             return true;
         }
 
         // 如果正在连接或认证中，也跳过
         if (State == ConnectionState.Connecting || State == ConnectionState.Authenticating)
         {
-            LogHelper.Info($"[RoomClient] 正在连接中，跳过此次连接请求");
             return false;
         }
 
-        _isManualDisconnect = false; // 重置标志
+        _isManualDisconnect = false;
 
-        // 如果不是断开状态，先清理并等待
+        // 如果不是断开状态，先清理
         if (State != ConnectionState.Disconnected)
         {
-            LogHelper.Info($"[RoomClient] 状态不是 Disconnected，先执行清理");
             await CleanupAsync();
         }
 
         try
         {
             SetState(ConnectionState.Connecting);
-            LogHelper.Info($"[RoomClient] 状态已设置为 Connecting");
+            ErrorMessage = null;
 
             _webSocket = new ClientWebSocket();
             _cts = new CancellationTokenSource();
 
-            LogHelper.Info($"[RoomClient] 正在连接到 {url}");
-            await _webSocket.ConnectAsync(new Uri(url), _cts.Token);
-            LogHelper.Info($"[RoomClient] WebSocket 连接成功");
+            // 设置连接超时
+            using var connectCts = new CancellationTokenSource(10000);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, connectCts.Token);
+
+            await _webSocket.ConnectAsync(new Uri(url), linkedCts.Token);
 
             SetState(ConnectionState.Connected);
 
@@ -91,14 +88,24 @@ public class WebSocketClient : IDisposable
             // 启动心跳任务
             _heartbeatTask = HeartbeatLoopAsync();
 
-            LogHelper.Info($"[RoomClient] 接收和心跳任务已启动");
             return true;
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
         {
-            ErrorMessage = ex.Message;
+            ErrorMessage = "连接超时";
             SetState(ConnectionState.Error);
-            LogHelper.Error($"[RoomClient] WebSocket连接失败: {ex}");
+            return false;
+        }
+        catch (WebSocketException)
+        {
+            ErrorMessage = "无法连接到服务器";
+            SetState(ConnectionState.Error);
+            return false;
+        }
+        catch (Exception)
+        {
+            ErrorMessage = "连接失败";
+            SetState(ConnectionState.Error);
             return false;
         }
     }
@@ -108,32 +115,27 @@ public class WebSocketClient : IDisposable
     /// </summary>
     public async Task DisconnectAsync()
     {
-        LogHelper.Info($"[RoomClient] DisconnectAsync 开始, 当前状态: {State}");
-
         if (_webSocket == null || State == ConnectionState.Disconnected)
         {
-            LogHelper.Info($"[RoomClient] 已经断开，无需操作");
             return;
         }
 
-        _isManualDisconnect = true; // 标记为主动断开
+        _isManualDisconnect = true;
 
         try
         {
             if (_webSocket.State == WebSocketState.Open)
             {
-                LogHelper.Info($"[RoomClient] 发送关闭消息");
                 using var closeCts = new CancellationTokenSource(3000);
                 await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Client disconnect", closeCts.Token);
             }
         }
-        catch (Exception ex)
+        catch
         {
-            LogHelper.Error($"[RoomClient] 断开连接时出错: {ex.Message}");
+            // 忽略断开时的错误
         }
 
         await CleanupAsync();
-        LogHelper.Info($"[RoomClient] DisconnectAsync 完成");
     }
 
     /// <summary>
@@ -232,9 +234,9 @@ public class WebSocketClient : IDisposable
             {
                 OnMessage?.Invoke(message);
             }
-            catch (Exception ex)
+            catch
             {
-                LogHelper.Error($"[RoomClient] 处理消息时出错: {ex.Message}");
+                // 忽略消息处理错误
             }
         }
     }
@@ -246,7 +248,7 @@ public class WebSocketClient : IDisposable
     /// </summary>
     public async Task<RoomListResponse?> GetRoomListAsync(int page = 1, int pageSize = 20)
     {
-        var ack = await SendWithAckAsync(MessageType.RoomList, new RoomListRequest
+        await SendWithAckAsync(MessageType.RoomList, new RoomListRequest
         {
             Page = page,
             PageSize = pageSize
@@ -260,15 +262,12 @@ public class WebSocketClient : IDisposable
     /// </summary>
     public async Task<WSAck?> CreateRoomAsync(string name, RoomSize size, string password = "")
     {
-        LogHelper.Info($"[RoomClient] WebSocket发送创建房间请求: name={name}, size={size}");
-        var result = await SendWithAckAsync(MessageType.RoomCreate, new RoomCreateRequest
+        return await SendWithAckAsync(MessageType.RoomCreate, new RoomCreateRequest
         {
             Name = name,
             Size = (int)size,
             Password = password
         });
-        LogHelper.Info($"[RoomClient] 创建房间结果: success={result?.Success}, error={result?.Error}");
-        return result;
     }
 
     /// <summary>
@@ -361,6 +360,60 @@ public class WebSocketClient : IDisposable
         });
     }
 
+    /// <summary>
+    /// 创建邀请码
+    /// </summary>
+    public async Task<RoomCreateInviteResponse?> CreateInviteAsync(string roomId)
+    {
+        var message = new WSMessage
+        {
+            MsgId = GenerateMsgId(),
+            Type = MessageType.RoomCreateInvite,
+            Payload = new RoomCreateInviteRequest { RoomId = roomId }
+        };
+
+        var tcs = new TaskCompletionSource<string>();
+        _pendingAcks[message.MsgId] = new TaskCompletionSource<WSAck>();
+
+        try
+        {
+            // 注册原始响应处理
+            _pendingRawResponses[message.MsgId] = tcs;
+            await SendMessageAsync(message);
+
+            using var cts = new CancellationTokenSource(10000);
+            cts.Token.Register(() => tcs.TrySetCanceled());
+
+            var rawJson = await tcs.Task;
+            var response = JsonSerializer.Deserialize<WSAckWithData<RoomCreateInviteResponse>>(rawJson);
+            if (response?.Success == true && response.Data != null)
+            {
+                return response.Data;
+            }
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        finally
+        {
+            _pendingAcks.TryRemove(message.MsgId, out _);
+            _pendingRawResponses.TryRemove(message.MsgId, out _);
+        }
+    }
+
+    /// <summary>
+    /// 通过邀请码加入房间
+    /// </summary>
+    public async Task<WSAck?> JoinRoomByInviteAsync(string inviteCode)
+    {
+        return await SendWithAckAsync(MessageType.RoomJoinByInvite, new RoomJoinByInviteRequest
+        {
+            InviteCode = inviteCode
+        });
+    }
+
     #endregion
 
     #region 管理员操作
@@ -392,12 +445,10 @@ public class WebSocketClient : IDisposable
     {
         if (_webSocket?.State != WebSocketState.Open)
         {
-            LogHelper.Error($"[RoomClient] WebSocket 未连接，无法发送消息: {message.Type}");
-            throw new InvalidOperationException("WebSocket 未连接");
+            throw new InvalidOperationException("未连接到服务器");
         }
 
         var json = JsonSerializer.Serialize(message);
-        LogHelper.Info($"[RoomClient] 发送WebSocket消息: {message.Type}, msgId={message.MsgId}");
         var bytes = Encoding.UTF8.GetBytes(json);
 
         await _webSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, _cts?.Token ?? CancellationToken.None);
@@ -407,8 +458,6 @@ public class WebSocketClient : IDisposable
     {
         var buffer = new byte[8192];
 
-        LogHelper.Info($"[RoomClient] ReceiveLoopAsync 开始");
-
         try
         {
             while (_webSocket?.State == WebSocketState.Open && !(_cts?.Token.IsCancellationRequested ?? true))
@@ -417,24 +466,20 @@ public class WebSocketClient : IDisposable
 
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
-                    // 处理服务器发来的关闭帧
                     var closeStatus = result.CloseStatus;
                     var closeDescription = result.CloseStatusDescription ?? "";
-
-                    LogHelper.Info($"[RoomClient] 收到关闭消息: code={closeStatus}, desc={closeDescription}");
 
                     // 检查是否是被踢出
                     // 4001: 账号在其他位置登录
                     // 4002: 被管理员踢出
                     if (closeStatus == (WebSocketCloseStatus)4001 || closeStatus == (WebSocketCloseStatus)4002)
                     {
-                        _isManualDisconnect = true; // 标记为"已知断开"，避免自动重连
+                        _isManualDisconnect = true;
                         RoomClientState.Instance.StatusMessage = closeDescription;
-                        LogHelper.Info($"[RoomClient] 连接被关闭: {closeDescription}");
                         OnError?.Invoke(closeDescription);
                     }
 
-                    // 发送关闭确认（完成握手）
+                    // 发送关闭确认
                     if (_webSocket.State == WebSocketState.CloseReceived)
                     {
                         try
@@ -443,7 +488,7 @@ public class WebSocketClient : IDisposable
                         }
                         catch
                         {
-                            // 忽略关闭时的错误
+                            // 忽略
                         }
                     }
 
@@ -459,53 +504,35 @@ public class WebSocketClient : IDisposable
         }
         catch (OperationCanceledException)
         {
-            LogHelper.Info($"[RoomClient] 接收循环被取消");
+            // 正常取消
         }
-        catch (WebSocketException ex)
+        catch (WebSocketException)
         {
-            // 检查是否是正常关闭（服务器发送了关闭帧后我们收到了异常）
+            // 检查是否是被踢出
             if (_webSocket?.CloseStatus != null)
             {
                 var closeStatus = _webSocket.CloseStatus.Value;
                 var closeDescription = _webSocket.CloseStatusDescription ?? "";
 
-                LogHelper.Info($"[RoomClient] WebSocket已关闭: code={closeStatus}, desc={closeDescription}");
-
-                // 检查是否是被踢出（4001: 其他位置登录，4002: 管理员踢出）
                 if ((int)closeStatus == 4001 || (int)closeStatus == 4002)
                 {
                     _isManualDisconnect = true;
                     RoomClientState.Instance.StatusMessage = closeDescription;
                     OnError?.Invoke(closeDescription);
-                    return;
                 }
             }
 
-            LogHelper.Error($"[RoomClient] WebSocket异常: {ex.Message}");
-            ErrorMessage = ex.Message;
-            // 只有在非手动断开时才设置错误状态
-            if (State != ConnectionState.Disconnected)
-            {
-                SetState(ConnectionState.Error);
-            }
+            ErrorMessage = "连接已断开";
         }
-        catch (Exception ex)
+        catch
         {
-            LogHelper.Error($"[RoomClient] 接收消息时出错: {ex.Message}");
-            ErrorMessage = ex.Message;
-            if (State != ConnectionState.Disconnected)
-            {
-                SetState(ConnectionState.Error);
-            }
+            ErrorMessage = "连接异常";
         }
         finally
         {
-            LogHelper.Info($"[RoomClient] ReceiveLoopAsync 结束, 当前状态: {State}");
-            // 不在这里调用 Cleanup，让调用方处理
-            // 但如果是异常断开，需要通知
-            if (State == ConnectionState.Connected || State == ConnectionState.Authenticated || State == ConnectionState.Authenticating)
+            // 无论什么原因导致接收循环结束，都应该设置为断开状态以触发重连逻辑
+            if (State != ConnectionState.Disconnected)
             {
-                LogHelper.Info($"[RoomClient] 连接意外断开");
                 SetState(ConnectionState.Disconnected);
             }
         }
@@ -521,10 +548,21 @@ public class WebSocketClient : IDisposable
             // 处理 ACK
             if (message.Type == MessageType.Ack)
             {
-                var ack = JsonSerializer.Deserialize<WSAck>(message.Payload?.ToString() ?? "{}");
-                if (ack != null && _pendingAcks.TryRemove(ack.MsgId, out var tcs))
+                var payloadStr = message.Payload?.ToString() ?? "{}";
+                var ack = JsonSerializer.Deserialize<WSAck>(payloadStr);
+                if (ack != null)
                 {
-                    tcs.TrySetResult(ack);
+                    // 检查是否有等待原始响应的请求
+                    if (_pendingRawResponses.TryRemove(ack.MsgId, out var rawTcs))
+                    {
+                        rawTcs.TrySetResult(payloadStr);
+                    }
+
+                    // 检查是否有等待 ACK 的请求
+                    if (_pendingAcks.TryRemove(ack.MsgId, out var tcs))
+                    {
+                        tcs.TrySetResult(ack);
+                    }
                 }
                 return;
             }
@@ -543,7 +581,6 @@ public class WebSocketClient : IDisposable
                 {
                     PlayerId = result.PlayerId;
                     PlayerRole = result.Role;
-                    // 设置管理员标志
                     RoomClientState.Instance.IsAdmin = result.Role == PlayerRole.Admin;
                 }
             }
@@ -551,9 +588,9 @@ public class WebSocketClient : IDisposable
             // 将消息加入队列，在主线程处理
             _messageQueue.Enqueue(message);
         }
-        catch (Exception ex)
+        catch
         {
-            LogHelper.Error($"[RoomClient] 解析消息失败: {ex.Message}");
+            // 忽略解析错误
         }
     }
 
@@ -571,13 +608,9 @@ public class WebSocketClient : IDisposable
                 }
             }
         }
-        catch (OperationCanceledException)
+        catch
         {
-            // 正常取消
-        }
-        catch (Exception ex)
-        {
-            LogHelper.Error($"[RoomClient] 心跳发送失败: {ex.Message}");
+            // 忽略心跳错误
         }
     }
 
@@ -594,28 +627,8 @@ public class WebSocketClient : IDisposable
         }
     }
 
-    private void Cleanup()
-    {
-        _cts?.Cancel();
-        _webSocket?.Dispose();
-        _webSocket = null;
-        _cts?.Dispose();
-        _cts = null;
-
-        foreach (var tcs in _pendingAcks.Values)
-        {
-            tcs.TrySetCanceled();
-        }
-        _pendingAcks.Clear();
-
-        PlayerId = null;
-    }
-
     private async Task CleanupAsync()
     {
-        LogHelper.Info($"[RoomClient] CleanupAsync 开始");
-
-        // 先取消所有操作
         _cts?.Cancel();
 
         // 等待接收任务完成
@@ -624,7 +637,6 @@ public class WebSocketClient : IDisposable
             try
             {
                 await Task.WhenAny(_receiveTask, Task.Delay(2000));
-                LogHelper.Info($"[RoomClient] 接收任务已停止");
             }
             catch
             {
@@ -638,7 +650,6 @@ public class WebSocketClient : IDisposable
             try
             {
                 await Task.WhenAny(_heartbeatTask, Task.Delay(1000));
-                LogHelper.Info($"[RoomClient] 心跳任务已停止");
             }
             catch
             {
@@ -662,8 +673,6 @@ public class WebSocketClient : IDisposable
 
         PlayerId = null;
         SetState(ConnectionState.Disconnected);
-
-        LogHelper.Info($"[RoomClient] CleanupAsync 完成, isManualDisconnect={_isManualDisconnect}");
     }
 
     private static string GenerateMsgId()
@@ -676,13 +685,10 @@ public class WebSocketClient : IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        LogHelper.Info("[RoomClient] WebSocketClient 正在销毁...");
-
-        // 同步清理，不等待异步操作完成
         try
         {
             _cts?.Cancel();
-            _webSocket?.Abort(); // 强制关闭连接
+            _webSocket?.Abort();
             _webSocket?.Dispose();
             _webSocket = null;
             _cts?.Dispose();
@@ -694,13 +700,12 @@ public class WebSocketClient : IDisposable
             }
             _pendingAcks.Clear();
         }
-        catch (Exception ex)
+        catch
         {
-            LogHelper.Error($"[RoomClient] WebSocketClient 销毁时出错: {ex.Message}");
+            // 忽略销毁时的错误
         }
 
         SetState(ConnectionState.Disconnected);
-        LogHelper.Info("[RoomClient] WebSocketClient 已销毁");
     }
 
     #endregion

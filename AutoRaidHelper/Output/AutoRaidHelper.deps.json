@@ -1,0 +1,41 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "AutoRaidHelper/0.0.189+client.3b3b742": {
+        "dependencies": {
+          "TerraFX.Interop.Windows": "10.0.26100.6"
+        },
+        "runtime": {
+          "AutoRaidHelper.dll": {}
+        }
+      },
+      "TerraFX.Interop.Windows/10.0.26100.6": {
+        "runtime": {
+          "lib/net10.0/TerraFX.Interop.Windows.dll": {
+            "assemblyVersion": "10.0.26100.6",
+            "fileVersion": "10.0.26100.6"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "AutoRaidHelper/0.0.189+client.3b3b742": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "TerraFX.Interop.Windows/10.0.26100.6": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-QjL9vliSWmscUv6A7bjvsryHjYnY0norqvCNcLXSdEy1VIIzMF6FiS7BuvLTBuGUeN9FY4zJbU65OsHEv7jG9A==",
+      "path": "terrafx.interop.windows/10.0.26100.6",
+      "hashPath": "terrafx.interop.windows.10.0.26100.6.nupkg.sha512"
+    }
+  }
+}

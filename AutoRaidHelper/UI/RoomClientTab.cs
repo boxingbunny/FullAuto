@@ -120,7 +120,7 @@ public class RoomClientTab
         if (state == ConnectionState.Disconnected || state == ConnectionState.Error)
         {
             ImGui.SameLine();
-            if (ImGui.Button("连接服务器"))
+            if (ImGui.Button("连接服务器##RCT_ConnectHeader"))
             {
                 _ = RoomClientManager.Instance.ConnectAsync();
             }
@@ -128,7 +128,7 @@ public class RoomClientTab
         else if (state == ConnectionState.Authenticated)
         {
             ImGui.SameLine();
-            if (ImGui.Button("断开连接"))
+            if (ImGui.Button("断开连接##RCT_DisconnectHeader"))
             {
                 _ = RoomClientManager.Instance.DisconnectAsync();
             }
@@ -170,7 +170,7 @@ public class RoomClientTab
         ImGui.TextDisabled("(?)");
         if (ImGui.IsItemHovered())
         {
-            ImGui.SetTooltip("启动插件时自动连接到服务器");
+            ImGui.SetTooltip("AE认证完成后自动连接到服务器\n如果连接失败会按照重连间隔持续尝试");
         }
 
         var autoReconnect = setting.AutoReconnect;
@@ -201,7 +201,7 @@ public class RoomClientTab
         }
 
         ImGui.Spacing();
-        if (ImGui.Button("保存设置"))
+        if (ImGui.Button("保存设置##RCT_SaveSettings"))
         {
             FullAutoSettings.Instance.Save();
             RoomClientState.Instance.StatusMessage = "设置已保存";
@@ -225,7 +225,7 @@ public class RoomClientTab
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.3f, 0.6f, 0.9f, 1.0f));
             ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.1f, 0.4f, 0.7f, 1.0f));
 
-            if (ImGui.Button("连接服务器", new Vector2(200, 35)))
+            if (ImGui.Button("连接服务器##RCT_ConnectQuick", new Vector2(200, 35)))
             {
                 _ = RoomClientManager.Instance.ConnectAsync();
             }
@@ -240,14 +240,14 @@ public class RoomClientTab
             {
                 ImGui.Text($"当前房间: {RoomClientState.Instance.CurrentRoom?.Name ?? "未知"}");
 
-                if (ImGui.Button("离开房间"))
+                if (ImGui.Button("离开房间##RCT_LeaveQuick"))
                 {
                     _ = RoomClientManager.Instance.Client.LeaveRoomAsync();
                 }
             }
 
             ImGui.SameLine();
-            if (ImGui.Button("断开连接"))
+            if (ImGui.Button("断开连接##RCT_DisconnectQuick"))
             {
                 _ = RoomClientManager.Instance.DisconnectAsync();
             }

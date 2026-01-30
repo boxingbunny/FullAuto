@@ -54,7 +54,7 @@ public class RoomManagementPanel
             ImGui.InputText("密码(可选)", ref _createRoomPassword, 32);
             ImGui.Combo("房间规模", ref _createRoomSizeIndex, RoomSizeLabels, RoomSizeLabels.Length);
 
-            if (ImGui.Button("创建房间##Create"))
+            if (ImGui.Button("创建房间##RCT_CreateRoom"))
             {
                 if (string.IsNullOrWhiteSpace(_createRoomName))
                 {
@@ -72,7 +72,7 @@ public class RoomManagementPanel
         // 房间列表
         if (ImGui.CollapsingHeader("房间列表", ImGuiTreeNodeFlags.DefaultOpen))
         {
-            if (ImGui.Button("刷新列表##Refresh"))
+            if (ImGui.Button("刷新列表##RCT_RefreshRoomList"))
             {
                 _ = RefreshRoomListSafeAsync();
             }
@@ -107,7 +107,7 @@ public class RoomManagementPanel
                         ImGui.InputText("房间密码", ref _joinRoomPassword, 32);
                     }
 
-                    if (ImGui.Button("加入房间##Join"))
+                    if (ImGui.Button("加入房间##RCT_JoinRoom"))
                     {
                         _ = JoinRoomAsync(selectedRoom.Id, selectedRoom.HasPassword ? _joinRoomPassword : "");
                     }
@@ -135,7 +135,7 @@ public class RoomManagementPanel
         ImGui.Text($"房主: {room.OwnerName}");
 
         // 操作按钮
-        if (ImGui.Button("离开房间"))
+        if (ImGui.Button("离开房间##RCT_LeaveRoom"))
         {
             _ = LeaveRoomAsync();
         }
@@ -143,16 +143,26 @@ public class RoomManagementPanel
         if (state.IsRoomOwner)
         {
             ImGui.SameLine();
-            if (ImGui.Button("解散房间"))
+            if (ImGui.Button("解散房间##RCT_DisbandRoom"))
             {
                 _ = DisbandRoomAsync();
             }
         }
 
         ImGui.SameLine();
-        if (ImGui.Button("刷新"))
+        if (ImGui.Button("刷新##RCT_RefreshRoom"))
         {
             _ = RoomClientManager.Instance.Client.GetRoomInfoAsync(room.Id);
+        }
+
+        ImGui.SameLine();
+        if (ImGui.Button("发送邀请##RCT_SendInvite"))
+        {
+            _ = SendInviteAsync(room.Id, room.Size);
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip(room.Size <= 8 ? "发送邀请到小队频道" : "发送邀请到团队频道");
         }
 
         ImGui.Separator();
@@ -431,6 +441,32 @@ public class RoomManagementPanel
         else
         {
             RoomClientState.Instance.StatusMessage = $"解散失败: {ack?.Error ?? "未知错误"}";
+        }
+    }
+
+    private async Task SendInviteAsync(string roomId, int roomSize)
+    {
+        RoomClientState.Instance.StatusMessage = "正在生成邀请码...";
+
+        try
+        {
+            var response = await RoomClientManager.Instance.Client.CreateInviteAsync(roomId);
+
+            if (response != null && !string.IsNullOrEmpty(response.InviteCode))
+            {
+                // 发送邀请消息到聊天频道
+                ChatInviteHandler.Instance.SendInviteMessage(response.InviteCode, roomSize);
+                RoomClientState.Instance.StatusMessage = "邀请已发送";
+            }
+            else
+            {
+                RoomClientState.Instance.StatusMessage = "生成邀请码失败";
+            }
+        }
+        catch (Exception ex)
+        {
+            LogHelper.Error($"[RoomClient] 发送邀请失败: {ex.Message}");
+            RoomClientState.Instance.StatusMessage = $"发送邀请失败: {ex.Message}";
         }
     }
 

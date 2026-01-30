@@ -338,10 +338,5 @@ public class MainWindow : Window, IDisposable
         // 初始化房间客户端管理器
         RoomClientManager.Instance.Initialize();
 
-        // 如果启用了自动连接，则连接服务器
-        if (FullAutoSettings.Instance.RoomClientSetting.AutoConnect)
-        {
-            _ = RoomClientManager.Instance.ConnectAsync();
-        }
     }
 }
