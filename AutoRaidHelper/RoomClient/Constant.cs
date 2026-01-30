@@ -89,20 +89,8 @@ public static class MessageType
     public const string AdminGetUsers = "admin_get_users";
     public const string AdminKickUser = "admin_kick_user";
 
-    // 邀请消息
-    public const string RoomCreateInvite = "room_create_invite";
-    public const string RoomJoinByInvite = "room_join_by_invite";
-}
-
-/// <summary>
-/// 聊天邀请消息前缀
-/// </summary>
-public static class InviteMessagePrefix
-{
-    /// <summary>
-    /// 邀请消息前缀
-    /// </summary>
-    public const string Prefix = "[AE房间]";
+    // 批量邀请消息
+    public const string RoomBatchInvite = "room_batch_invite";
 }
 
 /// <summary>

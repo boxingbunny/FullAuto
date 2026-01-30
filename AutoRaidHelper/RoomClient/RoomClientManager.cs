@@ -57,9 +57,6 @@ public class RoomClientManager : IDisposable
             Client.OnStateChanged += OnConnectionStateChanged;
             Client.OnError += OnWebSocketError;
 
-            // 初始化聊天邀请处理器
-            ChatInviteHandler.Instance.Initialize();
-
             _initialized = true;
         }
         catch (Exception ex)
@@ -596,9 +593,6 @@ public class RoomClientManager : IDisposable
         Client.OnMessage -= OnWebSocketMessage;
         Client.OnStateChanged -= OnConnectionStateChanged;
         Client.OnError -= OnWebSocketError;
-
-        // 清理聊天邀请处理器
-        ChatInviteHandler.Instance.Dispose();
 
         // 断开连接并清理
         Client.Dispose();

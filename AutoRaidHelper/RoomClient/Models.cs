@@ -443,46 +443,52 @@ public class AdminKickUserRequest
 
 #endregion
 
-#region 邀请消息
+#region 批量邀请消息
 
 /// <summary>
-/// 创建邀请码请求
+/// 批量邀请请求
 /// </summary>
-public class RoomCreateInviteRequest
+public class RoomBatchInviteRequest
 {
     [JsonPropertyName("roomId")]
     public string RoomId { get; set; } = "";
+
+    [JsonPropertyName("cids")]
+    public List<string> CIDs { get; set; } = new();
 }
 
 /// <summary>
-/// 创建邀请码响应
+/// 批量邀请响应
 /// </summary>
-public class RoomCreateInviteResponse
+public class RoomBatchInviteResponse
 {
-    [JsonPropertyName("inviteCode")]
-    public string InviteCode { get; set; } = "";
-
-    [JsonPropertyName("expiresAt")]
-    public long ExpiresAtUnix { get; set; }
+    /// <summary>
+    /// 成功加入的玩家名列表
+    /// </summary>
+    [JsonPropertyName("joined")]
+    public List<string> Joined { get; set; } = new();
 
     /// <summary>
-    /// 过期时间（从 Unix 时间戳转换）
+    /// 未连接服务器的CID数量
     /// </summary>
-    [JsonIgnore]
-    public DateTime ExpiresAt => DateTimeOffset.FromUnixTimeSeconds(ExpiresAtUnix).LocalDateTime;
+    [JsonPropertyName("notConnected")]
+    public int NotConnected { get; set; }
+
+    /// <summary>
+    /// 已在其他房间的玩家名列表
+    /// </summary>
+    [JsonPropertyName("alreadyInRoom")]
+    public List<string> AlreadyInRoom { get; set; } = new();
+
+    /// <summary>
+    /// 因房间满员未能加入的玩家名列表
+    /// </summary>
+    [JsonPropertyName("roomFull")]
+    public List<string> RoomFull { get; set; } = new();
 }
 
 /// <summary>
-/// 通过邀请码加入房间请求
-/// </summary>
-public class RoomJoinByInviteRequest
-{
-    [JsonPropertyName("inviteCode")]
-    public string InviteCode { get; set; } = "";
-}
-
-/// <summary>
-/// ACK with data (用于创建邀请码等需要返回数据的响应)
+/// ACK with data (用于需要返回数据的响应)
 /// </summary>
 public class WSAckWithData<T>
 {

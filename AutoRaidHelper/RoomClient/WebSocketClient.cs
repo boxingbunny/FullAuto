@@ -361,23 +361,24 @@ public class WebSocketClient : IDisposable
     }
 
     /// <summary>
-    /// 创建邀请码
+    /// 批量邀请玩家加入房间
     /// </summary>
-    public async Task<RoomCreateInviteResponse?> CreateInviteAsync(string roomId)
+    /// <param name="roomId">房间ID</param>
+    /// <param name="cids">要邀请的玩家CID列表</param>
+    public async Task<RoomBatchInviteResponse?> BatchInviteAsync(string roomId, List<string> cids)
     {
         var message = new WSMessage
         {
             MsgId = GenerateMsgId(),
-            Type = MessageType.RoomCreateInvite,
-            Payload = new RoomCreateInviteRequest { RoomId = roomId }
+            Type = MessageType.RoomBatchInvite,
+            Payload = new RoomBatchInviteRequest { RoomId = roomId, CIDs = cids }
         };
 
         var tcs = new TaskCompletionSource<string>();
-        _pendingAcks[message.MsgId] = new TaskCompletionSource<WSAck>();
 
         try
         {
-            // 注册原始响应处理
+            // 只注册原始响应处理器
             _pendingRawResponses[message.MsgId] = tcs;
             await SendMessageAsync(message);
 
@@ -385,7 +386,7 @@ public class WebSocketClient : IDisposable
             cts.Token.Register(() => tcs.TrySetCanceled());
 
             var rawJson = await tcs.Task;
-            var response = JsonSerializer.Deserialize<WSAckWithData<RoomCreateInviteResponse>>(rawJson);
+            var response = JsonSerializer.Deserialize<WSAckWithData<RoomBatchInviteResponse>>(rawJson);
             if (response?.Success == true && response.Data != null)
             {
                 return response.Data;
@@ -398,20 +399,8 @@ public class WebSocketClient : IDisposable
         }
         finally
         {
-            _pendingAcks.TryRemove(message.MsgId, out _);
             _pendingRawResponses.TryRemove(message.MsgId, out _);
         }
-    }
-
-    /// <summary>
-    /// 通过邀请码加入房间
-    /// </summary>
-    public async Task<WSAck?> JoinRoomByInviteAsync(string inviteCode)
-    {
-        return await SendWithAckAsync(MessageType.RoomJoinByInvite, new RoomJoinByInviteRequest
-        {
-            InviteCode = inviteCode
-        });
     }
 
     #endregion

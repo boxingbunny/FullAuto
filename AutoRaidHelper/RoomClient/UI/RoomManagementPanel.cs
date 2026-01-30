@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Threading.Tasks;
 using AEAssist.Helper;
 using Dalamud.Bindings.ImGui;
+using ECommons.DalamudServices;
 
 namespace AutoRaidHelper.RoomClient.UI;
 
@@ -156,13 +157,14 @@ public class RoomManagementPanel
         }
 
         ImGui.SameLine();
-        if (ImGui.Button("发送邀请##RCT_SendInvite"))
+        var inviteButtonText = room.Size <= 8 ? "邀请小队##RCT_BatchInvite" : "邀请团队##RCT_BatchInvite";
+        if (ImGui.Button(inviteButtonText))
         {
-            _ = SendInviteAsync(room.Id, room.Size);
+            _ = BatchInvitePartyAsync(room.Id);
         }
         if (ImGui.IsItemHovered())
         {
-            ImGui.SetTooltip(room.Size <= 8 ? "发送邀请到小队频道" : "发送邀请到团队频道");
+            ImGui.SetTooltip(room.Size <= 8 ? "邀请当前小队成员加入房间" : "邀请当前团队成员加入房间");
         }
 
         ImGui.Separator();
@@ -444,30 +446,90 @@ public class RoomManagementPanel
         }
     }
 
-    private async Task SendInviteAsync(string roomId, int roomSize)
+    /// <summary>
+    /// 批量邀请当前小队/团队成员加入房间
+    /// </summary>
+    private async Task BatchInvitePartyAsync(string roomId)
     {
-        RoomClientState.Instance.StatusMessage = "正在生成邀请码...";
+        RoomClientState.Instance.StatusMessage = "正在邀请队友...";
 
         try
         {
-            var response = await RoomClientManager.Instance.Client.CreateInviteAsync(roomId);
-
-            if (response != null && !string.IsNullOrEmpty(response.InviteCode))
+            // 获取当前小队/团队成员的 CID
+            var cids = GetPartyMemberCIDs();
+            if (cids.Count == 0)
             {
-                // 发送邀请消息到聊天频道
-                ChatInviteHandler.Instance.SendInviteMessage(response.InviteCode, roomSize);
-                RoomClientState.Instance.StatusMessage = "邀请已发送";
+                RoomClientState.Instance.StatusMessage = "没有可邀请的队友";
+                return;
+            }
+
+            var response = await RoomClientManager.Instance.Client.BatchInviteAsync(roomId, cids);
+
+            if (response != null)
+            {
+                // 构建结果消息
+                var messages = new List<string>();
+                if (response.Joined.Count > 0)
+                {
+                    messages.Add($"成功邀请 {response.Joined.Count} 人");
+                }
+                if (response.NotConnected > 0)
+                {
+                    messages.Add($"{response.NotConnected} 人未连接服务器");
+                }
+                if (response.AlreadyInRoom.Count > 0)
+                {
+                    messages.Add($"{response.AlreadyInRoom.Count} 人已在其他房间");
+                }
+                if (response.RoomFull.Count > 0)
+                {
+                    messages.Add($"{response.RoomFull.Count} 人因房间满员未能加入");
+                }
+
+                RoomClientState.Instance.StatusMessage = messages.Count > 0
+                    ? string.Join(", ", messages)
+                    : "没有可邀请的队友";
+
+                // 刷新房间信息
+                if (response.Joined.Count > 0)
+                {
+                    await RoomClientManager.Instance.Client.GetRoomInfoAsync(roomId);
+                }
             }
             else
             {
-                RoomClientState.Instance.StatusMessage = "生成邀请码失败";
+                RoomClientState.Instance.StatusMessage = "邀请失败";
             }
         }
         catch (Exception ex)
         {
-            LogHelper.Error($"[RoomClient] 发送邀请失败: {ex.Message}");
-            RoomClientState.Instance.StatusMessage = $"发送邀请失败: {ex.Message}";
+            LogHelper.Error($"[RoomClient] 批量邀请失败: {ex.Message}");
+            RoomClientState.Instance.StatusMessage = $"邀请失败: {ex.Message}";
         }
+    }
+
+    /// <summary>
+    /// 获取当前小队/团队成员的 CID 列表（不包括自己）
+    /// </summary>
+    private List<string> GetPartyMemberCIDs()
+    {
+        var cids = new List<string>();
+        var myCid = Svc.ClientState.LocalContentId;
+
+        foreach (var member in Svc.Party)
+        {
+            // ContentId 为 0 表示无效成员
+            if (member.ContentId == 0)
+                continue;
+
+            // 跳过自己（将 ulong 转换为 long 进行比较）
+            if (member.ContentId == (long)myCid)
+                continue;
+
+            cids.Add(member.ContentId.ToString());
+        }
+
+        return cids;
     }
 
     #endregion
