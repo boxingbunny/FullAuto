@@ -93,3 +93,6 @@ project.fragment.lock.json
 artifacts/
 AutoRaidHelper/AutoRaidHelper.sln
 AutoRaidHelper/AutoRaidHelper.csproj
+CLAUDE.md
+.git/
+.idea/

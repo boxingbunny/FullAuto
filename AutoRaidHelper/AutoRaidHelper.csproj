@@ -23,14 +23,14 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- 如果OutputPath环境变量存在，则使用，否则使用默认值 -->
     <OutputPath Condition="'$(AEPath)' != ''">$(AEPath)Plugins\AutoRaidHelper</OutputPath>
-    <OutputPath Condition="'$(AEPath)' == ''">E:\AE3.0\Plugins\AutoRaidHelper</OutputPath>
+    <OutputPath Condition="'$(AEPath)' == ''">.\Output\</OutputPath>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- 如果OutputPath环境变量存在，则使用，否则使用默认值 -->
     <OutputPath Condition="'$(AEPath)' != ''">$(AEPath)Plugins\AutoRaidHelper</OutputPath>
-    <OutputPath Condition="'$(AEPath)' == ''">E:\AE3.0\Plugins\AutoRaidHelper</OutputPath>
+    <OutputPath Condition="'$(AEPath)' == ''">.\Output\</OutputPath>
   </PropertyGroup>
 
   <PropertyGroup>
