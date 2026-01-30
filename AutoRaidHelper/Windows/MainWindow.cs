@@ -5,6 +5,7 @@ using AutoRaidHelper.Helpers;
 using AutoRaidHelper.UI;
 using AutoRaidHelper.Settings;
 using AutoRaidHelper.Utils;
+using AutoRaidHelper.RoomClient;
 using ECommons.DalamudServices;
 
 namespace AutoRaidHelper.Windows;
@@ -21,6 +22,7 @@ public class MainWindow : Window, IDisposable
     private readonly FoodBuffTab _foodBuffTab;
     private readonly UISettingsTab _uiSettingsTab;
     private readonly aboutTab _aboutTab;
+    private readonly RoomClientTab _roomClientTab;
 
     public MainWindow() : base(
         "全自动小助手###AutoRaidHelperMain",
@@ -44,6 +46,7 @@ public class MainWindow : Window, IDisposable
         _foodBuffTab = new FoodBuffTab();
         _uiSettingsTab = new UISettingsTab();
         _aboutTab = new aboutTab();
+        _roomClientTab = new RoomClientTab();
 
         // 初始化磨砂玻璃背景管理器
         try
@@ -64,6 +67,7 @@ public class MainWindow : Window, IDisposable
         _backgroundManager?.Dispose();
         _automationTab.Dispose();
         _debugPrintTab.Dispose();
+        RoomClientManager.Instance.Dispose();
     }
 
     public void OnUpdate()
@@ -72,6 +76,7 @@ public class MainWindow : Window, IDisposable
         _automationTab.Update();
         _faManualTab.Update();
         _blackListTab.Update();
+        RoomClientManager.Instance.Update();
     }
 
     public override void PreDraw()
@@ -302,7 +307,16 @@ public class MainWindow : Window, IDisposable
                 ImGui.EndChild();
                 ImGui.EndTabItem();
             }
-            
+
+            if (ImGui.BeginTabItem("房间客户端"))
+            {
+                ImGui.BeginChild("RoomClientContent", new Vector2(0, contentHeight), false,
+                    ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoScrollbar);
+                _roomClientTab.Draw();
+                ImGui.EndChild();
+                ImGui.EndTabItem();
+            }
+
             if (ImGui.BeginTabItem("关于"))
             {
                 ImGui.BeginChild("About", new Vector2(0, contentHeight), false,
@@ -320,5 +334,14 @@ public class MainWindow : Window, IDisposable
     {
         _automationTab.OnLoad(loadContext);
         _debugPrintTab.OnLoad(loadContext);
+
+        // 初始化房间客户端管理器
+        RoomClientManager.Instance.Initialize();
+
+        // 如果启用了自动连接，则连接服务器
+        if (FullAutoSettings.Instance.RoomClientSetting.AutoConnect)
+        {
+            _ = RoomClientManager.Instance.ConnectAsync();
+        }
     }
 }

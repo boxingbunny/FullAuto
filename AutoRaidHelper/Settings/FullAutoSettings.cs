@@ -61,6 +61,9 @@ namespace AutoRaidHelper.Settings
         // DebugPrintSettings：调试打印相关设置，控制输出各类触发事件的调试信息
         public DebugPrintSettings DebugPrintSettings { get; set; } = new();
 
+        // RoomClientSetting：房间客户端相关设置
+        public RoomClientSetting RoomClientSetting { get; set; } = new();
+
         // UI相关设置：磨砂玻璃背景和窗口不透明度
         public bool UseFrostedGlass { get; set; } = true;
         public float WindowOpacity { get; set; } = 0.5f;
@@ -781,6 +784,69 @@ namespace AutoRaidHelper.Settings
         public void UpdatePrintNpcYell(bool value)
         {
             PrintNpcYell = value;
+            FullAutoSettings.Instance.Save();
+        }
+    }
+
+    /// <summary>
+    /// RoomClientSetting 包含房间客户端相关的配置，
+    /// 如服务器地址、自动连接、断线重连等设置。
+    /// </summary>
+    public class RoomClientSetting
+    {
+        /// <summary>
+        /// 服务器地址
+        /// </summary>
+        public string ServerUrl { get; set; } = "ws://localhost:8080/api/ws";
+
+        /// <summary>
+        /// 自动连接
+        /// </summary>
+        public bool AutoConnect { get; set; } = false;
+
+        /// <summary>
+        /// 自动重连
+        /// </summary>
+        public bool AutoReconnect { get; set; } = true;
+
+        /// <summary>
+        /// 重连间隔(秒)
+        /// </summary>
+        public int ReconnectInterval { get; set; } = 5;
+
+        /// <summary>
+        /// 更新服务器地址，并保存配置
+        /// </summary>
+        public void UpdateServerUrl(string url)
+        {
+            ServerUrl = url;
+            FullAutoSettings.Instance.Save();
+        }
+
+        /// <summary>
+        /// 更新自动连接状态，并保存配置
+        /// </summary>
+        public void UpdateAutoConnect(bool enabled)
+        {
+            AutoConnect = enabled;
+            FullAutoSettings.Instance.Save();
+        }
+
+        /// <summary>
+        /// 更新自动重连状态，并保存配置
+        /// </summary>
+        public void UpdateAutoReconnect(bool enabled)
+        {
+            AutoReconnect = enabled;
+            FullAutoSettings.Instance.Save();
+        }
+
+        /// <summary>
+        /// 更新重连间隔，并保存配置
+        /// </summary>
+        public void UpdateReconnectInterval(int interval)
+        {
+            ReconnectInterval = Math.Clamp(interval, 1, 60);
             FullAutoSettings.Instance.Save();
         }
     }
