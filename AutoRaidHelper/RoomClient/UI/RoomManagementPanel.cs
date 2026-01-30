@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
 using AEAssist.Helper;
+using AutoRaidHelper.RoomClient.Command;
 using Dalamud.Bindings.ImGui;
 using ECommons.DalamudServices;
 
@@ -23,6 +24,10 @@ public class RoomManagementPanel
     // 加入房间
     private string _joinRoomPassword = "";
     private string _selectedRoomId = "";
+
+    // 发送指令
+    private string _commandTargets = "";
+    private string _commandMessage = "";
 
     private static readonly int[] RoomSizes = { 4, 8, 24, 32, 48 };
     private static readonly string[] RoomSizeLabels = { "4人", "8人", "24人", "32人", "48人" };
@@ -179,6 +184,59 @@ public class RoomManagementPanel
         {
             // 小房间：单一列表显示
             DrawSimplePlayerList(state, room);
+        }
+
+        // 指令发送面板
+        DrawCommandPanel();
+    }
+
+    /// <summary>
+    /// 绘制指令发送面板
+    /// </summary>
+    private void DrawCommandPanel()
+    {
+        ImGui.Spacing();
+        if (ImGui.CollapsingHeader("发送指令##RCT_CommandPanel"))
+        {
+            ImGui.InputText("目标##RCT_CmdTargets", ref _commandTargets, 64);
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.SetTooltip("留空=所有人, A=A队, MT=所有MT, A+MT=A队MT, MT,ST=所有MT和ST");
+            }
+
+            ImGui.InputText("消息##RCT_CmdMessage", ref _commandMessage, 256);
+
+            if (ImGui.Button("发送##RCT_SendCommand"))
+            {
+                if (!string.IsNullOrEmpty(_commandMessage))
+                {
+                    _ = SendCommandAsync(_commandTargets, _commandMessage);
+                }
+            }
+            ImGui.SameLine();
+            ImGui.TextDisabled("(?)");
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.SetTooltip("发送聊天消息指令给目标玩家\n目标玩家会在游戏内发送此消息");
+            }
+        }
+    }
+
+    /// <summary>
+    /// 发送指令
+    /// </summary>
+    private async Task SendCommandAsync(string targets, string message)
+    {
+        RoomClientState.Instance.StatusMessage = "正在发送指令...";
+        try
+        {
+            var success = await RoomCommandManager.Instance.SendChatMessageAsync(targets, message);
+            RoomClientState.Instance.StatusMessage = success ? "指令已发送" : "发送失败";
+        }
+        catch (Exception ex)
+        {
+            LogHelper.Error($"[RoomClient] 发送指令失败: {ex.Message}");
+            RoomClientState.Instance.StatusMessage = $"发送失败: {ex.Message}";
         }
     }
 

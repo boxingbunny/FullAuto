@@ -91,6 +91,20 @@ public static class MessageType
 
     // 批量邀请消息
     public const string RoomBatchInvite = "room_batch_invite";
+
+    // 房间指令消息
+    public const string RoomCommand = "room_command";
+}
+
+/// <summary>
+/// 房间指令类型
+/// </summary>
+public enum CommandType
+{
+    /// <summary>
+    /// 发送聊天消息
+    /// </summary>
+    SendMessage = 1
 }
 
 /// <summary>

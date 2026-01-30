@@ -506,3 +506,73 @@ public class WSAckWithData<T>
 }
 
 #endregion
+
+#region 房间指令消息
+
+/// <summary>
+/// 房间指令请求
+/// </summary>
+public class RoomCommandRequest
+{
+    /// <summary>
+    /// 房间ID（空则使用发送人所在房间）
+    /// </summary>
+    [JsonPropertyName("roomId")]
+    public string RoomId { get; set; } = "";
+
+    /// <summary>
+    /// 接收人（逗号分隔，如 "MT,ST" 或 "A+MT"，空表示所有人）
+    /// </summary>
+    [JsonPropertyName("targets")]
+    public string Targets { get; set; } = "";
+
+    /// <summary>
+    /// 指令类型
+    /// </summary>
+    [JsonPropertyName("commandType")]
+    public int CommandType { get; set; }
+
+    /// <summary>
+    /// 具体指令内容
+    /// </summary>
+    [JsonPropertyName("command")]
+    public string Command { get; set; } = "";
+}
+
+/// <summary>
+/// 房间指令消息（从服务端接收）
+/// </summary>
+public class RoomCommandMessage
+{
+    /// <summary>
+    /// 发送人 CID
+    /// </summary>
+    [JsonPropertyName("senderCid")]
+    public string SenderCid { get; set; } = "";
+
+    /// <summary>
+    /// 房间 ID
+    /// </summary>
+    [JsonPropertyName("roomId")]
+    public string RoomId { get; set; } = "";
+
+    /// <summary>
+    /// 原始接收人字符串
+    /// </summary>
+    [JsonPropertyName("targets")]
+    public string Targets { get; set; } = "";
+
+    /// <summary>
+    /// 指令类型
+    /// </summary>
+    [JsonPropertyName("commandType")]
+    public int CommandType { get; set; }
+
+    /// <summary>
+    /// 具体指令内容
+    /// </summary>
+    [JsonPropertyName("command")]
+    public string Command { get; set; } = "";
+}
+
+#endregion

@@ -361,6 +361,24 @@ public class WebSocketClient : IDisposable
     }
 
     /// <summary>
+    /// 发送房间指令
+    /// </summary>
+    /// <param name="roomId">房间ID（空则使用发送人所在房间）</param>
+    /// <param name="targets">接收人（逗号分隔，如 "MT,ST" 或 "A+MT"，空表示所有人）</param>
+    /// <param name="commandType">指令类型</param>
+    /// <param name="command">具体指令内容</param>
+    public async Task<WSAck?> SendRoomCommandAsync(string roomId, string targets, int commandType, string command)
+    {
+        return await SendWithAckAsync(MessageType.RoomCommand, new RoomCommandRequest
+        {
+            RoomId = roomId,
+            Targets = targets,
+            CommandType = commandType,
+            Command = command
+        });
+    }
+
+    /// <summary>
     /// 批量邀请玩家加入房间
     /// </summary>
     /// <param name="roomId">房间ID</param>

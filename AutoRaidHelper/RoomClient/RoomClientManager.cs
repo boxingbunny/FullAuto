@@ -9,6 +9,7 @@ using AEAssist.Extension;
 using AEAssist.Helper;
 using AEAssist.JobApi;
 using AEAssist.Verify;
+using AutoRaidHelper.RoomClient.Command;
 using AutoRaidHelper.Settings;
 
 namespace AutoRaidHelper.RoomClient;
@@ -74,6 +75,9 @@ public class RoomClientManager : IDisposable
 
         // 处理消息队列
         Client.ProcessMessages();
+
+        // 处理房间指令（主线程执行）
+        RoomCommandManager.Instance.Update();
 
         // 检测玩家状态变化并上报
         CheckAndReportPlayerInfoChanges();
@@ -380,6 +384,10 @@ public class RoomClientManager : IDisposable
                     }
                     break;
 
+                case MessageType.RoomCommand:
+                    HandleRoomCommand(message.Payload);
+                    break;
+
                 case MessageType.Error:
                     HandleError(message.Payload);
                     break;
@@ -494,6 +502,17 @@ public class RoomClientManager : IDisposable
         if (response != null)
         {
             RoomClientState.Instance.AllConnectedUsers = response.Users;
+        }
+    }
+
+    private void HandleRoomCommand(object? payload)
+    {
+        if (payload == null) return;
+
+        var message = JsonSerializer.Deserialize<RoomCommandMessage>(payload.ToString()!);
+        if (message != null)
+        {
+            RoomCommandManager.Instance.HandleCommand(message);
         }
     }
 
