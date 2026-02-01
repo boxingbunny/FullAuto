@@ -35,6 +35,17 @@ public class UISettingsTab
         ImGuiHelper.SetHoverTooltip("调整窗口背景的不透明度\n数值越大越不透明");
 
         ImGui.Spacing();
+
+        // 悬浮图标大小
+        float iconSize = settings.FloatingIconSize;
+        ImGui.SetNextItemWidth(300f);
+        if (ImGui.SliderFloat("悬浮图标大小", ref iconSize, 40f, 240f, "%.0f"))
+        {
+            settings.UpdateFloatingIconSize(iconSize);
+        }
+        ImGuiHelper.SetHoverTooltip("调整悬浮图标尺寸\n范围: 40 - 240");
+
+        ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
 
@@ -42,5 +53,6 @@ public class UISettingsTab
         ImGui.TextColored(new Vector4(0.5f, 0.8f, 1.0f, 1.0f), "当前状态:");
         ImGui.Text($"磨砂玻璃: {(settings.UseFrostedGlass ? "已启用" : "已禁用")}");
         ImGui.Text($"不透明度: {settings.WindowOpacity:P0}");
+        ImGui.Text($"悬浮图标大小: {settings.FloatingIconSize:0}");
     }
 }

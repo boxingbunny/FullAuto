@@ -70,6 +70,7 @@ namespace AutoRaidHelper.Settings
         // UI相关设置：磨砂玻璃背景和窗口不透明度
         public bool UseFrostedGlass { get; set; } = true;
         public float WindowOpacity { get; set; } = 0.5f;
+        public float FloatingIconSize { get; set; } = 100f;
 
         /// <summary>
         /// 更新磨砂玻璃启用状态，并保存配置
@@ -86,6 +87,15 @@ namespace AutoRaidHelper.Settings
         public void UpdateWindowOpacity(float opacity)
         {
             WindowOpacity = Math.Clamp(opacity, 0.1f, 1.0f);
+            Save();
+        }
+
+        /// <summary>
+        /// 更新悬浮图标大小，并保存配置
+        /// </summary>
+        public void UpdateFloatingIconSize(float size)
+        {
+            FloatingIconSize = Math.Clamp(size, 40f, 240f);
             Save();
         }
 

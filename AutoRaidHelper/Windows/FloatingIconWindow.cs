@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Reflection;
 using AEAssist.Helper;
+using AutoRaidHelper.Settings;
 using Dalamud.Interface.Windowing;
 using Dalamud.Bindings.ImGui;
 using ECommons.DalamudServices;
@@ -11,8 +12,9 @@ public class FloatingIconWindow : Window, IDisposable
 {
     private Dalamud.Interface.Textures.ISharedImmediateTexture? _iconTexture;
     private readonly MainWindow _mainWindow;
-    private readonly Vector2 _iconSize = new(100, 100);
+    private Vector2 _iconSize = new(100, 100);
     private bool _isDragging;
+    private Vector2 _dragStartWindowPos;
 
     public FloatingIconWindow(MainWindow mainWindow) : base(
         "FloatingIcon###AutoRaidHelperFloatingIcon",
@@ -64,52 +66,64 @@ public class FloatingIconWindow : Window, IDisposable
 
     public override void Draw()
     {
+        var sizeSetting = Math.Clamp(FullAutoSettings.Instance.FloatingIconSize, 40f, 240f);
+        var desiredSize = new Vector2(sizeSetting, sizeSetting);
+        if (_iconSize != desiredSize)
+        {
+            _iconSize = desiredSize;
+            Size = _iconSize;
+        }
+
         if (_iconTexture == null)
         {
             ImGui.Text("图标加载失败");
             return;
         }
 
-        var windowPos = ImGui.GetWindowPos();
-        var mousePos = ImGui.GetMousePos();
-
-        var isHovered = mousePos.X >= windowPos.X &&
-                        mousePos.X <= windowPos.X + _iconSize.X &&
-                        mousePos.Y >= windowPos.Y &&
-                        mousePos.Y <= windowPos.Y + _iconSize.Y;
-
-        // 绘制图标
-        var alpha = isHovered ? 1.0f : 0.7f;
         var wrap = _iconTexture.GetWrapOrEmpty();
-        if (wrap != null)
-        {
-            ImGui.Image(wrap.Handle, _iconSize, Vector2.Zero, Vector2.One, new Vector4(1, 1, 1, alpha));
-        }
+
+        ImGui.SetCursorPos(Vector2.Zero);
+        ImGui.InvisibleButton("###AutoRaidHelperFloatingIconButton", _iconSize);
+
+        var isHovered = ImGui.IsItemHovered();
+        var min = ImGui.GetItemRectMin();
+        var max = ImGui.GetItemRectMax();
+        var alpha = isHovered ? 1.0f : 0.7f;
+        var tint = ImGui.ColorConvertFloat4ToU32(new Vector4(1, 1, 1, alpha));
+        ImGui.GetWindowDrawList().AddImage(wrap.Handle, min, max, Vector2.Zero, Vector2.One, tint);
 
         // 左键点击打开主窗口
-        if (isHovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (ImGui.IsItemClicked(ImGuiMouseButton.Left))
         {
             _mainWindow.IsOpen = !_mainWindow.IsOpen;
         }
 
         // 右键拖动
-        if (isHovered && ImGui.IsMouseDown(ImGuiMouseButton.Right))
+        if (ImGui.IsItemClicked(ImGuiMouseButton.Right))
         {
-            if (!_isDragging)
-            {
-                _isDragging = true;
-            }
+            _isDragging = true;
+            _dragStartWindowPos = ImGui.GetWindowPos();
+            ImGui.ResetMouseDragDelta(ImGuiMouseButton.Right);
+        }
 
-            if (ImGui.IsMouseDragging(ImGuiMouseButton.Right))
+        if (_isDragging)
+        {
+            if (ImGui.IsMouseDown(ImGuiMouseButton.Right))
             {
                 var delta = ImGui.GetMouseDragDelta(ImGuiMouseButton.Right);
-                ImGui.SetWindowPos(new Vector2(windowPos.X + delta.X, windowPos.Y + delta.Y));
+                var newPos = _dragStartWindowPos + delta;
+                var viewport = ImGui.GetMainViewport();
+                var minPos = viewport.WorkPos;
+                var maxPos = viewport.WorkPos + viewport.WorkSize - _iconSize;
+                newPos.X = Math.Clamp(newPos.X, minPos.X, maxPos.X);
+                newPos.Y = Math.Clamp(newPos.Y, minPos.Y, maxPos.Y);
+                ImGui.SetWindowPos(newPos);
+            }
+            else
+            {
+                _isDragging = false;
                 ImGui.ResetMouseDragDelta(ImGuiMouseButton.Right);
             }
-        }
-        else
-        {
-            _isDragging = false;
         }
 
         // 悬停提示
