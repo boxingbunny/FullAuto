@@ -16,6 +16,7 @@ namespace AutoRaidHelper.UI
     /// </summary>
     public class GeometryTab
     {
+        public int precision;
         /// <summary>
         /// 获取全局的 GeometrySettings 配置单例，存储场地中心、朝向点及计算参数等配置。
         /// </summary>
@@ -203,8 +204,10 @@ namespace AutoRaidHelper.UI
             ImGui.SameLine();
             if (ImGui.Button("圆形测试"))
             {
-                Utilities.MoveAlongCircularPath("MT", Point1World ?? default, 3, 0, true, 3, 0.1f);
+                Utilities.MoveAlongCircularPath("MT", Point1World ?? default, 3, 0, true, precision, 0.1f);
             }
+            ImGui.SameLine();
+            ImGui.InputInt("##Point", ref precision);
 
             // 当记录了点1和点2后，计算并显示两点间的XZ平面距离，同时允许选择夹角顶点模式进行角度计算
             if (Point1World.HasValue && Point2World.HasValue)

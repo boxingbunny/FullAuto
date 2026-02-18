@@ -285,6 +285,11 @@ namespace AutoRaidHelper.UI
                 RemoteControlHelper.Cmd("", "/pdr load InstantLeaveDuty");
                 RemoteControlHelper.Cmd("", "/pdr leaveduty");
             }
+            ImGui.SameLine();
+            if (ImGui.Button("清理Debug点"))
+            {
+                DebugPoint.Clear();
+            }
 
             // 修改为下拉菜单选择目标
             if (ImGui.BeginCombo("##KillAllCombo", _selectedKillTarget))
