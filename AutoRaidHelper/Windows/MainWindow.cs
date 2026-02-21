@@ -21,6 +21,11 @@ public class MainWindow : Window, IDisposable
     private readonly SettingsTab _settingsTab;
     private readonly RoomClientTab _roomClientTab;
 
+    // 自定义标签栏
+    private int _selectedTabIndex = 0;
+    private readonly string[] _tabNames = { "自动化", "FA控制", "工具", "管理", "食物警察", "房间客户端", "设置" };
+    private readonly Dictionary<string, float> _tabHoverStates = new();
+
     public MainWindow() : base(
         "全自动小助手###AutoRaidHelperMain",
         ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoScrollbar)
@@ -180,6 +185,91 @@ public class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>
+    /// 绘制自定义圆角标签栏
+    /// </summary>
+    private void DrawCustomTabBar()
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var cursorPos = ImGui.GetCursorScreenPos();
+        var windowWidth = ImGui.GetContentRegionAvail().X;
+
+        // 标签栏配置
+        const float tabHeight = 32f;
+        const float tabPadding = 12f;
+        const float tabSpacing = 4f;
+        const float tabRounding = 6f;
+
+        // 玻璃态颜色
+        var tabInactive = new Vector4(0.15f, 0.15f, 0.2f, 0.2f);
+        var tabHovered = new Vector4(0.2f, 0.25f, 0.35f, 0.3f);
+        var tabActive = new Vector4(0.25f, 0.3f, 0.4f, 0.4f);
+        var tabBorder = new Vector4(1.0f, 1.0f, 1.0f, 0.12f);
+        var tabBorderHovered = new Vector4(1.0f, 1.0f, 1.0f, 0.25f);
+        var textColor = new Vector4(0.95f, 0.95f, 0.98f, 0.95f);
+
+        float currentX = cursorPos.X + 8f;
+
+        for (int i = 0; i < _tabNames.Length; i++)
+        {
+            var tabName = _tabNames[i];
+            var textSize = ImGui.CalcTextSize(tabName);
+            var tabWidth = textSize.X + tabPadding * 2f;
+
+            var tabMin = new Vector2(currentX, cursorPos.Y);
+            var tabMax = new Vector2(currentX + tabWidth, cursorPos.Y + tabHeight);
+
+            // 检测鼠标悬停
+            var mousePos = ImGui.GetMousePos();
+            bool isHovered = mousePos.X >= tabMin.X && mousePos.X <= tabMax.X &&
+                           mousePos.Y >= tabMin.Y && mousePos.Y <= tabMax.Y;
+            bool isActive = _selectedTabIndex == i;
+
+            // 平滑动画
+            string hoverKey = $"tab_{i}";
+            if (!_tabHoverStates.ContainsKey(hoverKey))
+                _tabHoverStates[hoverKey] = 0f;
+
+            float targetHover = isHovered ? 1f : 0f;
+            float currentHover = _tabHoverStates[hoverKey];
+            float delta = ImGui.GetIO().DeltaTime;
+            float newHover = currentHover + (targetHover - currentHover) * Math.Min(10f * delta, 1f);
+            _tabHoverStates[hoverKey] = newHover;
+
+            // 选择背景颜色
+            Vector4 bgColor;
+            if (isActive)
+                bgColor = tabActive;
+            else
+                bgColor = Vector4.Lerp(tabInactive, tabHovered, newHover);
+
+            // 绘制完整圆角矩形背景
+            drawList.AddRectFilled(tabMin, tabMax, ImGui.ColorConvertFloat4ToU32(bgColor), tabRounding);
+
+            // 绘制边框
+            var borderColor = Vector4.Lerp(tabBorder, tabBorderHovered, newHover);
+            drawList.AddRect(tabMin, tabMax, ImGui.ColorConvertFloat4ToU32(borderColor), tabRounding, ImDrawFlags.None, 1f);
+
+            // 绘制文字（居中）
+            var textPos = new Vector2(
+                currentX + (tabWidth - textSize.X) * 0.5f,
+                cursorPos.Y + (tabHeight - textSize.Y) * 0.5f
+            );
+            drawList.AddText(textPos, ImGui.ColorConvertFloat4ToU32(textColor), tabName);
+
+            // 处理点击
+            if (isHovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            {
+                _selectedTabIndex = i;
+            }
+
+            currentX += tabWidth + tabSpacing;
+        }
+
+        // 移动光标到标签栏下方
+        ImGui.SetCursorPosY(ImGui.GetCursorPosY() + tabHeight + 8f);
+    }
+
     public override void PostDraw()
     {
         var settings = FullAutoSettings.Instance;
@@ -222,78 +312,41 @@ public class MainWindow : Window, IDisposable
         // 绘制自定义标题栏
         DrawCustomTitleBar();
 
-        // 绘制Tab标题栏（固定不动）
-        if (ImGui.BeginTabBar("MainTabBar"))
+        // 绘制自定义标签栏
+        DrawCustomTabBar();
+
+        // 获取内容区域高度
+        var contentHeight = ImGui.GetContentRegionAvail().Y;
+
+        // 根据选中的标签绘制对应内容
+        ImGui.BeginChild("TabContent", new Vector2(0, contentHeight), false, ImGuiWindowFlags.AlwaysUseWindowPadding);
+
+        switch (_selectedTabIndex)
         {
-            // 使用GetContentRegionAvail获取剩余可用空间
-            var availRegion = ImGui.GetContentRegionAvail();
-            var contentHeight = availRegion.Y;
-
-            if (ImGui.BeginTabItem("自动化"))
-            {
-                ImGui.BeginChild("AutomationContent", new Vector2(0, contentHeight), false,
-                    ImGuiWindowFlags.AlwaysUseWindowPadding);
+            case 0:
                 _automationTab.Draw();
-                ImGui.EndChild();
-                ImGui.EndTabItem();
-            }
-
-            if (ImGui.BeginTabItem("FA控制"))
-            {
-                ImGui.BeginChild("FAControlContent", new Vector2(0, contentHeight), false,
-                    ImGuiWindowFlags.AlwaysUseWindowPadding);
+                break;
+            case 1:
                 _faControlTab.Draw();
-                ImGui.EndChild();
-                ImGui.EndTabItem();
-            }
-
-            if (ImGui.BeginTabItem("工具"))
-            {
-                ImGui.BeginChild("ToolsContent", new Vector2(0, contentHeight), false,
-                    ImGuiWindowFlags.AlwaysUseWindowPadding);
+                break;
+            case 2:
                 _toolsTab.Draw();
-                ImGui.EndChild();
-                ImGui.EndTabItem();
-            }
-
-            if (ImGui.BeginTabItem("管理"))
-            {
-                ImGui.BeginChild("ManagementContent", new Vector2(0, contentHeight), false,
-                    ImGuiWindowFlags.AlwaysUseWindowPadding);
+                break;
+            case 3:
                 _managementTab.Draw();
-                ImGui.EndChild();
-                ImGui.EndTabItem();
-            }
-
-            if (ImGui.BeginTabItem("食物警察"))
-            {
-                ImGui.BeginChild("FoodBuffContent", new Vector2(0, contentHeight), false,
-                    ImGuiWindowFlags.AlwaysUseWindowPadding);
+                break;
+            case 4:
                 _foodBuffTab.Draw();
-                ImGui.EndChild();
-                ImGui.EndTabItem();
-            }
-
-            if (ImGui.BeginTabItem("房间客户端"))
-            {
-                ImGui.BeginChild("RoomClientContent", new Vector2(0, contentHeight), false,
-                    ImGuiWindowFlags.AlwaysUseWindowPadding);
+                break;
+            case 5:
                 _roomClientTab.Draw();
-                ImGui.EndChild();
-                ImGui.EndTabItem();
-            }
-
-            if (ImGui.BeginTabItem("设置"))
-            {
-                ImGui.BeginChild("SettingsContent", new Vector2(0, contentHeight), false,
-                    ImGuiWindowFlags.AlwaysUseWindowPadding);
+                break;
+            case 6:
                 _settingsTab.Draw();
-                ImGui.EndChild();
-                ImGui.EndTabItem();
-            }
-
-            ImGui.EndTabBar();
+                break;
         }
+
+        ImGui.EndChild();
     }
 
     public void OnLoad(System.Runtime.Loader.AssemblyLoadContext loadContext)

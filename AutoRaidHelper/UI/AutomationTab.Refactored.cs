@@ -65,15 +65,15 @@ namespace AutoRaidHelper.UI
             UIHelpers.EndCard(occultOpen);
 
             // Debug信息卡片（折叠）
-            if (ImGui.CollapsingHeader("调试信息"))
+
+            bool debugOpen = UIHelpers.BeginCard("自动化Debug", FontAwesomeIcon.Bug, false);
+            if (debugOpen)
             {
-                bool debugOpen = UIHelpers.BeginCard("自动化Debug", FontAwesomeIcon.Bug, false);
-                if (debugOpen)
-                {
-                    DrawDebugInfo();
-                }
-                UIHelpers.EndCard(debugOpen);
+                DrawDebugInfo();
             }
+
+            UIHelpers.EndCard(debugOpen);
+            
         }
 
         /// <summary>
@@ -130,13 +130,15 @@ namespace AutoRaidHelper.UI
 
             ImGui.Spacing();
 
-            // 等待R点完成
+            // 等待R点完成和Roll点追踪
             bool waitRCompleted = Settings.AutoLeaveAfterLootEnabled;
             if (ImGui.Checkbox("等待R点完成后再退本", ref waitRCompleted))
             {
                 Settings.UpdateAutoLeaveAfterLootEnabled(waitRCompleted);
             }
 
+            ImGui.SameLine();
+            ImGui.Spacing();
             ImGui.SameLine();
 
             // Roll点追踪
@@ -150,6 +152,8 @@ namespace AutoRaidHelper.UI
                     LootTracker.Dispose();
             }
 
+            ImGui.SameLine();
+            ImGui.Spacing();
             ImGui.SameLine();
 
             if (!Settings.LootTrackEnabled)
@@ -473,6 +477,7 @@ namespace AutoRaidHelper.UI
 
             if (Settings.SelectedDutyName == "自定义")
             {
+                ImGui.Spacing();
                 ImGui.SetNextItemWidth(200f * scale);
                 string custom = Settings.CustomDutyName;
                 if (ImGui.InputText("自定义副本名称", ref custom, 50))
@@ -480,8 +485,11 @@ namespace AutoRaidHelper.UI
                     Settings.UpdateCustomDutyName(custom);
                 }
             }
+            else
+            {
+                ImGui.Spacing();
+            }
 
-            ImGui.SameLine();
             if (ImGui.Button("为队长发送排本命令"))
             {
                 var leaderName = PartyLeaderHelper.GetPartyLeaderName();
