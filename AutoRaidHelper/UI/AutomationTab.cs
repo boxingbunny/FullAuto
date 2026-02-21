@@ -28,7 +28,7 @@ namespace AutoRaidHelper.UI
     /// AutomationTab 用于处理自动化模块的 UI 展示与业务逻辑，
     /// 包括自动倒计时、自动退本、自动排本以及遥控功能等。
     /// </summary>
-    public class AutomationTab
+    public partial class AutomationTab
     {
         private int _runtimes;
 
@@ -180,6 +180,16 @@ namespace AutoRaidHelper.UI
         /// 包括地图记录、自动倒计时、自动退本、遥控按钮以及自动排本的设置和调试信息。
         /// </summary>
         public unsafe void Draw()
+        {
+            // 使用重构后的卡片式布局
+            DrawRefactored();
+        }
+
+        /// <summary>
+        /// 原始的Draw方法（已弃用，保留作为参考）
+        /// </summary>
+        [Obsolete("使用DrawRefactored代替")]
+        public unsafe void DrawOld()
         {
             //【地图记录与倒计时设置】
             ImGui.Text("本内自动化设置:");

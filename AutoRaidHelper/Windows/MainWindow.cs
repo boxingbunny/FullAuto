@@ -13,16 +13,12 @@ namespace AutoRaidHelper.Windows;
 public class MainWindow : Window, IDisposable
 {
     private readonly CleanBackgroundManager? _backgroundManager;
-    private readonly GeometryTab _geometryTab;
     private readonly AutomationTab _automationTab;
-    private readonly FaGeneralSettingTab _faGeneralSettingTab;
-    private readonly FaManualTab _faManualTab;
-    private readonly DebugPrintTab _debugPrintTab;
-    private readonly BlackListTab _blackListTab;
+    private readonly FAControlTab _faControlTab;
+    private readonly ToolsTab _toolsTab;
+    private readonly ManagementTab _managementTab;
     private readonly FoodBuffTab _foodBuffTab;
-    private readonly UISettingsTab _uiSettingsTab;
-    private readonly LootRollingTab _lootRollingTab;
-    private readonly AboutTab _aboutTab;
+    private readonly SettingsTab _settingsTab;
     private readonly RoomClientTab _roomClientTab;
 
     public MainWindow() : base(
@@ -38,16 +34,12 @@ public class MainWindow : Window, IDisposable
         };
 
         // 初始化所有Tab
-        _geometryTab = new GeometryTab();
         _automationTab = new AutomationTab();
-        _faGeneralSettingTab = new FaGeneralSettingTab();
-        _faManualTab = new FaManualTab();
-        _debugPrintTab = new DebugPrintTab();
-        _blackListTab = new BlackListTab();
+        _faControlTab = new FAControlTab();
+        _toolsTab = new ToolsTab();
+        _managementTab = new ManagementTab();
         _foodBuffTab = new FoodBuffTab();
-        _uiSettingsTab = new UISettingsTab();
-        _lootRollingTab = new LootRollingTab();
-        _aboutTab = new AboutTab();
+        _settingsTab = new SettingsTab();
         _roomClientTab = new RoomClientTab();
 
         // 初始化磨砂玻璃背景管理器
@@ -68,16 +60,16 @@ public class MainWindow : Window, IDisposable
     {
         _backgroundManager?.Dispose();
         _automationTab.Dispose();
-        _debugPrintTab.Dispose();
+        _toolsTab.Dispose();
         RoomClientManager.Instance.Dispose();
     }
 
     public void OnUpdate()
     {
-        _geometryTab.Update();
+        _toolsTab.Update();
         _automationTab.Update();
-        _faManualTab.Update();
-        _blackListTab.Update();
+        _faControlTab.Update();
+        _managementTab.Update();
         RoomClientManager.Instance.Update();
     }
 
@@ -237,57 +229,38 @@ public class MainWindow : Window, IDisposable
             var availRegion = ImGui.GetContentRegionAvail();
             var contentHeight = availRegion.Y;
 
-            if (ImGui.BeginTabItem("几何计算"))
-            {
-                // 创建可滚动的子窗口来包含Tab内容，隐藏滚动条但保留滚动功能
-                ImGui.BeginChild("GeometryContent", new Vector2(0, contentHeight), false,
-                    ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoScrollbar);
-                _geometryTab.Draw();
-                ImGui.EndChild();
-                ImGui.EndTabItem();
-            }
-
             if (ImGui.BeginTabItem("自动化"))
             {
                 ImGui.BeginChild("AutomationContent", new Vector2(0, contentHeight), false,
-                    ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoScrollbar);
+                    ImGuiWindowFlags.AlwaysUseWindowPadding);
                 _automationTab.Draw();
                 ImGui.EndChild();
                 ImGui.EndTabItem();
             }
 
-            if (ImGui.BeginTabItem("FA全局设置"))
+            if (ImGui.BeginTabItem("FA控制"))
             {
-                ImGui.BeginChild("FaGeneralContent", new Vector2(0, contentHeight), false,
-                    ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoScrollbar);
-                _faGeneralSettingTab.Draw();
+                ImGui.BeginChild("FAControlContent", new Vector2(0, contentHeight), false,
+                    ImGuiWindowFlags.AlwaysUseWindowPadding);
+                _faControlTab.Draw();
                 ImGui.EndChild();
                 ImGui.EndTabItem();
             }
 
-            if (ImGui.BeginTabItem("FA手动操作"))
+            if (ImGui.BeginTabItem("工具"))
             {
-                ImGui.BeginChild("FaManualContent", new Vector2(0, contentHeight), false,
-                    ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoScrollbar);
-                _faManualTab.Draw();
+                ImGui.BeginChild("ToolsContent", new Vector2(0, contentHeight), false,
+                    ImGuiWindowFlags.AlwaysUseWindowPadding);
+                _toolsTab.Draw();
                 ImGui.EndChild();
                 ImGui.EndTabItem();
             }
 
-            if (ImGui.BeginTabItem("日志监听"))
+            if (ImGui.BeginTabItem("管理"))
             {
-                ImGui.BeginChild("DebugPrintContent", new Vector2(0, contentHeight), false,
-                    ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoScrollbar);
-                _debugPrintTab.Draw();
-                ImGui.EndChild();
-                ImGui.EndTabItem();
-            }
-
-            if (ImGui.BeginTabItem("黑名单管理"))
-            {
-                ImGui.BeginChild("BlackListContent", new Vector2(0, contentHeight), false,
-                    ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoScrollbar);
-                _blackListTab.Draw();
+                ImGui.BeginChild("ManagementContent", new Vector2(0, contentHeight), false,
+                    ImGuiWindowFlags.AlwaysUseWindowPadding);
+                _managementTab.Draw();
                 ImGui.EndChild();
                 ImGui.EndTabItem();
             }
@@ -295,26 +268,8 @@ public class MainWindow : Window, IDisposable
             if (ImGui.BeginTabItem("食物警察"))
             {
                 ImGui.BeginChild("FoodBuffContent", new Vector2(0, contentHeight), false,
-                    ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoScrollbar);
+                    ImGuiWindowFlags.AlwaysUseWindowPadding);
                 _foodBuffTab.Draw();
-                ImGui.EndChild();
-                ImGui.EndTabItem();
-            }
-
-            if (ImGui.BeginTabItem("UI设置"))
-            {
-                ImGui.BeginChild("UISettingsContent", new Vector2(0, contentHeight), false,
-                    ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoScrollbar);
-                _uiSettingsTab.Draw();
-                ImGui.EndChild();
-                ImGui.EndTabItem();
-            }
-            
-            if (ImGui.BeginTabItem("Roll点设置"))
-            {
-                ImGui.BeginChild("LootRollingContent", new Vector2(0, contentHeight), false,
-                    ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoScrollbar);
-                _lootRollingTab.Draw();
                 ImGui.EndChild();
                 ImGui.EndTabItem();
             }
@@ -322,17 +277,17 @@ public class MainWindow : Window, IDisposable
             if (ImGui.BeginTabItem("房间客户端"))
             {
                 ImGui.BeginChild("RoomClientContent", new Vector2(0, contentHeight), false,
-                    ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoScrollbar);
+                    ImGuiWindowFlags.AlwaysUseWindowPadding);
                 _roomClientTab.Draw();
                 ImGui.EndChild();
                 ImGui.EndTabItem();
             }
 
-            if (ImGui.BeginTabItem("关于"))
+            if (ImGui.BeginTabItem("设置"))
             {
-                ImGui.BeginChild("About", new Vector2(0, contentHeight), false,
-                    ImGuiWindowFlags.AlwaysUseWindowPadding | ImGuiWindowFlags.NoScrollbar);
-                _aboutTab.Draw();
+                ImGui.BeginChild("SettingsContent", new Vector2(0, contentHeight), false,
+                    ImGuiWindowFlags.AlwaysUseWindowPadding);
+                _settingsTab.Draw();
                 ImGui.EndChild();
                 ImGui.EndTabItem();
             }
@@ -344,7 +299,7 @@ public class MainWindow : Window, IDisposable
     public void OnLoad(System.Runtime.Loader.AssemblyLoadContext loadContext)
     {
         _automationTab.OnLoad(loadContext);
-        _debugPrintTab.OnLoad(loadContext);
+        _toolsTab.OnLoad(loadContext);
 
         // 初始化房间客户端管理器
         RoomClientManager.Instance.Initialize();
