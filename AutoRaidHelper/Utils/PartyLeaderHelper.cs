@@ -282,7 +282,7 @@ public static class PartyLeaderHelper
 
         var yesnoAddon = (AddonSelectYesno*)addon;
         var values = stackalloc AtkValue[1];
-        values[0].Type = FFXIVClientStructs.FFXIV.Component.GUI.ValueType.Int;
+        values[0].Type = AtkValueType.Int;
         values[0].Int = 0;
 
         yesnoAddon->FireCallback(1, values, true);

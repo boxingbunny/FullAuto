@@ -1,6 +1,7 @@
 ﻿using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
+using Dalamud.Game.Chat;
 using Dalamud.Plugin.Services;
 using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
@@ -133,12 +134,12 @@ public class LootRollingManager : IDisposable
         }
     }
 
-    private void OnChatMessage(XivChatType type, int senderId, ref SeString sender, ref SeString message, ref bool isHandled)
+    private void OnChatMessage(IHandleableChatMessage chatMessage)
     {
         var settings = FullAutoSettings.Instance.LootRollingSettings;
-        if (!settings.AutoRollEnabled || type != (XivChatType)2105) return;
+        if (!settings.AutoRollEnabled || chatMessage.LogKind != (XivChatType)2105) return;
 
-        var textValue = message.TextValue;
+        var textValue = chatMessage.Message.TextValue;
         // LogMessage ID 5194 表示可以 Roll 了
         if (textValue != Svc.Data.GetExcelSheet<LogMessage>()!.First(x => x.RowId == 5194).Text) return;
         _nextRollTime = DateTime.Now.AddMilliseconds(new Random()

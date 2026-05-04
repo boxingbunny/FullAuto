@@ -6,7 +6,7 @@
   "compilationOptions": {},
   "targets": {
     ".NETCoreApp,Version=v10.0": {
-      "AutoRaidHelper/0.0.189+client.3b3b742": {
+      "AutoRaidHelper/0.0.229+master.b59898c": {
         "dependencies": {
           "TerraFX.Interop.Windows": "10.0.26100.6"
         },
@@ -25,7 +25,7 @@
     }
   },
   "libraries": {
-    "AutoRaidHelper/0.0.189+client.3b3b742": {
+    "AutoRaidHelper/0.0.229+master.b59898c": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

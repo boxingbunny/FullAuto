@@ -572,7 +572,7 @@ public class RoomManagementPanel
     private List<string> GetPartyMemberCIDs()
     {
         var cids = new List<string>();
-        var myCid = Svc.ClientState.LocalContentId;
+        var myCid = Svc.PlayerState.ContentId;
 
         foreach (var member in Svc.Party)
         {
@@ -581,7 +581,7 @@ public class RoomManagementPanel
                 continue;
 
             // 跳过自己（将 ulong 转换为 long 进行比较）
-            if (member.ContentId == (long)myCid)
+            if ((ulong)member.ContentId == myCid)
                 continue;
 
             cids.Add(member.ContentId.ToString());

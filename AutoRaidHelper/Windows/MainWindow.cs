@@ -32,11 +32,6 @@ public class MainWindow : Window, IDisposable
     {
         Size = new Vector2(800, 600);
         SizeCondition = ImGuiCond.FirstUseEver;
-        SizeConstraints = new WindowSizeConstraints
-        {
-            MinimumSize = new Vector2(688, 400),
-            MaximumSize = new Vector2(2000, 1500)
-        };
 
         // 初始化所有Tab
         _automationTab = new AutomationTab();
@@ -81,6 +76,7 @@ public class MainWindow : Window, IDisposable
     public override void PreDraw()
     {
         var settings = FullAutoSettings.Instance;
+        ImGui.SetNextWindowSizeConstraints(new Vector2(688, 400), new Vector2(2000, 1500));
 
         // 隐藏调整大小手柄（右下角的三角形）
         ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 0f);

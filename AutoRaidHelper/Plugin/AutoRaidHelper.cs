@@ -43,11 +43,11 @@ namespace AutoRaidHelper.Plugin
             // 初始化窗口系统
             _windowSystem = new WindowSystem("AutoRaidHelper");
             _mainWindow = new MainWindow();
-            _windowSystem.AddWindow(_mainWindow);
+            WindowSystemCompat.AddWindow(_windowSystem, _mainWindow);
 
             // 初始化悬浮图标窗口
             _floatingIconWindow = new FloatingIconWindow(_mainWindow);
-            _windowSystem.AddWindow(_floatingIconWindow);
+            WindowSystemCompat.AddWindow(_windowSystem, _floatingIconWindow);
 
             // 注册窗口绘制
             Svc.PluginInterface.UiBuilder.Draw += _windowSystem.Draw;
@@ -90,7 +90,7 @@ namespace AutoRaidHelper.Plugin
                 Svc.PluginInterface.UiBuilder.Draw -= _windowSystem.Draw;
                 _mainWindow.Dispose();
                 _floatingIconWindow?.Dispose();
-                _windowSystem.RemoveAllWindows();
+                WindowSystemCompat.RemoveAllWindows(_windowSystem);
             }
 
             DebugPoint.Clear();

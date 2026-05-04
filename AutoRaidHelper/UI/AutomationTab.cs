@@ -14,6 +14,7 @@ using System.Numerics;
 using System.Reflection;
 using System.Runtime.Loader;
 using AEAssist.GUI;
+using Dalamud.Game.DutyState;
 using Dalamud.Game.Text;
 using FFXIVClientStructs.FFXIV.Client.Game.InstanceContent;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
@@ -153,12 +154,11 @@ namespace AutoRaidHelper.UI
         /// <summary>
         /// 当副本完成时触发 DutyCompleted 事件，对应更新副本完成状态。
         /// </summary>
-        /// <param name="sender">事件发送者</param>
-        /// <param name="e">副本任务ID</param>
-        private void OnDutyCompleted(object? sender, ushort e)
+        /// <param name="args">副本状态事件参数</param>
+        private void OnDutyCompleted(IDutyStateEventArgs args)
         {
             // 打印副本完成事件日志
-            LogHelper.Print($"副本任务完成（DutyCompleted 事件，ID: {e}）");
+            LogHelper.Print($"副本任务完成（DutyCompleted 事件，CF: {args.ContentFinderCondition.RowId}）");
             _dutyCompleted = true; // 标记副本已完成
             _runtimes++;
         }
@@ -166,11 +166,10 @@ namespace AutoRaidHelper.UI
         /// <summary>
         /// 当副本团灭时触发 DutyWiped 事件，可用于重置某些状态（目前仅打印日志）。
         /// </summary>
-        /// <param name="sender">事件发送者</param>
-        /// <param name="e">副本任务ID</param>
-        private void OnDutyWiped(object? sender, ushort e)
+        /// <param name="args">副本状态事件参数</param>
+        private void OnDutyWiped(IDutyStateEventArgs args)
         {
-            LogHelper.Print($"副本团灭重置（DutyWiped 事件，ID: {e}）");
+            LogHelper.Print($"副本团灭重置（DutyWiped 事件，CF: {args.ContentFinderCondition.RowId}）");
             // 如有需要，在此处重置其他状态
             _isCountdownCompleted = false;
         }
